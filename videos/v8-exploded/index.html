@@ -195,9 +195,10 @@
     <script>
       // 2D overlay reveals; the 3D scene renders from the Three.js adapter's hf-seek time.
       const tl = gsap.timeline({ paused: true });
-      tl.fromTo("#title-block", { "--rule": 0 }, { "--rule": 1, duration: 0.7, ease: "expo.out" }, 12.95)
-        .fromTo("#title-block", { "--word": 0 }, { "--word": 1, duration: 1.0, ease: "expo.out" }, 13.15)
-        .fromTo("#title-block", { "--spec": 0 }, { "--spec": 1, duration: 0.8, ease: "expo.out" }, 13.7);
+      tl.set("#title-block", { "--rule": 0, "--word": 0, "--spec": 0 }, 0);
+      tl.fromTo("#title-block", { "--rule": 0 }, { "--rule": 1, duration: 0.7, immediateRender: false, ease: "expo.out" }, 12.95)
+        .fromTo("#title-block", { "--word": 0 }, { "--word": 1, duration: 1.0, immediateRender: false, ease: "expo.out" }, 13.15)
+        .fromTo("#title-block", { "--spec": 0 }, { "--spec": 1, duration: 0.8, immediateRender: false, ease: "expo.out" }, 13.7);
       document.querySelectorAll(".callout").forEach((el) => {
         tl.fromTo(el, { "--k": 0 }, { "--k": 1, duration: 0.6, ease: "expo.out" }, parseFloat(el.dataset.in))
           .to(el, { "--k": 0, duration: 0.4, ease: "power2.inOut" }, 8.9);
