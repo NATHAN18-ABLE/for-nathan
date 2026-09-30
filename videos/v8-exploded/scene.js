@@ -515,25 +515,39 @@ for (const side of SIDES) {
   }
   mesh(tube([V(-0.95, D + 0.69, 0.13), V(-0.2, D + 0.7, 0.12), V(0.6, D + 0.7, 0.12), V(1.02, D + 0.66, 0.1), V(1.12, D + 0.52, 0.06)], 0.028, 80, 10), M.loom, bf);
   for (let i = 0; i < 6; i++) for (const dz of [-0.29, 0.29]) mesh(hexBolt, M.steel, bf, [-0.85 + i * 0.34, D + 0.6, dz]);
-  // variable-cam-timing solenoids poking through the front of each cover
-  for (const dz of [-0.15, 0.15]) {
-    mesh(cylX(0.055, 0.12, 24), M.machined, bf, [1.08, D + 0.47, dz]);
-    mesh(rbox(0.06, 0.07, 0.07, 0.015), M.dark, bf, [1.16, D + 0.49, dz]);
-  }
   if (side > 0) mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.07, 32), M.dark, bf, [-0.62, D + 0.63, -0.14]);
 }
 
-// --- Timing cover (spans block and heads) ---
+// --- Timing cover (spans block, heads and cam-cover fronts, like the Coyote front cover) ---
 const timing = part("timing", { dir: V(1, 0.1, 0), dist: 0.85, out: [3.2, 1.9], inn: [10.75, 0.5] });
 {
-  const geo = new THREE.ExtrudeGeometry(blockShape(1.0, 0.33), { depth: 0.07, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: 3 });
+  const TC_EXTRA = 0.6, TC_FACE = 1.155;
+  const shape = blockShape(1.0, TC_EXTRA);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.025, bevelSegments: 3 });
   mesh(geo, M.alu, timing, [1.06, 0, 0], [0, Math.PI / 2, 0]);
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    mesh(hexBolt.clone().rotateZ(Math.PI / 2), M.steel, timing, [1.16, 0.45 + 0.52 * Math.sin(a), 0.56 * Math.cos(a)]);
+  // perimeter bolts: walk the outline and inset each point toward the cover's middle
+  const outline = shape.getSpacedPoints(26).slice(0, -1);
+  const cz = 0, cy = 0.62;
+  for (const q of outline) {
+    const dz = cz - q.x, dy = cy - q.y, l = Math.hypot(dz, dy) || 1;
+    mesh(hexBolt.clone().rotateZ(Math.PI / 2), M.steel, timing, [TC_FACE + 0.012, q.y + (dy / l) * 0.06, -(q.x + (dz / l) * 0.06)]);
+  }
+  // cast ribs and bosses on the face
+  for (const side of SIDES) {
+    const bf = bankFrame(side, timing);
+    mesh(rbox(0.05, 0.9, 0.06, 0.02), M.alu, bf, [TC_FACE, D - 0.05, side * 0.22]);
+    mesh(rbox(0.05, 0.9, 0.06, 0.02), M.alu, bf, [TC_FACE, D - 0.05, -side * 0.22]);
+    // variable-cam-timing solenoids seated in the cover, one per cam
+    for (const dz of [-0.15, 0.15]) {
+      mesh(cylX(0.06, 0.06, 24), M.alu, bf, [TC_FACE + 0.02, D + 0.47, dz]);
+      mesh(cylX(0.045, 0.1, 24), M.machined, bf, [TC_FACE + 0.08, D + 0.47, dz]);
+      mesh(rbox(0.07, 0.08, 0.08, 0.018), M.dark, bf, [TC_FACE + 0.16, D + 0.47, dz]);
+    }
   }
   mesh(cylX(0.11, 0.12, 32), M.alu, timing, [1.19, 0.5, 0]); // water-pump snout
   mesh(cylX(0.075, 0.08, 32), M.machined, timing, [1.16, 0, 0]); // front seal
+  for (const [y, z] of [[0.22, 0.42], [0.22, -0.42], [-0.2, 0.46], [-0.2, -0.46]])
+    mesh(cylX(0.045, 0.04, 16), M.alu, timing, [TC_FACE + 0.015, y, z]);
 }
 
 // --- Front-end accessory drive: serpentine belt computed around the real pulley layout ---
@@ -631,11 +645,10 @@ const spinning = [];
   }
   // alternator: finned case, rear housing, cooling slots
   const alt = PULLEYS.find((p) => p.name === "alternator").c;
-  mesh(latheX([[0.001, -0.18], [0.2, -0.18], [0.22, -0.14], [0.22, 0.1], [0.19, 0.14], [0.001, 0.14]], 48), M.alu, fead, [BELT_X - 0.26, alt[1], alt[0]]);
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    mesh(rbox(0.26, 0.02, 0.05, 0.008), M.machined, fead, [BELT_X - 0.26, alt[1] + 0.225 * Math.sin(a), alt[0] + 0.225 * Math.cos(a)], [a, 0, 0]);
-  }
+  const altProf = [[0.001, -0.18], [0.2, -0.18], [0.22, -0.15]];
+  for (let i = 0; i < 7; i++) altProf.push([0.22, -0.13 + i * 0.033], [0.205, -0.118 + i * 0.033], [0.22, -0.106 + i * 0.033]);
+  altProf.push([0.22, 0.1], [0.19, 0.14], [0.001, 0.14]);
+  mesh(latheX(altProf, 48), M.alu, fead, [BELT_X - 0.26, alt[1], alt[0]]);
   mesh(cylX(0.06, 0.08), M.dark, fead, [BELT_X - 0.47, alt[1], alt[0]]);
   // A/C compressor with clutch plate
   const ac = PULLEYS.find((p) => p.name === "ac").c;
@@ -647,8 +660,8 @@ const spinning = [];
   mesh(rbox(0.04, 0.24, 0.07, 0.02), M.alu, fead, [BELT_X - 0.02, tn[1] - 0.08, tn[0] - 0.06], [-0.6, 0, 0]);
   // thermostat housing + upper hose stub
   mesh(cylX(0.075, 0.14, 24), M.alu, fead, [BELT_X - 0.06, 0.95, 0.0]);
-  mesh(tube([V(BELT_X, 0.95, 0), V(BELT_X + 0.25, 1.0, 0.02), V(BELT_X + 0.45, 1.15, 0.1), V(BELT_X + 0.55, 1.35, 0.22)], 0.065, 40, 16), M.hose, fead);
-  mesh(new THREE.TorusGeometry(0.07, 0.012, 8, 24).rotateY(Math.PI / 2), M.zinc, fead, [BELT_X + 0.06, 0.955, 0.0]);
+  mesh(cylX(0.055, 0.12, 24), M.machined, fead, [BELT_X + 0.06, 0.95, 0.0]);
+  mesh(new THREE.TorusGeometry(0.058, 0.01, 8, 24).rotateY(Math.PI / 2), M.machined, fead, [BELT_X + 0.12, 0.95, 0.0]);
 }
 
 // --- Exhaust headers (stainless, heat-tinted) with O2 sensors ---
@@ -809,7 +822,8 @@ composer.addPass(grade);
 const CAM = [
   [0.0, 58, 3, 6.0, 0.5, 30],
   [2.4, 50, 6, 7.6, 0.45, 30],
-  [5.2, 34, 11, 14.0, 1.9, 30],
+  [3.7, 42, 9, 12.4, 1.6, 30],
+  [5.2, 34, 11, 16.6, 2.5, 30],
   [7.2, 24, 12, 15.5, 2.35, 30],
   [9.0, 14, 11, 15.5, 2.35, 30],
   [11.2, 24, 8, 12.5, 1.2, 30],
@@ -913,7 +927,7 @@ function renderAt(time) {
   const sweepAz = (opening ? lerp(115, -10, easeInOutQuint(sw)) : lerp(110, 10, easeInOutQuint(sw))) * DEG;
   sweep.position.set(4.2 * Math.sin(sweepAz), 1.2 + engine.position.y, 4.2 * Math.cos(sweepAz));
   sweep.lookAt(0, 0.4 + engine.position.y, 0);
-  sweep.intensity = 20 * Math.sin(Math.PI * sw) * (opening || t > 12.9 ? 1 : 0);
+  sweep.intensity = (opening ? 8 : 16) * Math.sin(Math.PI * sw) * (opening || t > 12.9 ? 1 : 0);
 
   // dust drift
   const pos = dust.geo.attributes.position.array;

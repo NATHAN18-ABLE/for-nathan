@@ -203,6 +203,7 @@
         tl.fromTo(el, { "--k": 0 }, { "--k": 1, duration: 0.6, ease: "expo.out" }, parseFloat(el.dataset.in))
           .to(el, { "--k": 0, duration: 0.4, ease: "power2.inOut" }, 8.9);
       });
+      window.__timelines = window.__timelines || {};
       window.__timelines["main"] = tl;
     </script>
     <script type="module" src="scene.js"></script>
