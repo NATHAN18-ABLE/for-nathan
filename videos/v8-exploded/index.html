@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/build/three.module.js",
+          "three/addons/": "./vendor/three/addons/"
+        }
+      }
+    </script>
+    <style>
+      @font-face {
+        font-family: "Michroma";
+        src: url("assets/fonts/michroma-latin-400-normal.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #050607;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #050607;
+      }
+      #three-layer {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      /* Spec callouts: a dot on the part, a hairline, a mono label. --k drives the reveal. */
+      .callout {
+        --k: 0;
+        --x: 0px;
+        --lx: 0px;
+        --lw: 0px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 0;
+      }
+      .callout .dot {
+        position: absolute;
+        left: calc(var(--x) - 8px);
+        top: -8px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 3px solid #f2f3f4;
+        background: #c3121b;
+        opacity: var(--k);
+        transform: scale(calc(0.4 + 0.6 * var(--k)));
+      }
+      .callout .line {
+        position: absolute;
+        top: -1px;
+        left: var(--lx);
+        width: var(--lw);
+        height: 2px;
+        background: #e9ebed;
+        opacity: calc(0.8 * var(--k));
+        transform: scaleX(var(--k));
+      }
+      .callout .tag {
+        position: absolute;
+        top: -76px;
+        width: 400px;
+        font-family: "IBM Plex Mono", monospace;
+        color: #eef0f2;
+        opacity: var(--k);
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+      }
+      .callout .tag b {
+        display: block;
+        font-weight: 700;
+        font-size: 30px;
+        letter-spacing: 0.14em;
+      }
+      .callout .tag span {
+        display: block;
+        font-weight: 400;
+        font-size: 24px;
+        letter-spacing: 0.1em;
+        color: #b9bec4;
+      }
+      .callout.left .line {
+        transform-origin: right center;
+      }
+      .callout.left .tag {
+        left: 70px;
+      }
+      .callout.right .line {
+        transform-origin: left center;
+      }
+      .callout.right .tag {
+        right: 70px;
+        text-align: right;
+      }
+
+      /* End title. --rule / --word / --spec drive the lockup. */
+      #title-block {
+        --rule: 0;
+        --word: 0;
+        --spec: 0;
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 390px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 26px;
+      }
+      #title-block .rule {
+        display: block;
+        width: 160px;
+        height: 4px;
+        background: #c3121b;
+        transform: scaleX(var(--rule));
+      }
+      #title-block .word {
+        font-family: "Michroma", sans-serif;
+        font-size: 230px;
+        line-height: 1;
+        color: #eef0f2;
+        letter-spacing: calc(0.02em + 0.35em * (1 - var(--word)));
+        margin-right: calc(-0.02em - 0.35em * (1 - var(--word)));
+        opacity: var(--word);
+        transform: translateY(calc(50px * (1 - var(--word))));
+        text-shadow: 0 10px 50px rgba(0, 0, 0, 0.85);
+      }
+      #title-block .spec {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 30px;
+        font-weight: 400;
+        letter-spacing: 0.32em;
+        color: #c4c9cf;
+        opacity: var(--spec);
+        transform: translateY(calc(18px * (1 - var(--spec))));
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1080" data-height="1920">
+      <canvas id="three-layer" class="clip" data-start="0" data-duration="15" data-track-index="0"></canvas>
+
+      <div id="callouts" class="overlay clip" data-start="6.8" data-duration="2.6" data-track-index="1">
+        <div class="callout right" data-anchor="head" data-in="7.0">
+          <i class="dot"></i><i class="line"></i>
+          <div class="tag"><b>CYLINDER HEAD</b><span>DOHC · 4 VALVES/CYL</span></div>
+        </div>
+        <div class="callout left" data-anchor="piston" data-in="7.25">
+          <i class="dot"></i><i class="line"></i>
+          <div class="tag"><b>PISTON ×8</b><span>FORGED ALLOY</span></div>
+        </div>
+        <div class="callout right" data-anchor="crank" data-in="7.5">
+          <i class="dot"></i><i class="line"></i>
+          <div class="tag"><b>CRANKSHAFT</b><span>90° CROSS-PLANE</span></div>
+        </div>
+      </div>
+
+      <div id="title-block" class="clip" data-start="12.8" data-duration="2.2" data-track-index="2">
+        <i class="rule"></i>
+        <h1 class="word">V8</h1>
+        <p class="spec">90° · 32 VALVES · 8 CYL</p>
+      </div>
+    </div>
+    <script type="module" src="scene.js"></script>
+  </body>
+</html>

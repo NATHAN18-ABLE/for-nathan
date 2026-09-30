@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "preferences": {
+    "aspect": {
+      "value": "1080x1920",
+      "confirmed_in": [
+        "v8-exploded"
+      ],
+      "updated_at": "2026-09-30T06:09:59.599Z"
+    },
+    "flow": {
+      "value": "automation",
+      "confirmed_in": [
+        "v8-exploded"
+      ],
+      "updated_at": "2026-09-30T06:09:59.658Z"
+    }
+  },
+  "sightings": {}
+}
