@@ -26,7 +26,6 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
 const lerp = (a, b, t) => a + (b - a) * t;
 const smooth = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
 const easeInOutQuint = (x) => { x = clamp01(x); return x < 0.5 ? 16 * x ** 5 : 1 - (-2 * x + 2) ** 5 / 2; };
-const easeOutExpo = (x) => { x = clamp01(x); return x === 1 ? 1 : 1 - 2 ** (-10 * x); };
 const easeInCubic = (x) => { x = clamp01(x); return x * x * x; };
 const DEG = Math.PI / 180;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -930,7 +929,7 @@ function renderAt(time) {
   grade.uniforms.uFade.value = smooth(t / 0.35);
   composer.render();
 
-  // overlay: spec callouts track their parts; title resolves at the end
+  // overlay: callouts track their parts (their reveal lives on the GSAP timeline)
   for (const el of labels) {
     const [name, local] = ANCHORS[el.dataset.anchor];
     const v = local.clone().applyMatrix4(byName[name].g.matrixWorld).project(camera);
@@ -940,13 +939,7 @@ function renderAt(time) {
     el.style.setProperty("--x", `${x.toFixed(1)}px`);
     el.style.setProperty("--lx", `${Math.min(x, colX).toFixed(1)}px`);
     el.style.setProperty("--lw", `${Math.abs(x - colX).toFixed(1)}px`);
-    const k = easeOutExpo((t - parseFloat(el.dataset.in)) / 0.6) * (1 - smooth((t - 8.9) / 0.4));
-    el.style.setProperty("--k", k.toFixed(4));
   }
-  const title = document.getElementById("title-block");
-  title.style.setProperty("--rule", easeOutExpo((t - 12.95) / 0.7).toFixed(4));
-  title.style.setProperty("--word", easeOutExpo((t - 13.15) / 1.0).toFixed(4));
-  title.style.setProperty("--spec", easeOutExpo((t - 13.7) / 0.8).toFixed(4));
 }
 
 window.__v8RenderAt = renderAt;

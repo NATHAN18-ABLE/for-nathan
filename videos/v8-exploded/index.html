@@ -170,7 +170,7 @@
     <div id="root" data-composition-id="main" data-start="0" data-duration="15" data-width="1080" data-height="1920">
       <canvas id="three-layer" class="clip" data-start="0" data-duration="15" data-track-index="0"></canvas>
 
-      <div id="callouts" class="overlay clip" data-start="6.8" data-duration="2.6" data-track-index="1">
+      <div id="callouts" class="overlay">
         <div class="callout right" data-anchor="head" data-in="7.0">
           <i class="dot"></i><i class="line"></i>
           <div class="tag"><b>CYLINDER HEAD</b><span>DOHC · 4 VALVES/CYL</span></div>
@@ -185,12 +185,25 @@
         </div>
       </div>
 
-      <div id="title-block" class="clip" data-start="12.8" data-duration="2.2" data-track-index="2">
+      <div id="title-block">
         <i class="rule"></i>
         <h1 class="word">V8</h1>
         <p class="spec">5.0L · DOHC · 32 VALVES</p>
       </div>
     </div>
+    <script src="vendor/gsap/gsap.min.js"></script>
+    <script>
+      // 2D overlay reveals; the 3D scene renders from the Three.js adapter's hf-seek time.
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#title-block", { "--rule": 0 }, { "--rule": 1, duration: 0.7, ease: "expo.out" }, 12.95)
+        .fromTo("#title-block", { "--word": 0 }, { "--word": 1, duration: 1.0, ease: "expo.out" }, 13.15)
+        .fromTo("#title-block", { "--spec": 0 }, { "--spec": 1, duration: 0.8, ease: "expo.out" }, 13.7);
+      document.querySelectorAll(".callout").forEach((el) => {
+        tl.fromTo(el, { "--k": 0 }, { "--k": 1, duration: 0.6, ease: "expo.out" }, parseFloat(el.dataset.in))
+          .to(el, { "--k": 0, duration: 0.4, ease: "power2.inOut" }, 8.9);
+      });
+      window.__timelines["main"] = tl;
+    </script>
     <script type="module" src="scene.js"></script>
   </body>
 </html>
