@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<title>Space Motion</title>
+<style>
+  :root {
+    --bg: #000;
+    --ink: rgba(235, 242, 255, 0.92);
+    --glass: rgba(255, 255, 255, 0.08);
+    --glass-edge: rgba(255, 255, 255, 0.16);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    display: block;
+  }
+
+  .replay {
+    position: fixed;
+    right: max(20px, env(safe-area-inset-right));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--glass-edge);
+    border-radius: 999px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    pointer-events: none;
+    transition: opacity 400ms var(--ease-out), transform 400ms var(--ease-out), background-color 160ms ease;
+  }
+
+  .replay[data-visible] {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .replay:active {
+    transform: scale(0.97);
+    transition: transform 100ms var(--ease-out);
+  }
+
+  .replay:focus-visible {
+    outline: 2px solid rgba(160, 200, 255, 0.9);
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .replay:hover { background: rgba(255, 255, 255, 0.14); }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .replay { background: #1c1c1e; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .replay { transform: none; transition: opacity 200ms ease; }
+    canvas { animation: fade-in 600ms ease-out both; }
+  }
+
+  @keyframes fade-in { from { opacity: 0; } }
+</style>
+</head>
+<body>
+<canvas aria-label="별 하나에서 시작해 별밭을 지나 행성 너머로 해가 떠오르는 9초 모션그래픽" role="img"></canvas>
+<button class="replay" type="button" aria-label="다시 재생">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 12a9 9 0 1 0 2.64-6.36"/>
+    <path d="M3 4v5h5"/>
+  </svg>
+</button>
+<script>
+(() => {
+  const DURATION = 9;
+  const params = new URLSearchParams(location.search);
+  const CAPTURE = params.has('capture');
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const canvas = document.querySelector('canvas');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const replay = document.querySelector('.replay');
+  const glowCanvas = document.createElement('canvas');
+  const glow = glowCanvas.getContext('2d');
+  let W = 0, H = 0, U = 1, dpr = 1;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    U = Math.min(W, H) / 1080; // 1080p 기준 단위
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    glowCanvas.width = canvas.width;
+    glowCanvas.height = canvas.height;
+  }
+
+  // ---------- timing ----------
+  function bezier(x1, y1, x2, y2) {
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    const sx = (t) => ((ax * t + bx) * t + cx) * t;
+    const sy = (t) => ((ay * t + by) * t + cy) * t;
+    return (x) => {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      let lo = 0, hi = 1, t = x;
+      for (let i = 0; i < 24; i++) {
+        const v = sx(t);
+        if (Math.abs(v - x) < 1e-6) break;
+        if (v < x) lo = t; else hi = t;
+        t = (lo + hi) / 2;
+      }
+      return sy(t);
+    };
+  }
+  const easeOut = bezier(0.23, 1, 0.32, 1);
+  const easeInOut = bezier(0.77, 0, 0.175, 1);
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const smooth = (a, b, v) => { const k = clamp((v - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
+
+  // ---------- stars ----------
+  function mulberry32(seed) {
+    return () => {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rand = mulberry32(20261001);
+  const NEAR = 0.035, DEPTH = 1;
+  const TINTS = ['255,255,255', '214,228,255', '255,236,214'];
+  const stars = Array.from({ length: 2400 }, () => {
+    const r = rand();
+    return {
+      x: (rand() * 2 - 1) * 1.1,
+      y: (rand() * 2 - 1) * 1.1,
+      z: rand() * DEPTH,
+      size: 0.45 + Math.pow(rand(), 3) * 1.1,
+      mag: 0.45 + Math.pow(rand(), 2) * 0.55,
+      tint: TINTS[r < 0.72 ? 0 : r < 0.9 ? 1 : 2],
+      tw: 1.2 + rand() * 2.6,
+      ph: rand() * Math.PI * 2,
+    };
+  });
+
+  // 카메라 전진: 느린 드리프트 + 강한 ease-in-out 돌리
+  const camZ = (t) => 0.045 * t + 1.45 * easeInOut(seg(t, 0.9, 6.3));
+
+  // ---------- render ----------
+  function render(t) {
+    const cx = W / 2;
+    const focal = Math.max(W, H) * 0.62;
+
+    // 행성 & 태양 지오메트리
+    const R = Math.max(W * 1.15, H * 1.05) * (1 + 0.035 * easeOut(seg(t, 3, DURATION)));
+    const topFinal = H * (W >= H ? 0.665 : 0.7);
+    const top = lerp(H + 40 * U, topFinal, easeOut(seg(t, 2.8, 6.2)));
+    const pcy = top + R;
+    const sunY = topFinal + 14 * U - 34 * U * easeOut(seg(t, 5.0, 7.8));
+    const sunR = 9 * U;
+    // 태양이 지평선 위로 드러난 정도 — 행성에 한 번 가려진 뒤에만 의미가 있다
+    const sun = smooth(-1.6, 1.4, (top - sunY) / sunR) * smooth(4.4, 5.4, t);
+    const planetIn = easeOut(seg(t, 2.8, 4.6));
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    // 하늘 산란: 태양 쪽으로 번지는 얕은 푸른 기운
+    ctx.save();
+    ctx.translate(cx, top);
+    ctx.scale(1, 0.32);
+    let g = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.75);
+    g.addColorStop(0, `rgba(48, 96, 210, ${0.05 * planetIn + 0.22 * sun})`);
+    g.addColorStop(0.45, `rgba(24, 52, 140, ${0.025 * planetIn + 0.08 * sun})`);
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-W, -W, W * 2, W * 2);
+    ctx.restore();
+
+    // 별
+    const z0 = camZ(t);
+    const v = (camZ(t + 0.01) - camZ(t - 0.01)) / 0.02;
+    const shutter = 0.05;
+    const field = smooth(0.6, 2.2, t) * (1 - 0.35 * sun);
+    const cyStar = H * 0.5;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (const s of stars) {
+      const d = ((s.z - z0) % DEPTH + DEPTH) % DEPTH + NEAR;
+      const a = s.mag * field * smooth(DEPTH + NEAR, DEPTH * 0.7, d) * smooth(NEAR, NEAR * 3, d)
+        * (REDUCED ? 1 : 0.86 + 0.14 * Math.sin(t * s.tw + s.ph));
+      if (a < 0.01) continue;
+      const k = focal / d;
+      const x = cx + s.x * k, y = cyStar + s.y * k;
+      if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
+      const r = s.size * U * clamp(0.16 / d, 0.55, 3.2);
+      const dt = d + v * shutter;
+      const kt = focal / dt;
+      const tx = cx + s.x * kt, ty = cyStar + s.y * kt;
+      const len = Math.hypot(x - tx, y - ty);
+      ctx.globalAlpha = a;
+      if (len > r * 0.8) {
+        ctx.strokeStyle = `rgb(${s.tint})`;
+        ctx.lineWidth = r * 1.6;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = `rgb(${s.tint})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 첫 별 = 태양. 행성 뒤에 있으므로 몸체보다 먼저 그린다
+    const hero = smooth(0.15, 1.3, t);
+    const glowR = lerp(30 * U, 120 * U, sun);
+    g = ctx.createRadialGradient(cx, sunY, 0, cx, sunY, glowR);
+    g.addColorStop(0, `rgba(255, 255, 255, ${0.95 * hero})`);
+    g.addColorStop(0.08, `rgba(240, 246, 255, ${0.75 * hero})`);
+    g.addColorStop(0.3, `rgba(150, 190, 255, ${(0.26 + 0.22 * sun) * hero})`);
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - glowR, sunY - glowR, glowR * 2, glowR * 2);
+
+    // 대기 림 — 바깥쪽 글로우
+    if (top < H + 30 * U) {
+      const baseRim = ctx.createLinearGradient(cx - W * 0.6, 0, cx + W * 0.6, 0);
+      baseRim.addColorStop(0, 'rgba(40, 70, 190, 0.25)');
+      baseRim.addColorStop(0.5, 'rgba(90, 150, 255, 1)');
+      baseRim.addColorStop(1, 'rgba(40, 70, 190, 0.25)');
+      const sunRim = ctx.createLinearGradient(cx - W * 0.4, 0, cx + W * 0.4, 0);
+      sunRim.addColorStop(0, 'rgba(60, 120, 255, 0)');
+      sunRim.addColorStop(0.36, 'rgba(110, 175, 255, 0.55)');
+      sunRim.addColorStop(0.5, 'rgba(235, 247, 255, 1)');
+      sunRim.addColorStop(0.64, 'rgba(110, 175, 255, 0.55)');
+      sunRim.addColorStop(1, 'rgba(60, 120, 255, 0)');
+      const passes = [[1.5, 0.9], [4, 0.4]];
+      for (const [w, a] of passes) {
+        ctx.lineWidth = w * U;
+        ctx.strokeStyle = baseRim;
+        ctx.globalAlpha = a * 0.55 * planetIn;
+        ctx.beginPath(); ctx.arc(cx, pcy, R, Math.PI, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = sunRim;
+        ctx.globalAlpha = a * sun;
+        ctx.beginPath(); ctx.arc(cx, pcy, R, Math.PI, Math.PI * 2); ctx.stroke();
+      }
+
+      // 넓은 대기 글로우: 부드러운 고리를 오프스크린에 그리고 가로 마스크로 태양 쪽만 밝힌다
+      const reach = 170 * U;
+      glow.setTransform(1, 0, 0, 1, 0, 0);
+      glow.globalCompositeOperation = 'source-over';
+      glow.clearRect(0, 0, glowCanvas.width, glowCanvas.height);
+      glow.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g = glow.createRadialGradient(cx, pcy, R - 2 * U, cx, pcy, R + reach);
+      g.addColorStop(0, 'rgba(150, 195, 255, 0.55)');
+      g.addColorStop(0.05, 'rgba(90, 145, 255, 0.32)');
+      g.addColorStop(0.22, 'rgba(50, 95, 230, 0.12)');
+      g.addColorStop(0.55, 'rgba(30, 60, 180, 0.035)');
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      glow.fillStyle = g;
+      glow.fillRect(0, Math.max(0, top - reach), W, H);
+      glow.globalCompositeOperation = 'destination-in';
+      const edge = 0.28 * planetIn, mid = clamp(0.45 * planetIn + 0.75 * sun, 0, 1);
+      g = glow.createLinearGradient(cx - W * 0.6, 0, cx + W * 0.6, 0);
+      g.addColorStop(0, `rgba(0, 0, 0, ${edge})`);
+      g.addColorStop(0.5, `rgba(0, 0, 0, ${mid})`);
+      g.addColorStop(1, `rgba(0, 0, 0, ${edge})`);
+      glow.fillStyle = g;
+      glow.fillRect(0, 0, W, H);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.drawImage(glowCanvas, 0, 0);
+      ctx.restore();
+    }
+
+    // 행성 몸체
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#010205';
+    ctx.beginPath();
+    ctx.arc(cx, pcy, R, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 몸체 안쪽: 지평선 바로 아래 산란광 + 얇은 림 라인
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, pcy, R, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.save();
+    ctx.translate(cx, top);
+    ctx.scale(1, 0.16);
+    g = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.6);
+    g.addColorStop(0, `rgba(70, 120, 230, ${0.05 * planetIn + 0.32 * sun})`);
+    g.addColorStop(0.5, `rgba(30, 60, 150, ${0.02 * planetIn + 0.1 * sun})`);
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-W, -W, W * 2, W * 2);
+    ctx.restore();
+    const lineG = ctx.createLinearGradient(cx - W * 0.55, 0, cx + W * 0.55, 0);
+    lineG.addColorStop(0, 'rgba(120, 170, 255, 0)');
+    lineG.addColorStop(0.5, 'rgba(225, 240, 255, 1)');
+    lineG.addColorStop(1, 'rgba(120, 170, 255, 0)');
+    ctx.strokeStyle = lineG;
+    ctx.lineWidth = 2.2 * U;
+    ctx.globalAlpha = 0.35 * planetIn + 0.65 * sun;
+    ctx.beginPath(); ctx.arc(cx, pcy, R - 0.6 * U, Math.PI, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+
+    // 렌즈 블룸 — 행성 위로 번지는 빛
+    if (sun > 0.001) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 1;
+      const bloomR = 420 * U;
+      g = ctx.createRadialGradient(cx, sunY, 0, cx, sunY, bloomR);
+      g.addColorStop(0, `rgba(210, 230, 255, ${0.42 * sun})`);
+      g.addColorStop(0.12, `rgba(120, 170, 255, ${0.14 * sun})`);
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - bloomR, sunY - bloomR, bloomR * 2, bloomR * 2);
+
+      ctx.save();
+      ctx.translate(cx, sunY);
+      ctx.scale(1, 0.012);
+      const streakR = W * 0.42;
+      g = ctx.createRadialGradient(0, 0, 0, 0, 0, streakR);
+      g.addColorStop(0, `rgba(200, 225, 255, ${0.5 * sun})`);
+      g.addColorStop(0.3, `rgba(110, 160, 255, ${0.14 * sun})`);
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(-streakR, -streakR, streakR * 2, streakR * 2);
+      ctx.restore();
+    }
+
+    // 비네트
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    g = ctx.createRadialGradient(cx, H * 0.5, Math.min(W, H) * 0.35, cx, H * 0.5, Math.hypot(W, H) * 0.62);
+    g.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ---------- playback ----------
+  let elapsed = 0, last = 0, raf = 0;
+
+  function frame(now) {
+    const dt = last ? Math.min((now - last) / 1000, 0.05) : 0; // 탭 전환 시 점프 방지
+    last = now;
+    elapsed += dt;
+    render(elapsed);
+    if (elapsed >= DURATION) replay.toggleAttribute('data-visible', true);
+    raf = requestAnimationFrame(frame);
+  }
+
+  function play() {
+    cancelAnimationFrame(raf);
+    replay.toggleAttribute('data-visible', false);
+    elapsed = 0;
+    last = 0;
+    raf = requestAnimationFrame(frame);
+  }
+
+  resize();
+  window.addEventListener('resize', () => { resize(); render(elapsed); });
+
+  if (CAPTURE) {
+    replay.hidden = true;
+    window.renderAt = (t) => render(t);
+    window.DURATION = DURATION;
+  } else if (REDUCED) {
+    elapsed = DURATION;
+    render(DURATION);
+    replay.hidden = true;
+  } else {
+    replay.addEventListener('click', play);
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); play(); }
+    });
+    play();
+  }
+})();
+</script>
+</body>
+</html>
