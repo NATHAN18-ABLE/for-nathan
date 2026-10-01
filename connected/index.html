@@ -708,14 +708,14 @@
   const SEGS = [
     [S.SEED, S.SEED, 0, 1, 0, E_MORPH, 0, 0, 0],
     [S.SEED, S.NET, 1.05, 1.15, 0.78, E_GROW, 0.03, 0, 0],
-    [S.NET, S.EYE, 2.1, 0.42, 0.35, E_MORPH, 0.16, 0, 0.7],
-    [S.EYE, S.GAL, 2.66, 0.4, 0.3, E_MORPH, 0.1, 0, 1.6],
-    [S.GAL, S.EARTH, 3.2, 0.4, 0.3, E_MORPH, 0.12, 0, -0.9],
-    [S.EARTH, S.DOC, 3.74, 0.4, 0.45, E_MORPH, 0.14, 0, 0],
-    [S.DOC, S.CODE, 4.28, 0.38, 0.4, E_MORPH, 0.08, 0, 0],
-    [S.CODE, S.HUMAN, 4.8, 0.42, 0.35, E_MORPH, 0.14, 0, 0.35],
+    [S.NET, S.EYE, 2.1, 0.42, 0.35, E_MORPH, 0.16, 0, 0.7, 0.4],
+    [S.EYE, S.GAL, 2.66, 0.4, 0.3, E_MORPH, 0.1, 0, 1.6, 0.4],
+    [S.GAL, S.EARTH, 3.2, 0.4, 0.3, E_MORPH, 0.12, 0, -0.9, 0.4],
+    [S.EARTH, S.DOC, 3.74, 0.4, 0.45, E_MORPH, 0.14, 0, 0, 0.4],
+    [S.DOC, S.CODE, 4.28, 0.38, 0.4, E_MORPH, 0.08, 0, 0, 0.4],
+    [S.CODE, S.HUMAN, 4.8, 0.42, 0.35, E_MORPH, 0.14, 0, 0.35, 0.4],
     [S.HUMAN, S.CONST, 5.4, 0.95, 0.3, E_MORPH, 0.2, 0, 0],
-    [S.CONST, S.CORE, 8.0, 0.95, 0.22, E_FALL, 0.06, 0, 1.3],
+    [S.CONST, S.CORE, 8.0, 0.95, 0.22, E_FALL, 0.06, 0, 1.3, 0.4],
     [S.CORE, S.TITLE, 9.0, 1.55, 0.3, E_BURST, 0.22, 0.95, 0, 0.65],
   ];
   function segAt(t) {
@@ -755,7 +755,7 @@
 
   function look(t) {
     return {
-      threads: lerp(lerp(lerp(0, 1, seg(t, 1.1, 1.8)), 0.28, seg(t, 2.1, 2.6)), 0.85, seg(t, 5.6, 6.6)) * (1 - 0.8 * seg(t, 8.0, 8.8)),
+      threads: lerp(lerp(lerp(0, 1, seg(t, 1.1, 1.8)), 0.1, seg(t, 2.1, 2.5)), 0.85, seg(t, 5.6, 6.6)) * (1 - 0.8 * seg(t, 8.0, 8.8)),
       aperture: t < 5.4 ? lerp(6, 11, seg(t, 1.5, 2.4)) : lerp(11, 4, seg(t, 5.4, 9.5)),
       warmth: easeSoft(seg(t, 5.2, 9.4)),
       exposure: 1 + 1.4 * Math.exp(-Math.max(0, t - 9.0) / 0.14) * (t >= 9 ? 1 : 0),
