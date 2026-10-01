@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
-<title>Space Motion</title>
+<title>Gathering Stars</title>
 <style>
   :root {
     --bg: #000;
-    --ink: rgba(235, 242, 255, 0.92);
+    --ink: rgba(240, 236, 230, 0.92);
     --glass: rgba(255, 255, 255, 0.08);
     --glass-edge: rgba(255, 255, 255, 0.16);
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -24,18 +24,22 @@
   }
 
   body {
+    display: grid;
+    place-items: center;
+    height: 100vh;
+    height: 100dvh;
     -webkit-tap-highlight-color: transparent;
     -webkit-user-select: none;
     user-select: none;
   }
 
-  canvas {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    display: block;
+  canvas { display: block; }
+
+  .notice {
+    color: var(--ink);
+    font: 500 15px/1.5 system-ui, sans-serif;
+    padding: 0 24px;
+    text-align: center;
   }
 
   .replay {
@@ -73,7 +77,7 @@
   }
 
   .replay:focus-visible {
-    outline: 2px solid rgba(160, 200, 255, 0.9);
+    outline: 2px solid rgba(255, 196, 170, 0.9);
     outline-offset: 3px;
   }
 
@@ -94,7 +98,7 @@
 </style>
 </head>
 <body>
-<canvas aria-label="별 하나에서 시작해 별밭을 지나 행성 너머로 해가 떠오르는 9초 모션그래픽" role="img"></canvas>
+<canvas role="img" aria-label="성운 속 별밭을 지나던 수천 개의 별이 소용돌이치며 모여 클로드의 스파크 심볼을 이루는 세로형 모션그래픽"></canvas>
 <button class="replay" type="button" aria-label="다시 재생">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M3 12a9 9 0 1 0 2.64-6.36"/>
@@ -103,31 +107,39 @@
 </button>
 <script>
 (() => {
-  const DURATION = 9;
+  // ============================================================
+  // 시퀀스 (초)
+  //  0.0 –  2.2  암전에서 성운과 별밭이 드러난다. 카메라는 살짝 기울어 떠 있다
+  //  1.8 –  8.6  돌리 인. 별이 빛줄기로 늘어나고 가까운 별은 보케로 스친다
+  //  6.4 – 12.8  별들이 소용돌이치며 모인다. 중심에서 바깥 광선 순으로 점화
+  //  8.4 – 10.6  초점이 심볼 평면으로 넘어온다 (랙 포커스)
+  // 10.4 – 13.0  흰 별빛이 클로드 코럴로 물든다
+  // 13.2 – 14.8  빛이 심볼을 대각선으로 훑고 지나간다
+  // 11.0 – 16.0  느린 푸시 인으로 마무리
+  // ============================================================
+  const DURATION = 16;
+  const FRAME_W = 1080, FRAME_H = 1920; // 디자인 기준 프레임 (9:16)
+
   const params = new URLSearchParams(location.search);
   const CAPTURE = params.has('capture');
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const canvas = document.querySelector('canvas');
-  const ctx = canvas.getContext('2d', { alpha: false });
   const replay = document.querySelector('.replay');
-  const glowCanvas = document.createElement('canvas');
-  const glow = glowCanvas.getContext('2d');
-  let W = 0, H = 0, U = 1, dpr = 1;
-
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth;
-    H = window.innerHeight;
-    U = Math.min(W, H) / 1080; // 1080p 기준 단위
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    glowCanvas.width = canvas.width;
-    glowCanvas.height = canvas.height;
+  const gl = canvas.getContext('webgl2', {
+    alpha: false, antialias: false, depth: false, stencil: false,
+    premultipliedAlpha: false, preserveDrawingBuffer: CAPTURE, powerPreference: 'high-performance',
+  });
+  if (!gl) {
+    canvas.replaceWith(Object.assign(document.createElement('p'), {
+      className: 'notice', textContent: '이 브라우저에서는 WebGL2를 사용할 수 없어 재생할 수 없습니다.',
+    }));
+    replay.hidden = true;
+    return;
   }
+  const HDR = !!gl.getExtension('EXT_color_buffer_float');
 
-  // ---------- timing ----------
+  // ---------- 수학 ----------
   function bezier(x1, y1, x2, y2) {
     const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
     const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
@@ -137,9 +149,9 @@
       if (x <= 0) return 0;
       if (x >= 1) return 1;
       let lo = 0, hi = 1, t = x;
-      for (let i = 0; i < 24; i++) {
+      for (let i = 0; i < 28; i++) {
         const v = sx(t);
-        if (Math.abs(v - x) < 1e-6) break;
+        if (Math.abs(v - x) < 1e-7) break;
         if (v < x) lo = t; else hi = t;
         t = (lo + hi) / 2;
       }
@@ -148,12 +160,11 @@
   }
   const easeOut = bezier(0.23, 1, 0.32, 1);
   const easeInOut = bezier(0.77, 0, 0.175, 1);
+  const easeSoft = bezier(0.45, 0, 0.55, 1);
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
   const lerp = (a, b, k) => a + (b - a) * k;
-  const smooth = (a, b, v) => { const k = clamp((v - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); };
 
-  // ---------- stars ----------
   function mulberry32(seed) {
     return () => {
       seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
@@ -162,236 +173,571 @@
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
-  const rand = mulberry32(20261001);
-  const NEAR = 0.035, DEPTH = 1;
-  const TINTS = ['255,255,255', '214,228,255', '255,236,214'];
-  const stars = Array.from({ length: 2400 }, () => {
-    const r = rand();
-    return {
-      x: (rand() * 2 - 1) * 1.1,
-      y: (rand() * 2 - 1) * 1.1,
-      z: rand() * DEPTH,
-      size: 0.45 + Math.pow(rand(), 3) * 1.1,
-      mag: 0.45 + Math.pow(rand(), 2) * 0.55,
-      tint: TINTS[r < 0.72 ? 0 : r < 0.9 ? 1 : 2],
-      tw: 1.2 + rand() * 2.6,
-      ph: rand() * Math.PI * 2,
-    };
-  });
 
-  // 카메라 전진: 느린 드리프트 + 강한 ease-in-out 돌리
-  const camZ = (t) => 0.045 * t + 1.45 * easeInOut(seg(t, 0.9, 6.3));
+  // ---------- 카메라 & 타임라인 ----------
+  const FOCAL = 0.55 * FRAME_H;        // 디자인 px
+  const DEPTH = 1.25, NEAR = 0.03;     // 배경 별 볼륨 (반복)
+  const LOGO_Y = 0.1;                   // 심볼 중심을 화면 중앙보다 약간 위에
+  const LOGO_EXTENT = 0.27;             // 심볼 반폭 (심볼 평면 거리 1 기준)
 
-  // ---------- render ----------
-  function render(t) {
-    const cx = W / 2;
-    const focal = Math.max(W, H) * 0.62;
+  const camZ = (t) => 0.03 * t + 2.4 * easeInOut(seg(t, 1.8, 8.6));
+  const logoDist = (t) => 1 - 0.1 * easeSoft(seg(t, 11, 16));
 
-    // 행성 & 태양 지오메트리
-    const R = Math.max(W * 1.15, H * 1.05) * (1 + 0.035 * easeOut(seg(t, 3, DURATION)));
-    const topFinal = H * (W >= H ? 0.665 : 0.7);
-    const top = lerp(H + 40 * U, topFinal, easeOut(seg(t, 2.8, 6.2)));
-    const pcy = top + R;
-    const sunY = topFinal + 14 * U - 34 * U * easeOut(seg(t, 5.0, 7.8));
-    const sunR = 9 * U;
-    // 태양이 지평선 위로 드러난 정도 — 행성에 한 번 가려진 뒤에만 의미가 있다
-    const sun = smooth(-1.6, 1.4, (top - sunY) / sunR) * smooth(4.4, 5.4, t);
-    const planetIn = easeOut(seg(t, 2.8, 4.6));
-
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
-
-    // 하늘 산란: 태양 쪽으로 번지는 얕은 푸른 기운
-    ctx.save();
-    ctx.translate(cx, top);
-    ctx.scale(1, 0.32);
-    let g = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.75);
-    g.addColorStop(0, `rgba(48, 96, 210, ${0.05 * planetIn + 0.22 * sun})`);
-    g.addColorStop(0.45, `rgba(24, 52, 140, ${0.025 * planetIn + 0.08 * sun})`);
-    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(-W, -W, W * 2, W * 2);
-    ctx.restore();
-
-    // 별
-    const z0 = camZ(t);
-    const v = (camZ(t + 0.01) - camZ(t - 0.01)) / 0.02;
-    const shutter = 0.05;
-    const field = smooth(0.6, 2.2, t) * (1 - 0.35 * sun);
-    const cyStar = H * 0.5;
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = 'round';
-    for (const s of stars) {
-      const d = ((s.z - z0) % DEPTH + DEPTH) % DEPTH + NEAR;
-      const a = s.mag * field * smooth(DEPTH + NEAR, DEPTH * 0.7, d) * smooth(NEAR, NEAR * 3, d)
-        * (REDUCED ? 1 : 0.86 + 0.14 * Math.sin(t * s.tw + s.ph));
-      if (a < 0.01) continue;
-      const k = focal / d;
-      const x = cx + s.x * k, y = cyStar + s.y * k;
-      if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
-      const r = s.size * U * clamp(0.16 / d, 0.55, 3.2);
-      const dt = d + v * shutter;
-      const kt = focal / dt;
-      const tx = cx + s.x * kt, ty = cyStar + s.y * kt;
-      const len = Math.hypot(x - tx, y - ty);
-      ctx.globalAlpha = a;
-      if (len > r * 0.8) {
-        ctx.strokeStyle = `rgb(${s.tint})`;
-        ctx.lineWidth = r * 1.6;
-        ctx.beginPath();
-        ctx.moveTo(tx, ty);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      } else {
-        ctx.fillStyle = `rgb(${s.tint})`;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // 첫 별 = 태양. 행성 뒤에 있으므로 몸체보다 먼저 그린다
-    const hero = smooth(0.15, 1.3, t);
-    const glowR = lerp(30 * U, 120 * U, sun);
-    g = ctx.createRadialGradient(cx, sunY, 0, cx, sunY, glowR);
-    g.addColorStop(0, `rgba(255, 255, 255, ${0.95 * hero})`);
-    g.addColorStop(0.08, `rgba(240, 246, 255, ${0.75 * hero})`);
-    g.addColorStop(0.3, `rgba(150, 190, 255, ${(0.26 + 0.22 * sun) * hero})`);
-    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = g;
-    ctx.fillRect(cx - glowR, sunY - glowR, glowR * 2, glowR * 2);
-
-    // 대기 림 — 바깥쪽 글로우
-    if (top < H + 30 * U) {
-      const baseRim = ctx.createLinearGradient(cx - W * 0.6, 0, cx + W * 0.6, 0);
-      baseRim.addColorStop(0, 'rgba(40, 70, 190, 0.25)');
-      baseRim.addColorStop(0.5, 'rgba(90, 150, 255, 1)');
-      baseRim.addColorStop(1, 'rgba(40, 70, 190, 0.25)');
-      const sunRim = ctx.createLinearGradient(cx - W * 0.4, 0, cx + W * 0.4, 0);
-      sunRim.addColorStop(0, 'rgba(60, 120, 255, 0)');
-      sunRim.addColorStop(0.36, 'rgba(110, 175, 255, 0.55)');
-      sunRim.addColorStop(0.5, 'rgba(235, 247, 255, 1)');
-      sunRim.addColorStop(0.64, 'rgba(110, 175, 255, 0.55)');
-      sunRim.addColorStop(1, 'rgba(60, 120, 255, 0)');
-      const passes = [[1.5, 0.9], [4, 0.4]];
-      for (const [w, a] of passes) {
-        ctx.lineWidth = w * U;
-        ctx.strokeStyle = baseRim;
-        ctx.globalAlpha = a * 0.55 * planetIn;
-        ctx.beginPath(); ctx.arc(cx, pcy, R, Math.PI, Math.PI * 2); ctx.stroke();
-        ctx.strokeStyle = sunRim;
-        ctx.globalAlpha = a * sun;
-        ctx.beginPath(); ctx.arc(cx, pcy, R, Math.PI, Math.PI * 2); ctx.stroke();
-      }
-
-      // 넓은 대기 글로우: 부드러운 고리를 오프스크린에 그리고 가로 마스크로 태양 쪽만 밝힌다
-      const reach = 170 * U;
-      glow.setTransform(1, 0, 0, 1, 0, 0);
-      glow.globalCompositeOperation = 'source-over';
-      glow.clearRect(0, 0, glowCanvas.width, glowCanvas.height);
-      glow.setTransform(dpr, 0, 0, dpr, 0, 0);
-      g = glow.createRadialGradient(cx, pcy, R - 2 * U, cx, pcy, R + reach);
-      g.addColorStop(0, 'rgba(150, 195, 255, 0.55)');
-      g.addColorStop(0.05, 'rgba(90, 145, 255, 0.32)');
-      g.addColorStop(0.22, 'rgba(50, 95, 230, 0.12)');
-      g.addColorStop(0.55, 'rgba(30, 60, 180, 0.035)');
-      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      glow.fillStyle = g;
-      glow.fillRect(0, Math.max(0, top - reach), W, H);
-      glow.globalCompositeOperation = 'destination-in';
-      const edge = 0.28 * planetIn, mid = clamp(0.45 * planetIn + 0.75 * sun, 0, 1);
-      g = glow.createLinearGradient(cx - W * 0.6, 0, cx + W * 0.6, 0);
-      g.addColorStop(0, `rgba(0, 0, 0, ${edge})`);
-      g.addColorStop(0.5, `rgba(0, 0, 0, ${mid})`);
-      g.addColorStop(1, `rgba(0, 0, 0, ${edge})`);
-      glow.fillStyle = g;
-      glow.fillRect(0, 0, W, H);
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalAlpha = 1;
-      ctx.drawImage(glowCanvas, 0, 0);
-      ctx.restore();
-    }
-
-    // 행성 몸체
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#010205';
-    ctx.beginPath();
-    ctx.arc(cx, pcy, R, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 몸체 안쪽: 지평선 바로 아래 산란광 + 얇은 림 라인
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, pcy, R, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.save();
-    ctx.translate(cx, top);
-    ctx.scale(1, 0.16);
-    g = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.6);
-    g.addColorStop(0, `rgba(70, 120, 230, ${0.05 * planetIn + 0.32 * sun})`);
-    g.addColorStop(0.5, `rgba(30, 60, 150, ${0.02 * planetIn + 0.1 * sun})`);
-    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(-W, -W, W * 2, W * 2);
-    ctx.restore();
-    const lineG = ctx.createLinearGradient(cx - W * 0.55, 0, cx + W * 0.55, 0);
-    lineG.addColorStop(0, 'rgba(120, 170, 255, 0)');
-    lineG.addColorStop(0.5, 'rgba(225, 240, 255, 1)');
-    lineG.addColorStop(1, 'rgba(120, 170, 255, 0)');
-    ctx.strokeStyle = lineG;
-    ctx.lineWidth = 2.2 * U;
-    ctx.globalAlpha = 0.35 * planetIn + 0.65 * sun;
-    ctx.beginPath(); ctx.arc(cx, pcy, R - 0.6 * U, Math.PI, Math.PI * 2); ctx.stroke();
-    ctx.restore();
-
-    // 렌즈 블룸 — 행성 위로 번지는 빛
-    if (sun > 0.001) {
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 1;
-      const bloomR = 420 * U;
-      g = ctx.createRadialGradient(cx, sunY, 0, cx, sunY, bloomR);
-      g.addColorStop(0, `rgba(210, 230, 255, ${0.42 * sun})`);
-      g.addColorStop(0.12, `rgba(120, 170, 255, ${0.14 * sun})`);
-      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(cx - bloomR, sunY - bloomR, bloomR * 2, bloomR * 2);
-
-      ctx.save();
-      ctx.translate(cx, sunY);
-      ctx.scale(1, 0.012);
-      const streakR = W * 0.42;
-      g = ctx.createRadialGradient(0, 0, 0, 0, 0, streakR);
-      g.addColorStop(0, `rgba(200, 225, 255, ${0.5 * sun})`);
-      g.addColorStop(0.3, `rgba(110, 160, 255, ${0.14 * sun})`);
-      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(-streakR, -streakR, streakR * 2, streakR * 2);
-      ctx.restore();
-    }
-
-    // 비네트
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1;
-    g = ctx.createRadialGradient(cx, H * 0.5, Math.min(W, H) * 0.35, cx, H * 0.5, Math.hypot(W, H) * 0.62);
-    g.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    g.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+  function camera(t) {
+    const settle = easeOut(seg(t, 9, 13));
+    const roll = -0.11 * (1 - easeOut(seg(t, 0, 11))) + 0.006 * Math.sin(t * 0.6) * (1 - settle);
+    const sx = (Math.sin(t * 1.7) * 0.6 + Math.sin(t * 2.9 + 1.3) * 0.35) * 1.6 * (1 - settle);
+    const sy = (Math.cos(t * 1.3) * 0.5 + Math.sin(t * 2.3 + 0.7) * 0.3) * 1.6 * (1 - settle);
+    return [camZ(t), roll, sx, sy];
   }
 
-  // ---------- playback ----------
+  function timeline(t) {
+    const ld = logoDist(t);
+    return {
+      exposure: easeSoft(seg(t, 0, 2.2)),
+      field: lerp(1, 0.42, easeSoft(seg(t, 10.5, 13.5))),
+      focus: lerp(lerp(0.8, 1.05, easeSoft(seg(t, 1.5, 6))), ld, easeInOut(seg(t, 8.4, 10.6))),
+      aperture: lerp(5.5, 8, easeSoft(seg(t, 9, 12.5))),
+      colorMix: easeInOut(seg(t, 10.4, 13)),
+      logoGain: lerp(1, 1.7, easeSoft(seg(t, 10.4, 13))),
+      sweep: lerp(-1.6, 1.6, easeInOut(seg(t, 13.2, 14.8))),
+      nebula: easeSoft(seg(t, 0.3, 3.5)) * lerp(1, 0.7, easeSoft(seg(t, 11, 14))),
+      warm: easeSoft(seg(t, 10.5, 14)),
+      glow: 0.17 * easeSoft(seg(t, 10.8, 14)),
+      logoDist: ld,
+    };
+  }
+
+  // ---------- 클로드 스파크 심볼 (마스크에서 목표점 샘플링) ----------
+  // 공식 심볼 SVG가 있으면 path의 d 값과 viewBox 크기를 넣는다. 비어 있으면 근사 형태를 그린다.
+  const MARK_SVG = { d: '', size: 0 };
+
+  function sparkMask(S) {
+    const c = document.createElement('canvas');
+    c.width = c.height = S;
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff';
+    if (MARK_SVG.d) {
+      const k = (S * 0.96) / MARK_SVG.size;
+      x.translate(S * 0.02, S * 0.02);
+      x.scale(k, k);
+      x.fill(new Path2D(MARK_SVG.d));
+      return x.getImageData(0, 0, S, S).data;
+    }
+    // 근사: 길이·굵기·각도가 조금씩 다른 광선 12개. 끝은 둥글고 바깥으로 갈수록 살짝 굵어진다
+    x.translate(S / 2, S / 2);
+    const rnd = mulberry32(5);
+    const LENS = [1, 0.8, 0.93, 0.74, 0.97, 0.83, 0.9, 0.72, 0.99, 0.85, 0.88, 0.77];
+    const N = LENS.length;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2 - Math.PI / 2 + (rnd() - 0.5) * 0.2;
+      const len = S * 0.49 * LENS[i];
+      const w1 = S * (0.03 + rnd() * 0.018);
+      const w0 = w1 * (0.55 + rnd() * 0.15);
+      x.save();
+      x.rotate(a);
+      x.beginPath();
+      x.moveTo(0, -w0);
+      x.lineTo(len - w1, -w1);
+      x.arc(len - w1, 0, w1, -Math.PI / 2, Math.PI / 2);
+      x.lineTo(0, w0);
+      x.closePath();
+      x.fill();
+      x.restore();
+    }
+    x.beginPath();
+    x.arc(0, 0, S * 0.075, 0, Math.PI * 2);
+    x.fill();
+    return x.getImageData(0, 0, S, S).data;
+  }
+
+  // ---------- 파티클 ----------
+  const STRIDE = 17; // world3, target3, info4, flight4, color3
+  const STAR_TINTS = [[1, 1, 1], [0.74, 0.84, 1], [1, 0.84, 0.66], [0.86, 0.92, 1]];
+  function tint(r) { return STAR_TINTS[r < 0.62 ? 0 : r < 0.8 ? 1 : r < 0.92 ? 3 : 2]; }
+
+  function buildParticles() {
+    const rnd = mulberry32(20261001);
+    const BG = 22000, LOGO = 10000;
+    const data = new Float32Array((BG + LOGO) * STRIDE);
+    let o = 0;
+    const push = (...v) => { for (const n of v) data[o++] = n; };
+
+    for (let i = 0; i < BG; i++) {
+      const b = Math.pow(rnd(), 5);
+      push((rnd() * 2 - 1) * 1.15, (rnd() * 2 - 1) * 1.25, rnd() * DEPTH,
+        0, 0, 0,
+        0.7 + b * 1.3, 0.22 + b * 2.6, rnd(), 0,
+        0, 1, 0, 0,
+        ...tint(rnd()));
+    }
+
+    const S = 360;
+    const mask = sparkMask(S);
+    const inside = [], edge = [];
+    const at = (x, y) => (x < 0 || y < 0 || x >= S || y >= S) ? 0 : mask[(y * S + x) * 4 + 3];
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      if (at(x, y) < 128) continue;
+      const e = at(x + 2, y) < 128 || at(x - 2, y) < 128 || at(x, y + 2) < 128 || at(x, y - 2) < 128;
+      (e ? edge : inside).push(x, y);
+    }
+    for (let i = 0; i < LOGO; i++) {
+      const isEdge = rnd() < 0.34;
+      const src = isEdge ? edge : inside;
+      const k = Math.floor(rnd() * (src.length / 2)) * 2;
+      const mx = ((src[k] + rnd()) / S - 0.5) * 2;
+      const my = -((src[k + 1] + rnd()) / S - 0.5) * 2;
+      const radial = Math.min(1, Math.hypot(mx, my));
+      // 출발: 그 순간 카메라 앞 어딘가에 있던 평범한 별
+      const ts = 6.4 + 2.7 * (0.55 * radial + 0.45 * rnd());
+      const dur = 2.3 + rnd() * 1.1;
+      const sz = 0.35 + rnd() * 1.3;
+      const sx = (rnd() * 2 - 1) * 0.9 * sz, sy = (rnd() * 2 - 1) * 1.3 * sz;
+      push(sx, sy, sz + camZ(ts),
+        mx * LOGO_EXTENT, LOGO_Y + my * LOGO_EXTENT, (rnd() - 0.5) * 0.02,
+        0.6 + rnd() * 0.45, (isEdge ? 0.8 : 0.55) * (0.7 + rnd() * 0.6), rnd(), 1,
+        ts, dur, 1.1 + rnd() * 0.9, rnd() * 0.2,
+        ...tint(rnd() * 0.85));
+    }
+    return { data, count: BG + LOGO };
+  }
+
+  // ---------- 셰이더 ----------
+  const FULLSCREEN_VS = `#version 300 es
+  out vec2 v_uv;
+  void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    v_uv = p;
+    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+  }`;
+
+  const PARTICLE_VS = `#version 300 es
+  precision highp float;
+  layout(location = 0) in vec3 a_world;
+  layout(location = 1) in vec3 a_target;
+  layout(location = 2) in vec4 a_info;    // size, brightness, seed, kind
+  layout(location = 3) in vec4 a_flight;  // start, duration, swirl, lift
+  layout(location = 4) in vec3 a_color;
+
+  uniform float u_time, u_shutter, u_scale, u_focal, u_focus, u_aperture, u_depth, u_near;
+  uniform vec2 u_res;
+  uniform vec4 u_cam0, u_cam1;            // camZ, roll, shakeX, shakeY  (t, t - shutter)
+  uniform float u_logoDist0, u_logoDist1;
+  uniform float u_field, u_logoGain, u_colorMix, u_sweep, u_logoY, u_logoExtent;
+  uniform vec3 u_logoColor;
+
+  out vec2 v_local;
+  out float v_half, v_r, v_bokeh;
+  out vec3 v_col;
+
+  mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
+
+  float bez(float x, vec4 c) {
+    float cx = 3.0 * c.x, bx = 3.0 * (c.z - c.x) - cx, ax = 1.0 - cx - bx;
+    float t = x;
+    for (int i = 0; i < 8; i++) {
+      float xt = ((ax * t + bx) * t + cx) * t - x;
+      float dx = (3.0 * ax * t + 2.0 * bx) * t + cx;
+      if (abs(dx) < 1e-5) break;
+      t = clamp(t - xt / dx, 0.0, 1.0);
+    }
+    float cy = 3.0 * c.y, by = 3.0 * (c.w - c.y) - cy, ay = 1.0 - cy - by;
+    return ((ay * t + by) * t + cy) * t;
+  }
+
+  // 카메라 공간 위치. vis: 가시도, e: 비행 진행도
+  vec3 posAt(float t, vec4 cam, float logoDist, out float vis, out float e) {
+    e = 0.0;
+    if (a_info.w < 0.5) {
+      float d = mod(a_world.z - cam.x, u_depth) + u_near;
+      vis = smoothstep(u_depth + u_near, u_depth * 0.62, d) * smoothstep(u_near, u_near * 4.0, d);
+      return vec3(a_world.xy, d);
+    }
+    vec3 s = a_world - vec3(0.0, 0.0, cam.x);
+    float u = clamp((t - a_flight.x) / a_flight.y, 0.0, 1.0);
+    e = bez(u, vec4(0.5, 0.0, 0.12, 1.0));
+    vec3 T = vec3(a_target.xy, logoDist + a_target.z);
+    float k = 1.0 - e;
+    vec3 q;
+    q.xy = T.xy + rot(a_flight.z * k * k) * (s.xy - T.xy) * k;
+    q.z = mix(s.z, T.z, e) - a_flight.w * sin(3.14159265 * e);
+    // 정착 후 아주 미세하게 숨 쉬는 움직임
+    float settled = smoothstep(0.92, 1.0, u);
+    q.xy += 0.0012 * settled * vec2(sin(t * 1.3 + a_info.z * 40.0), cos(t * 1.1 + a_info.z * 70.0));
+    vis = mix(smoothstep(u_depth + u_near + 0.2, u_depth * 0.62, s.z) * step(u_near, s.z), 1.0, smoothstep(0.0, 0.35, e));
+    q.z = max(q.z, u_near);
+    return q;
+  }
+
+  vec2 project(vec3 q, vec4 cam) {
+    return rot(cam.y) * (u_focal * q.xy / q.z) + cam.zw;
+  }
+
+  void main() {
+    float vis0, vis1, e0, e1;
+    vec3 q0 = posAt(u_time, u_cam0, u_logoDist0, vis0, e0);
+    vec3 q1 = posAt(u_time - u_shutter, u_cam1, u_logoDist1, vis1, e1);
+    if (a_info.w < 0.5 && q1.z < q0.z - 0.001) q1 = q0; // 깊이 반복 경계에서는 줄을 긋지 않는다
+
+    vec2 p0 = project(q0, u_cam0) * u_scale;
+    vec2 p1 = project(q1, u_cam1) * u_scale;
+    vec2 dv = p0 - p1;
+    float len = length(dv);
+    vec2 dir = len > 1e-3 ? dv / len : vec2(1.0, 0.0);
+    vec2 nrm = vec2(-dir.y, dir.x);
+
+    bool logo = a_info.w > 0.5;
+    float grow = logo ? 1.0 / q0.z : clamp(0.22 / q0.z, 0.6, 2.4);
+    float rCore = a_info.x * grow * u_scale;
+    float coc = abs(1.0 / q0.z - 1.0 / u_focus) * u_aperture * u_scale;
+    float r = sqrt(rCore * rCore + coc * coc);
+
+    float bright = a_info.y * vis0;
+    vec3 col = a_color;
+    if (logo) {
+      vec2 m = (vec2(a_target.x, a_target.y - u_logoY)) / u_logoExtent;
+      float settled = smoothstep(0.85, 1.0, e0);
+      float along = dot(m, normalize(vec2(1.0, -1.0)));
+      float glint = exp(-pow((along - u_sweep) / 0.16, 2.0)) * settled;
+      float shimmer = mix(1.0, 0.78 + 0.22 * sin(u_time * (1.5 + a_info.z * 2.5) + a_info.z * 30.0), settled);
+      col = mix(col, u_logoColor, u_colorMix * settled);
+      bright *= u_logoGain * shimmer * (1.0 + 2.6 * glint);
+      col = mix(col, vec3(1.0, 0.93, 0.86), 0.55 * glint);
+    } else {
+      bright *= u_field * (0.86 + 0.14 * sin(u_time * (1.2 + a_info.z * 2.6) + a_info.z * 50.0));
+    }
+    // 에너지 보존: 흐려지거나 늘어난 만큼 어두워진다
+    float peak = bright * (rCore * rCore) / (r * (r + len)) / (u_scale * u_scale) * 1.6;
+
+    v_bokeh = smoothstep(1.6 * u_scale, 5.5 * u_scale, coc);
+    float ext = r * mix(2.4, 1.15, v_bokeh) + 1.0;
+    int id = gl_VertexID;
+    vec2 corner = vec2((id & 1) == 1 ? 1.0 : -1.0, (id & 2) == 2 ? 1.0 : -1.0);
+    vec2 local = vec2(corner.x * (len * 0.5 + ext), corner.y * ext);
+    vec2 pos = (p0 + p1) * 0.5 + dir * local.x + nrm * local.y;
+
+    v_local = local;
+    v_half = len * 0.5;
+    v_r = r;
+    v_col = col * peak;
+    gl_Position = peak < 0.0015 ? vec4(2.0, 2.0, 2.0, 1.0) : vec4(pos / (u_res * 0.5), 0.0, 1.0);
+  }`;
+
+  const PARTICLE_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_local;
+  in float v_half, v_r, v_bokeh;
+  in vec3 v_col;
+  out vec4 o;
+  void main() {
+    float dx = max(abs(v_local.x) - v_half, 0.0);
+    float d = length(vec2(dx, v_local.y)) / v_r;
+    float g = exp(-2.0 * d * d);
+    float disc = smoothstep(1.0, 0.86, d) * (0.82 + 0.3 * smoothstep(0.5, 0.95, d)) * 0.5;
+    o = vec4(v_col * mix(g, disc, v_bokeh), 1.0);
+  }`;
+
+  const NEBULA_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  out vec4 o;
+  uniform float u_time, u_camZ, u_roll, u_gain, u_warm, u_aspect, u_logoY;
+  mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
+  float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float noise(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x), mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x), mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+  }
+  float fbm(vec3 p) {
+    float s = 0.0, a = 0.5;
+    for (int i = 0; i < 6; i++) { s += a * noise(p); p = p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; }
+    return s;
+  }
+  void main() {
+    vec2 uv = (v_uv - 0.5) * vec2(u_aspect, 1.0);
+    uv = rot(u_roll) * uv;
+    vec3 p = vec3(uv * 2.4, u_camZ * 0.32 + u_time * 0.015);
+    float w = fbm(p * 0.7);
+    float n = fbm(p + vec3(w * 1.6, w * 1.1, 0.0));
+    float dens = smoothstep(0.42, 0.95, n);
+    dens *= dens;
+    float bd = uv.x * 0.9 - uv.y * 0.42 + 0.08 * sin(uv.y * 5.0 + w * 3.0);
+    dens *= mix(0.25, 1.0, exp(-bd * bd * 9.0));
+    float dust = smoothstep(0.5, 0.78, fbm(p * 2.1 + vec3(7.0)));
+    vec3 teal = vec3(0.012, 0.045, 0.07), indigo = vec3(0.03, 0.024, 0.075), ember = vec3(0.09, 0.028, 0.014);
+    vec3 c = mix(teal, indigo, smoothstep(0.3, 0.7, fbm(p * 1.3 + vec3(3.0))));
+    vec2 lc = uv - vec2(0.0, u_logoY);
+    c = mix(c, ember, u_warm * exp(-dot(lc, lc) * 7.0));
+    c *= dens * (1.0 - 0.75 * dust) * 1.25;
+    o = vec4(c * u_gain, 1.0);
+  }`;
+
+  const DOWN_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  out vec4 o;
+  uniform sampler2D u_tex;
+  uniform vec2 u_texel;
+  void main() {
+    vec2 h = u_texel;
+    vec3 s = texture(u_tex, v_uv).rgb * 4.0
+      + texture(u_tex, v_uv - h).rgb + texture(u_tex, v_uv + h).rgb
+      + texture(u_tex, v_uv + vec2(h.x, -h.y)).rgb + texture(u_tex, v_uv - vec2(h.x, -h.y)).rgb;
+    o = vec4(s / 8.0, 1.0);
+  }`;
+
+  const UP_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  out vec4 o;
+  uniform sampler2D u_tex, u_add;
+  uniform vec2 u_texel;
+  void main() {
+    vec2 h = u_texel;
+    vec3 s = texture(u_tex, v_uv + vec2(-2.0 * h.x, 0.0)).rgb + texture(u_tex, v_uv + vec2(2.0 * h.x, 0.0)).rgb
+      + texture(u_tex, v_uv + vec2(0.0, 2.0 * h.y)).rgb + texture(u_tex, v_uv + vec2(0.0, -2.0 * h.y)).rgb
+      + 2.0 * (texture(u_tex, v_uv + vec2(-h.x, h.y)).rgb + texture(u_tex, v_uv + h).rgb
+             + texture(u_tex, v_uv + vec2(h.x, -h.y)).rgb + texture(u_tex, v_uv - h).rgb);
+    o = vec4(s / 12.0 + texture(u_add, v_uv).rgb, 1.0);
+  }`;
+
+  const COMPOSITE_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv;
+  out vec4 o;
+  uniform sampler2D u_scene, u_bloom, u_neb;
+  uniform float u_exposure, u_bloomAmt, u_time, u_aspect, u_glowAmt, u_glowSize;
+  uniform vec2 u_glowPos;
+  uniform vec3 u_glowColor;
+  vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+  float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+  void main() {
+    vec2 c = v_uv - 0.5;
+    vec2 ca = c * 0.004;
+    vec3 col;
+    col.r = texture(u_scene, v_uv - ca).r;
+    col.g = texture(u_scene, v_uv).g;
+    col.b = texture(u_scene, v_uv + ca).b;
+    vec3 bloom = texture(u_bloom, v_uv).rgb / 6.0;
+    col += bloom * u_bloomAmt;
+    col += texture(u_neb, v_uv).rgb;
+    vec2 g = (v_uv - u_glowPos) * vec2(u_aspect, 1.0);
+    col += u_glowColor * u_glowAmt * (exp(-dot(g, g) / (u_glowSize * u_glowSize)) + 0.18 * exp(-dot(g, g) / (u_glowSize * u_glowSize * 6.0)));
+    col *= u_exposure;
+    col = aces(col);
+    // 그레이드: 그림자는 차갑게, 하이라이트는 따뜻하게
+    float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    col *= mix(vec3(1.0), vec3(1.03, 1.0, 0.96), smoothstep(0.35, 0.9, l));
+    col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+    col += vec3(-0.001, 0.002, 0.005) * (1.0 - smoothstep(0.0, 0.2, l));
+    float vig = smoothstep(0.95, 0.22, length(c * vec2(u_aspect * 1.25, 1.0)));
+    col *= mix(0.42, 1.0, vig);
+    float grain = hash(gl_FragCoord.xy + fract(u_time * 7.31) * 913.0) - 0.5;
+    col += grain * mix(0.02, 0.01, l);
+    o = vec4(col, 1.0);
+  }`;
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function program(vs, fs) {
+    const p = gl.createProgram();
+    gl.attachShader(p, compile(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {};
+    const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) {
+      const name = gl.getActiveUniform(p, i).name;
+      u[name] = gl.getUniformLocation(p, name);
+    }
+    return { p, u };
+  }
+
+  const progParticle = program(PARTICLE_VS, PARTICLE_FS);
+  const progNebula = program(FULLSCREEN_VS, NEBULA_FS);
+  const progDown = program(FULLSCREEN_VS, DOWN_FS);
+  const progUp = program(FULLSCREEN_VS, UP_FS);
+  const progComposite = program(FULLSCREEN_VS, COMPOSITE_FS);
+
+  const emptyVao = gl.createVertexArray();
+  const particleVao = gl.createVertexArray();
+  const particles = buildParticles();
+  gl.bindVertexArray(particleVao);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, particles.data, gl.STATIC_DRAW);
+  [[0, 3, 0], [1, 3, 3], [2, 4, 6], [3, 4, 10], [4, 3, 14]].forEach(([loc, size, off]) => {
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, size, gl.FLOAT, false, STRIDE * 4, off * 4);
+    gl.vertexAttribDivisor(loc, 1);
+  });
+  gl.bindVertexArray(null);
+
+  // ---------- 렌더 타깃 ----------
+  function target(w, h) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, HDR ? gl.RGBA16F : gl.RGBA8, w, h, 0, gl.RGBA, HDR ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    return { tex, fbo, w, h };
+  }
+  function release(t) { if (t) { gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fbo); } }
+
+  let PW = 0, PH = 0, scene, nebula, downs = [], ups = [];
+
+  function resize() {
+    let w, h;
+    if (CAPTURE) { w = FRAME_W; h = FRAME_H; }
+    else {
+      h = window.innerHeight; w = h * 9 / 16;
+      if (w > window.innerWidth) { w = window.innerWidth; h = w * 16 / 9; }
+    }
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    const dpr = CAPTURE ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+    let pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+    if (pw > FRAME_W) { ph = Math.round(ph * FRAME_W / pw); pw = FRAME_W; }
+    if (pw === PW && ph === PH) return;
+    PW = pw; PH = ph;
+    canvas.width = PW; canvas.height = PH;
+    [scene, nebula, ...downs, ...ups].forEach(release);
+    scene = target(PW, PH);
+    nebula = target(Math.ceil(PW / 4), Math.ceil(PH / 4));
+    downs = []; ups = [];
+    let dw = PW, dh = PH;
+    for (let i = 0; i < 6; i++) {
+      dw = Math.max(1, Math.ceil(dw / 2)); dh = Math.max(1, Math.ceil(dh / 2));
+      downs.push(target(dw, dh));
+      if (i < 5) ups.push(target(dw, dh));
+    }
+  }
+
+  function bind(t) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, t ? t.fbo : null);
+    gl.viewport(0, 0, t ? t.w : PW, t ? t.h : PH);
+  }
+  function tex(unit, t, loc) {
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, t.tex);
+    gl.uniform1i(loc, unit);
+  }
+
+  // 클로드 코럴 #D97757 (선형)
+  const CORAL = [0.693, 0.184, 0.095];
+  const SHUTTER = 1 / 26;
+
+  function render(t) {
+    const tl = timeline(t);
+    const cam0 = camera(t), cam1 = camera(t - SHUTTER);
+    const scale = PH / FRAME_H;
+    const aspect = PW / PH;
+
+    gl.bindVertexArray(emptyVao);
+    gl.disable(gl.BLEND);
+
+    // 1. 성운 (1/4 해상도)
+    bind(nebula);
+    gl.useProgram(progNebula.p);
+    gl.uniform1f(progNebula.u.u_time, t);
+    gl.uniform1f(progNebula.u.u_camZ, cam0[0]);
+    gl.uniform1f(progNebula.u.u_roll, cam0[1]);
+    gl.uniform1f(progNebula.u.u_gain, tl.nebula);
+    gl.uniform1f(progNebula.u.u_warm, tl.warm);
+    gl.uniform1f(progNebula.u.u_aspect, aspect);
+    gl.uniform1f(progNebula.u.u_logoY, FOCAL * LOGO_Y / tl.logoDist / FRAME_H);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // 2. 별 (HDR, 가산 합성)
+    bind(scene);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.useProgram(progParticle.p);
+    const u = progParticle.u;
+    gl.uniform1f(u.u_time, t);
+    gl.uniform1f(u.u_shutter, SHUTTER);
+    gl.uniform1f(u.u_scale, scale);
+    gl.uniform1f(u.u_focal, FOCAL);
+    gl.uniform1f(u.u_focus, tl.focus);
+    gl.uniform1f(u.u_aperture, tl.aperture);
+    gl.uniform1f(u.u_depth, DEPTH);
+    gl.uniform1f(u.u_near, NEAR);
+    gl.uniform2f(u.u_res, PW, PH);
+    gl.uniform4f(u.u_cam0, ...cam0);
+    gl.uniform4f(u.u_cam1, ...cam1);
+    gl.uniform1f(u.u_logoDist0, tl.logoDist);
+    gl.uniform1f(u.u_logoDist1, logoDist(t - SHUTTER));
+    gl.uniform1f(u.u_field, tl.field);
+    gl.uniform1f(u.u_logoGain, tl.logoGain);
+    gl.uniform1f(u.u_colorMix, tl.colorMix);
+    gl.uniform1f(u.u_sweep, tl.sweep);
+    gl.uniform1f(u.u_logoY, LOGO_Y);
+    gl.uniform1f(u.u_logoExtent, LOGO_EXTENT);
+    gl.uniform3f(u.u_logoColor, ...CORAL);
+    gl.bindVertexArray(particleVao);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, particles.count);
+    gl.bindVertexArray(emptyVao);
+    gl.disable(gl.BLEND);
+
+    // 3. 블룸 (dual kawase 피라미드)
+    gl.useProgram(progDown.p);
+    let src = scene;
+    for (const d of downs) {
+      bind(d);
+      tex(0, src, progDown.u.u_tex);
+      gl.uniform2f(progDown.u.u_texel, 1 / src.w, 1 / src.h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      src = d;
+    }
+    gl.useProgram(progUp.p);
+    for (let i = ups.length - 1; i >= 0; i--) {
+      bind(ups[i]);
+      tex(0, src, progUp.u.u_tex);
+      tex(1, downs[i], progUp.u.u_add);
+      gl.uniform2f(progUp.u.u_texel, 0.5 / src.w, 0.5 / src.h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      src = ups[i];
+    }
+
+    // 4. 합성 → 화면
+    bind(null);
+    const c = progComposite.u;
+    gl.useProgram(progComposite.p);
+    tex(0, scene, c.u_scene);
+    tex(1, src, c.u_bloom);
+    tex(2, nebula, c.u_neb);
+    gl.uniform1f(c.u_exposure, tl.exposure);
+    gl.uniform1f(c.u_bloomAmt, 0.7);
+    gl.uniform1f(c.u_time, t);
+    gl.uniform1f(c.u_aspect, aspect);
+    gl.uniform1f(c.u_glowAmt, tl.glow);
+    gl.uniform1f(c.u_glowSize, 0.13);
+    gl.uniform2f(c.u_glowPos, 0.5, 0.5 + FOCAL * LOGO_Y / tl.logoDist / FRAME_H);
+    gl.uniform3f(c.u_glowColor, ...CORAL);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  // ---------- 재생 ----------
   let elapsed = 0, last = 0, raf = 0;
 
   function frame(now) {
-    const dt = last ? Math.min((now - last) / 1000, 0.05) : 0; // 탭 전환 시 점프 방지
+    const dt = last ? Math.min((now - last) / 1000, 0.05) : 0; // 탭 전환 후 점프 방지
     last = now;
-    elapsed += dt;
+    elapsed = Math.min(elapsed + dt, DURATION + 60);
     render(elapsed);
     if (elapsed >= DURATION) replay.toggleAttribute('data-visible', true);
     raf = requestAnimationFrame(frame);
@@ -410,7 +756,7 @@
 
   if (CAPTURE) {
     replay.hidden = true;
-    window.renderAt = (t) => render(t);
+    window.renderAt = (t) => { render(t); gl.finish(); };
     window.DURATION = DURATION;
   } else if (REDUCED) {
     elapsed = DURATION;
