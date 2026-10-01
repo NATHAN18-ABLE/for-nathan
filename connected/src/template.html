@@ -1,0 +1,1406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<title>Connected</title>
+<style>
+  :root {
+    --bg: #000;
+    --ink: rgba(244, 236, 226, 0.92);
+    --glass: rgba(255, 255, 255, 0.08);
+    --glass-edge: rgba(255, 255, 255, 0.16);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    display: grid;
+    place-items: center;
+    height: 100vh;
+    height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  canvas { display: block; }
+
+  .notice {
+    color: var(--ink);
+    font: 500 15px/1.5 system-ui, sans-serif;
+    padding: 0 24px;
+    text-align: center;
+  }
+
+  .replay {
+    position: fixed;
+    right: max(20px, env(safe-area-inset-right));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--glass-edge);
+    border-radius: 999px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    color: var(--ink);
+    cursor: pointer;
+    touch-action: manipulation;
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    pointer-events: none;
+    transition: opacity 400ms var(--ease-out), transform 400ms var(--ease-out), background-color 160ms ease;
+  }
+
+  .replay[data-visible] { opacity: 1; transform: none; pointer-events: auto; }
+  .replay:active { transform: scale(0.97); transition: transform 100ms var(--ease-out); }
+  .replay:focus-visible { outline: 2px solid rgba(255, 196, 170, 0.9); outline-offset: 3px; }
+
+  @media (hover: hover) and (pointer: fine) {
+    .replay:hover { background: rgba(255, 255, 255, 0.14); }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .replay { background: #1c1c1e; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .replay { transform: none; transition: opacity 200ms ease; }
+    canvas { animation: fade-in 600ms ease-out both; }
+  }
+  @keyframes fade-in { from { opacity: 0; } }
+</style>
+</head>
+<body>
+<canvas role="img" aria-label="A heartbeat of light grows into a web of threads; particles flow through a human eye, a spiral galaxy, the Earth, a document, code and a human profile, gather into a constellation of connected forms with the words Different minds. Shared destiny., then collapse and ignite into the title Claude."></canvas>
+<button class="replay" type="button" aria-label="Replay">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 12a9 9 0 1 0 2.64-6.36"/>
+    <path d="M3 4v5h5"/>
+  </svg>
+</button>
+<!--ASSETS-->
+<script>
+(async () => {
+  // ==================================================================
+  // CONNECTED — 12s, 1920×1080, 2.39:1 scope, 30fps
+  //  0.0 –  1.1  Heartbeat: a point of light beats twice
+  //  1.1 –  2.2  Threads: the light grows into a web
+  //  2.1 –  5.3  Match-cut montage: eye → galaxy → earth → document → code → human
+  //  5.4 –  8.0  Constellation: every form at once, joined by threads
+  //              "Different minds."  "Shared destiny."
+  //  8.0 –  9.0  The threads pull taut; everything falls to one point
+  //  9.0         Ignition: a ring of light
+  //  9.0 – 12.0  Title: CLAUDE assembles, resolves, catches the light
+  // ==================================================================
+  const DURATION = 12;
+  const FRAME_W = 1920, FRAME_H = 1080, SCOPE = 2.39;
+  const COLS = 1024, ROWS = 118, N = COLS * ROWS;
+
+  const params = new URLSearchParams(location.search);
+  const CAPTURE = params.has('capture');
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const canvas = document.querySelector('canvas');
+  const replay = document.querySelector('.replay');
+  const gl = canvas.getContext('webgl2', {
+    alpha: false, antialias: false, depth: false, stencil: false,
+    premultipliedAlpha: false, preserveDrawingBuffer: CAPTURE, powerPreference: 'high-performance',
+  });
+  if (!gl || !gl.getExtension('EXT_color_buffer_float')) {
+    canvas.replaceWith(Object.assign(document.createElement('p'), {
+      className: 'notice', textContent: 'This browser cannot play this piece (WebGL2 with float render targets is required).',
+    }));
+    replay.hidden = true;
+    return;
+  }
+
+  // ---------- assets ----------
+  const bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const A = window.ASSETS;
+  for (const [family, key, desc] of [
+    ['Cinzel', 'cinzel600', { weight: '600' }],
+    ['Cormorant Garamond', 'cormorantItalic', { weight: '500', style: 'italic' }],
+    ['Cormorant Garamond', 'cormorant', { weight: '500' }],
+    ['JetBrains Mono', 'jetbrains', { weight: '400' }],
+  ]) {
+    const face = new FontFace(family, bytes(A[key]).buffer, desc);
+    await face.load();
+    document.fonts.add(face);
+  }
+  const LAND = bytes(A.land);
+  const LAND_W = 720, LAND_H = 360;
+  const isLand = (lon, lat) => {
+    const x = Math.min(LAND_W - 1, Math.max(0, Math.floor((lon + Math.PI) / (2 * Math.PI) * LAND_W)));
+    const y = Math.min(LAND_H - 1, Math.max(0, Math.floor((Math.PI / 2 - lat) / Math.PI * LAND_H)));
+    const i = y * LAND_W + x;
+    return (LAND[i >> 3] >> (i & 7)) & 1;
+  };
+
+  // ---------- math ----------
+  function bezier(x1, y1, x2, y2) {
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    return (x) => {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      let lo = 0, hi = 1, t = x;
+      for (let i = 0; i < 28; i++) {
+        const v = ((ax * t + bx) * t + cx) * t;
+        if (Math.abs(v - x) < 1e-7) break;
+        if (v < x) lo = t; else hi = t;
+        t = (lo + hi) / 2;
+      }
+      return ((ay * t + by) * t + cy) * t;
+    };
+  }
+  const easeOut = bezier(0.23, 1, 0.32, 1);
+  const easeInOut = bezier(0.77, 0, 0.175, 1);
+  const easeSoft = bezier(0.45, 0, 0.55, 1);
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+  const lerp = (a, b, k) => a + (b - a) * k;
+
+  function mulberry32(seed) {
+    return () => {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rnd = mulberry32(20261001);
+  const gauss = () => {
+    const u = Math.max(1e-9, rnd()), v = rnd();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+
+  // column-major mat4
+  const M4 = {
+    ident: () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+    mul(a, b) {
+      const o = new Float32Array(16);
+      for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+        let s = 0;
+        for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k];
+        o[c * 4 + r] = s;
+      }
+      return o;
+    },
+    chain(...ms) { return ms.reduce((a, b) => M4.mul(a, b)); },
+    rotX(a) { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]); },
+    rotY(a) { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]); },
+    rotZ(a) { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]); },
+    scale(s) { return new Float32Array([s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1]); },
+    trans(x, y, z) { return new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]); },
+    persp(fovy, aspect, near, far) {
+      const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+      return new Float32Array([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) * nf, -1, 0, 0, 2 * far * near * nf, 0]);
+    },
+    lookAt(e, t, u) {
+      let zx = e[0] - t[0], zy = e[1] - t[1], zz = e[2] - t[2];
+      let l = Math.hypot(zx, zy, zz); zx /= l; zy /= l; zz /= l;
+      let xx = u[1] * zz - u[2] * zy, xy = u[2] * zx - u[0] * zz, xz = u[0] * zy - u[1] * zx;
+      l = Math.hypot(xx, xy, xz); xx /= l; xy /= l; xz /= l;
+      const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+      return new Float32Array([xx, yx, zx, 0, xy, yy, zy, 0, xz, yz, zz, 0,
+        -(xx * e[0] + xy * e[1] + xz * e[2]), -(yx * e[0] + yy * e[1] + yz * e[2]), -(zx * e[0] + zy * e[1] + zz * e[2]), 1]);
+    },
+    apply(m, x, y, z) {
+      return [m[0] * x + m[4] * y + m[8] * z + m[12], m[1] * x + m[5] * y + m[9] * z + m[13],
+        m[2] * x + m[6] * y + m[10] * z + m[14], m[3] * x + m[7] * y + m[11] * z + m[15]];
+    },
+  };
+
+  // ---------- point clouds ----------
+  class Cloud {
+    constructor(n) { this.n = n; this.k = 0; this.pos = new Float32Array(n * 4); this.aux = new Float32Array(n * 4); }
+    get full() { return this.k >= this.n; }
+    push(x, y, z, w, order, accent = 0) {
+      if (this.k >= this.n) return;
+      const o = this.k++ * 4;
+      this.pos[o] = x; this.pos[o + 1] = y; this.pos[o + 2] = z; this.pos[o + 3] = w;
+      this.aux[o] = clamp(order, 0, 1); this.aux[o + 1] = accent;
+    }
+    // merge another cloud through a 4×4 transform
+    absorb(c, m = null) {
+      for (let i = 0; i < c.k && !this.full; i++) {
+        const o = i * 4;
+        let [x, y, z] = [c.pos[o], c.pos[o + 1], c.pos[o + 2]];
+        if (m) [x, y, z] = M4.apply(m, x, y, z);
+        this.push(x, y, z, c.pos[o + 3], c.aux[o], c.aux[o + 1]);
+      }
+    }
+    fill(fn) { while (!this.full) fn(); return this; }
+  }
+  const quota = (n, f) => Math.round(n * f);
+
+  // luminance-weighted sampling of a 2D canvas. R = base ink, G = accent ink.
+  function sampleCanvas(cloud, count, cv, { width, cx = 0, cy = 0, gamma = 1, wScale = 1, order = (u, v) => v, z = () => 0 }) {
+    const W = cv.width, H = cv.height;
+    const d = cv.getContext('2d').getImageData(0, 0, W, H).data;
+    const cdf = new Float64Array(W * H);
+    let acc = 0;
+    for (let i = 0; i < W * H; i++) {
+      const l = Math.max(d[i * 4], d[i * 4 + 1]) / 255;
+      acc += l > 0.02 ? Math.pow(l, gamma) : 0;
+      cdf[i] = acc;
+    }
+    const height = width * H / W;
+    for (let k = 0; k < count; k++) {
+      const target = rnd() * acc;
+      let lo = 0, hi = W * H - 1;
+      while (lo < hi) { const mid = (lo + hi) >> 1; if (cdf[mid] < target) lo = mid + 1; else hi = mid; }
+      const px = (lo % W) + rnd(), py = Math.floor(lo / W) + rnd();
+      const u = px / W, v = py / H;
+      const r = d[lo * 4] / 255, g = d[lo * 4 + 1] / 255;
+      const x = (u - 0.5) * width + cx, y = -(v - 0.5) * height + cy;
+      cloud.push(x, y, z(u, v), Math.max(r, g) * wScale, order(u, v), g > r ? 1 : 0);
+    }
+  }
+
+  function makeCanvas(w, h) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    x.fillStyle = '#000';
+    x.fillRect(0, 0, w, h);
+    return [c, x];
+  }
+
+  function wrapText(x, text, maxW) {
+    const words = text.split(' '), lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (x.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  // Claude spark (approximation; replace with the official path via MARK_SVG)
+  const MARK_SVG = { d: '', size: 0 };
+  function drawSpark(x, cx, cy, S) {
+    x.save();
+    if (MARK_SVG.d) {
+      const k = S / MARK_SVG.size;
+      x.translate(cx - S / 2, cy - S / 2);
+      x.scale(k, k);
+      x.fill(new Path2D(MARK_SVG.d));
+      x.restore();
+      return;
+    }
+    x.translate(cx, cy);
+    const r = mulberry32(5);
+    const LENS = [1, 0.8, 0.93, 0.74, 0.97, 0.83, 0.9, 0.72, 0.99, 0.85, 0.88, 0.77];
+    for (let i = 0; i < LENS.length; i++) {
+      const a = (i / LENS.length) * Math.PI * 2 - Math.PI / 2 + (r() - 0.5) * 0.2;
+      const len = S * 0.49 * LENS[i];
+      const w1 = S * (0.03 + r() * 0.018), w0 = w1 * (0.55 + r() * 0.15);
+      x.save();
+      x.rotate(a);
+      x.beginPath();
+      x.moveTo(0, -w0);
+      x.lineTo(len - w1, -w1);
+      x.arc(len - w1, 0, w1, -Math.PI / 2, Math.PI / 2);
+      x.lineTo(0, w0);
+      x.closePath();
+      x.fill();
+      x.restore();
+    }
+    x.beginPath();
+    x.arc(0, 0, S * 0.075, 0, Math.PI * 2);
+    x.fill();
+    x.restore();
+  }
+
+  // ---------- shapes ----------
+  function genSeed(n) {
+    const c = new Cloud(n);
+    return c.fill(() => c.push(gauss() * 0.012, gauss() * 0.012, gauss() * 0.012, 0.004, rnd()));
+  }
+
+  function genNetwork(n) {
+    const segs = [], nodes = [];
+    const step = 0.028;
+    function grow(p, dir, len, depth, dist) {
+      let q = p.slice(), d = dir.slice(), dd = dist;
+      const steps = Math.ceil(len / step);
+      for (let s = 0; s < steps; s++) {
+        d = [d[0] + gauss() * 0.22, d[1] + gauss() * 0.22, d[2] + gauss() * 0.12];
+        const l = Math.hypot(...d); d = d.map((v) => v / l);
+        const nq = [q[0] + d[0] * step, q[1] + d[1] * step * 0.62, q[2] + d[2] * step];
+        segs.push([q, nq, dd, depth]);
+        dd += step;
+        if (depth < 4 && rnd() < 0.075 && s > 2) {
+          nodes.push([nq, dd]);
+          const turn = (rnd() < 0.5 ? -1 : 1) * (0.45 + rnd() * 0.6), c = Math.cos(turn), sn = Math.sin(turn);
+          grow(nq, [d[0] * c - d[1] * sn, d[0] * sn + d[1] * c, d[2]], len * (0.45 + rnd() * 0.25), depth + 1, dd);
+        }
+        q = nq;
+      }
+    }
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + gauss() * 0.15;
+      grow([0, 0, 0], [Math.cos(a), Math.sin(a), gauss() * 0.3], 1.25 + rnd() * 0.5, 0, 0);
+    }
+    const maxD = Math.max(...segs.map((s) => s[2]));
+    const c = new Cloud(n);
+    for (let k = 0; k < quota(n, 0.1); k++) {
+      const [p, d] = nodes[Math.floor(rnd() * nodes.length)];
+      c.push(p[0] + gauss() * 0.014, p[1] + gauss() * 0.014, p[2] + gauss() * 0.014, 0.85, d / maxD);
+    }
+    for (let k = 0; k < quota(n, 0.06); k++) {
+      const r = 1.7 * Math.cbrt(rnd()), a = rnd() * Math.PI * 2;
+      c.push(Math.cos(a) * r, Math.sin(a) * r * 0.55, gauss() * 0.4, 0.05, rnd());
+    }
+    return c.fill(() => {
+      const [p0, p1, d, depth] = segs[Math.floor(rnd() * segs.length)];
+      const k = rnd(), j = 0.004 * (1 + depth * 0.4);
+      c.push(lerp(p0[0], p1[0], k) + gauss() * j, lerp(p0[1], p1[1], k) + gauss() * j, lerp(p0[2], p1[2], k) + gauss() * j,
+        0.5 * (1 - depth * 0.12), (d + k * step) / maxD);
+    });
+  }
+
+  function genEye(n) {
+    const W = 1.15, IR = 0.46, PR = 0.16;
+    const upper = (x) => 0.5 * Math.pow(Math.max(0, 1 - (x / W) ** 2), 0.85);
+    const lower = (x) => -0.36 * Math.pow(Math.max(0, 1 - (x / W) ** 2), 0.9);
+    const inside = (x, y) => Math.abs(x) < W && y < upper(x) && y > lower(x);
+    const c = new Cloud(n);
+    const dome = (r) => 0.12 * Math.max(0, 1 - (r / IR) ** 2);
+    const ring = (count, r0, sd, w, acc, wob = 0) => {
+      for (let k = 0; k < count; k++) {
+        const a = rnd() * Math.PI * 2, r = r0 + gauss() * sd + wob * Math.sin(a * 14);
+        const x = Math.cos(a) * r, y = Math.sin(a) * r + 0.02;
+        if (inside(x, y)) c.push(x, y, dome(r), w, r / 1.2, acc);
+      }
+    };
+    ring(quota(n, 0.06), 0.27, 0.008, 0.8, 1, 0.012);
+    ring(quota(n, 0.08), IR, 0.01, 0.7, 0);
+    ring(quota(n, 0.04), PR, 0.004, 0.6, 1);
+    for (let k = 0; k < quota(n, 0.02); k++) c.push(-0.12 + gauss() * 0.025, 0.16 + gauss() * 0.025, 0.13, 1.6, 0.1);
+    for (let k = 0; k < quota(n, 0.006); k++) c.push(0.1 + gauss() * 0.01, -0.08 + gauss() * 0.01, 0.12, 0.9, 0.1);
+    for (let k = 0; k < quota(n, 0.07); k++) { const x = (rnd() * 2 - 1) * W; c.push(x, upper(x) + gauss() * 0.006, 0, 0.75, Math.abs(x) / 1.2); }
+    for (let k = 0; k < quota(n, 0.04); k++) { const x = (rnd() * 2 - 1) * W; c.push(x, lower(x) + gauss() * 0.006, 0, 0.45, Math.abs(x) / 1.2); }
+    for (let k = 0; k < quota(n, 0.025); k++) {
+      const x = (rnd() * 2 - 1) * W * 0.9;
+      c.push(x, upper(x) + 0.17 * (1 - (x / W) ** 2) + gauss() * 0.006, 0, 0.22, Math.abs(x) / 1.2);
+    }
+    for (let k = 0; k < quota(n, 0.045); k++) {
+      const bx = lerp(-0.9 * W, 0.97 * W, rnd()), by = upper(bx);
+      const side = bx / W, len = 0.08 + rnd() * 0.09, t = rnd();
+      const ang = Math.PI / 2 - side * 0.9 - 0.15;
+      const curl = t * t * 0.4 * (side > 0 ? -1 : 1);
+      c.push(bx + Math.cos(ang + curl) * len * t, by + Math.sin(ang + curl) * len * t, 0, 0.55 * (1 - t * 0.5), Math.abs(bx) / 1.2);
+    }
+    for (let k = 0; k < quota(n, 0.08); k++) {
+      const x = (rnd() * 2 - 1) * W, y = lerp(lower(x), upper(x), rnd());
+      if (Math.hypot(x, y - 0.02) > IR) c.push(x, y, 0, 0.05 + 0.05 * rnd(), Math.hypot(x, y) / 1.2);
+    }
+    return c.fill(() => {
+      let a = Math.floor(rnd() * 240) / 240 * Math.PI * 2 + gauss() * 0.004;
+      const r = PR + (IR - PR) * Math.pow(rnd(), 0.8);
+      a += 0.03 * Math.sin(r * 30 + a * 7);
+      const x = Math.cos(a) * r, y = Math.sin(a) * r + 0.02;
+      if (!inside(x, y)) return;
+      const w = 0.3 + 0.35 * (0.5 + 0.5 * Math.sin(a * 37) * Math.cos(r * 23));
+      c.push(x, y, dome(r), w, r / 1.2, r < 0.26 ? 1 : 0);
+    });
+  }
+
+  function genGalaxy(n) {
+    const c = new Cloud(n);
+    for (let k = 0; k < quota(n, 0.22); k++) {
+      const r = Math.abs(gauss()) * 0.11;
+      const a = rnd() * Math.PI * 2;
+      c.push(Math.cos(a) * r, gauss() * 0.05 * Math.exp(-r * 6), Math.sin(a) * r * 1.0, 0.75, r / 1.1, 1);
+    }
+    for (let k = 0; k < quota(n, 0.17); k++) {
+      const r = -Math.log(1 - rnd() * 0.95) * 0.38, a = rnd() * Math.PI * 2;
+      c.push(Math.cos(a) * r, gauss() * 0.02, Math.sin(a) * r, 0.14, r / 1.1);
+    }
+    for (let k = 0; k < quota(n, 0.05); k++) {
+      const v = [gauss(), gauss() * 0.6, gauss()], l = Math.hypot(...v), r = 1.3 * Math.cbrt(rnd());
+      c.push(v[0] / l * r, v[1] / l * r, v[2] / l * r, 0.08, r / 1.3);
+    }
+    return c.fill(() => {
+      const arm = rnd() < 0.5 ? 0 : Math.PI;
+      const th = rnd() * Math.PI * 3;
+      const r = 0.08 * Math.exp(0.27 * th);
+      const sd = 0.03 + 0.07 * r;
+      const a = th + arm;
+      const knot = rnd() < 0.06;
+      c.push(Math.cos(a) * r + gauss() * sd, gauss() * 0.02, Math.sin(a) * r + gauss() * sd, knot ? 1.1 : 0.42, r / 1.1, 0);
+    });
+  }
+
+  function genEarth(n) {
+    const R = 0.62;
+    const c = new Cloud(n);
+    const sph = () => { const u = rnd() * 2 - 1, ph = rnd() * Math.PI * 2; return [Math.asin(u), ph - Math.PI]; };
+    const at = (lat, lon, r) => [Math.cos(lat) * Math.cos(lon) * r, Math.sin(lat) * r, Math.cos(lat) * Math.sin(lon) * r];
+    for (let k = 0; k < quota(n, 0.07); ) {
+      const [lat, lon] = sph();
+      if (!isLand(lon, lat) || Math.abs(lat) > 1.15) continue;
+      const m = 4 + Math.floor(rnd() * 40);
+      for (let j = 0; j < m && k < quota(n, 0.07); j++, k++) {
+        const la = lat + gauss() * 0.012, lo = lon + gauss() * 0.012;
+        c.push(...at(la, lo, R * 1.002), 1.1, (lo + Math.PI) / (2 * Math.PI), 1);
+      }
+    }
+    for (let k = 0; k < quota(n, 0.06); k++) {
+      const [lat, lon] = sph();
+      c.push(...at(lat, lon, R * (1.03 + Math.abs(gauss()) * 0.02)), 0.1, (lon + Math.PI) / (2 * Math.PI));
+    }
+    return c.fill(() => {
+      const [lat, lon] = sph();
+      const land = isLand(lon, lat);
+      if (!land && rnd() > 0.16) return;
+      c.push(...at(lat, lon, R), land ? 0.5 : 0.07, (lon + Math.PI) / (2 * Math.PI));
+    });
+  }
+
+  const DOC_TEXT = [
+    'Every star that ever burned left a trace in the dark. Every mind that ever wondered left a question behind. Between them runs a thread we are only beginning to see, fine as light and older than language.',
+    'We wrote it down. We drew maps of it. We taught our machines to read it back to us, and in reading, they began to answer.',
+    'What we call a network was always a kinship: of atoms and oceans, of cities and signals, of every voice that ever reached for another.',
+  ];
+  function genDoc(n) {
+    const [cv, x] = makeCanvas(1100, 1400);
+    x.strokeStyle = 'rgba(255,0,0,0.42)';
+    x.lineWidth = 3;
+    x.strokeRect(40, 40, 1020, 1320);
+    x.fillStyle = 'rgba(255,0,0,0.035)';
+    x.fillRect(40, 40, 1020, 1320);
+    x.fillStyle = '#f00';
+    x.font = "600 58px 'Cinzel'";
+    x.letterSpacing = '12px';
+    x.fillText('ON CONNECTION', 110, 190);
+    x.letterSpacing = '0px';
+    x.font = "italic 500 36px 'Cormorant Garamond'";
+    x.fillStyle = 'rgba(255,0,0,0.75)';
+    x.fillText('notes toward a shared future', 112, 246);
+    x.fillRect(112, 285, 300, 2);
+    x.font = "500 31px 'Cormorant Garamond'";
+    x.fillStyle = 'rgba(255,0,0,0.9)';
+    let y = 360;
+    for (const p of DOC_TEXT) {
+      for (const line of wrapText(x, p, 880)) { x.fillText(line, 110, y); y += 46; }
+      y += 30;
+    }
+    x.fillStyle = 'rgba(0,255,0,0.9)';
+    x.fillRect(110, y + 10, 880 * 0.62, 2);
+    const c = new Cloud(n);
+    sampleCanvas(c, n, cv, { width: 1.15, wScale: 0.62, order: (u, v) => v });
+    return c;
+  }
+
+  const CODE_LINES = [
+    [['// every mind, one network', 1]],
+    [['import { stars, earth, people } from ', 0], ['"universe"', 1], [';', 0]],
+    [['', 0]],
+    [['export function ', 0], ['connect', 1], ['(minds) {', 0]],
+    [['  const web = new Graph();', 0]],
+    [['  for (const mind of minds) {', 0]],
+    [['    for (const other of minds) {', 0]],
+    [['      if (mind !== other) web.link(mind, other);', 0]],
+    [['    }', 0]],
+    [['  }', 0]],
+    [['  return web.', 0], ['awaken', 1], ['();', 0]],
+    [['}', 0]],
+  ];
+  function genCode(n) {
+    const [cv, x] = makeCanvas(1560, 900);
+    x.font = "400 31px 'JetBrains Mono'";
+    CODE_LINES.forEach((parts, i) => {
+      const y = 110 + i * 60;
+      x.fillStyle = 'rgba(255,0,0,0.3)';
+      x.textAlign = 'right';
+      x.fillText(String(i + 1), 70, y);
+      x.textAlign = 'left';
+      let px = 110;
+      for (const [s, acc] of parts) {
+        x.fillStyle = acc ? '#0f0' : 'rgba(255,0,0,0.92)';
+        x.fillText(s, px, y);
+        px += x.measureText(s).width;
+      }
+    });
+    x.fillStyle = 'rgba(0,255,0,1)';
+    x.fillRect(110 + x.measureText('  return web.awaken();').width + 8, 110 + 10 * 60 - 30, 16, 36);
+    const c = new Cloud(n);
+    sampleCanvas(c, n, cv, { width: 2.35, wScale: 0.6, order: (u, v) => v * 0.8 + u * 0.2 });
+    return c;
+  }
+
+  const PROFILE = [[380, 990], [362, 840], [318, 700], [292, 560], [300, 420], [345, 290], [420, 200], [530, 150], [640, 172],
+    [712, 250], [738, 345], [744, 405], [731, 445], [752, 498], [790, 560], [806, 590], [781, 612], [762, 624], [778, 652],
+    [759, 674], [773, 699], [748, 724], [764, 772], [738, 814], [668, 834], [618, 858], [622, 990]];
+  function genHuman(n) {
+    const [cv, x] = makeCanvas(1000, 1000);
+    const path = new Path2D();
+    const P = PROFILE;
+    path.moveTo(...P[0]);
+    for (let i = 0; i < P.length - 1; i++) {
+      const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
+      path.bezierCurveTo(p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6, p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6, p2[0], p2[1]);
+    }
+    x.fillStyle = 'rgba(255,0,0,0.1)';
+    x.fill(path);
+    x.strokeStyle = 'rgba(255,0,0,1)';
+    x.lineWidth = 5;
+    x.stroke(path);
+    x.save();
+    x.clip(path);
+    const r = mulberry32(9), nodes = [];
+    while (nodes.length < 70) {
+      const nx = 500 + (r() * 2 - 1) * 230, ny = 380 + (r() * 2 - 1) * 175;
+      if (((nx - 500) / 230) ** 2 + ((ny - 380) / 175) ** 2 < 1) nodes.push([nx, ny]);
+    }
+    x.strokeStyle = 'rgba(0,255,0,0.5)';
+    x.lineWidth = 2;
+    for (const a of nodes) for (const b of nodes) {
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      if (d < 95 && a < b) { x.beginPath(); x.moveTo(...a); x.lineTo(...b); x.stroke(); }
+    }
+    x.fillStyle = '#0f0';
+    for (const [nx, ny] of nodes) { x.beginPath(); x.arc(nx, ny, 5 + r() * 4, 0, Math.PI * 2); x.fill(); }
+    x.restore();
+    x.strokeStyle = 'rgba(255,0,0,0.45)';
+    x.lineWidth = 2;
+    for (let i = 0; i < 9; i++) {
+      const a = -0.9 + i * 0.16, sx = 640 + Math.cos(a) * 120, sy = 330 + Math.sin(a) * 120;
+      x.beginPath(); x.moveTo(sx, sy);
+      x.quadraticCurveTo(sx + 120, sy - 40 + i * 6, 990, sy - 120 + i * 30);
+      x.stroke();
+    }
+    const c = new Cloud(n);
+    sampleCanvas(c, n, cv, { width: 1.75, cx: -0.05, wScale: 0.6, order: (u, v) => Math.hypot(u - 0.5, v - 0.38) * 1.4 });
+    return c;
+  }
+
+  function genConstellation(n) {
+    const c = new Cloud(n);
+    const nodes = [];
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2 + 0.3;
+      nodes.push([1.38 * Math.cos(a), 0.5 * Math.sin(a), 0.45 * Math.sin(a * 2 + 1)]);
+    }
+    const mini = [
+      [genEye, M4.scale(0.24)],
+      [genGalaxy, M4.mul(M4.scale(0.3), M4.rotX(-1.0))],
+      [genEarth, M4.mul(M4.scale(0.32), M4.rotZ(0.4))],
+      [genDoc, M4.mul(M4.scale(0.28), M4.rotY(-0.3))],
+      [genCode, M4.mul(M4.scale(0.17), M4.rotY(0.3))],
+      [genHuman, M4.scale(0.24)],
+    ];
+    mini.forEach(([gen, m], k) => {
+      const part = gen(quota(n, 0.115));
+      for (let i = 0; i < part.k; i++) part.aux[i * 4] = 0.35 + 0.65 * Math.hypot(...nodes[k]) / 1.6;
+      c.absorb(part, M4.mul(M4.trans(...nodes[k]), m));
+    });
+    for (let k = 0; k < quota(n, 0.035); k++) c.push(gauss() * 0.035, gauss() * 0.035, gauss() * 0.035, 0.45, 0, 1);
+    const arcs = [];
+    for (let k = 0; k < 6; k++) {
+      arcs.push([nodes[k], nodes[(k + 1) % 6], 1], [nodes[k], nodes[(k + 2) % 6], 0.6], [nodes[k], [0, 0, 0], 0.8]);
+    }
+    return c.fill(() => {
+      const [p0, p1, wt] = arcs[Math.floor(rnd() * arcs.length)];
+      if (rnd() > wt) return;
+      const t = rnd();
+      const mid = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 + 0.22, (p0[2] + p1[2]) / 2 + 0.1];
+      const q = (i) => (1 - t) * (1 - t) * p0[i] + 2 * (1 - t) * t * mid[i] + t * t * p1[i];
+      const bead = rnd() < 0.04;
+      const x = q(0) + gauss() * 0.005, y = q(1) + gauss() * 0.005, z = q(2) + gauss() * 0.005;
+      c.push(x, y, z, bead ? 0.9 : 0.3, Math.hypot(x, y, z) / 1.6, bead ? 1 : 0);
+    });
+  }
+
+  function genCore(n) {
+    const c = new Cloud(n);
+    return c.fill(() => c.push(gauss() * 0.03, gauss() * 0.03, gauss() * 0.03, 0.025, rnd(), rnd() < 0.3 ? 1 : 0));
+  }
+
+  // title layout shared by the particle target and the crisp overlay
+  const TITLE = { w: 3000, h: 600, world: 3.0 };
+  function drawTitle(x, ink, accent) {
+    x.font = "600 250px 'Cinzel'";
+    x.letterSpacing = '42px';
+    const word = 'CLAUDE';
+    const tw = x.measureText(word).width - 42;
+    const mark = 230, gap = 90;
+    const total = mark + gap + tw;
+    const left = (TITLE.w - total) / 2;
+    x.fillStyle = accent;
+    drawSpark(x, left + mark / 2, TITLE.h / 2, mark);
+    x.fillStyle = ink;
+    x.textBaseline = 'middle';
+    x.fillText(word, left + mark + gap, TITLE.h / 2 + 12);
+  }
+  function genTitle(n) {
+    const [cv, x] = makeCanvas(TITLE.w, TITLE.h);
+    drawTitle(x, '#f00', '#0f0');
+    const c = new Cloud(n);
+    const dust = quota(n, 0.06);
+    for (let k = 0; k < dust; k++) {
+      const u = rnd(), v = rnd();
+      c.push((u - 0.5) * TITLE.world * 1.1, (v - 0.5) * TITLE.world * 0.3, gauss() * 0.15, 0.05, Math.abs(u - 0.5) * 2);
+    }
+    sampleCanvas(c, n - dust, cv, { width: TITLE.world, wScale: 0.62, order: (u) => Math.abs(u - 0.5) * 2 });
+    return c;
+  }
+
+  // Morton order: index neighbours become spatial neighbours in every shape,
+  // which keeps morphs coherent and gives the thread pass local pairs to join.
+  function mortonSort(c) {
+    let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < c.n; i++) for (let a = 0; a < 3; a++) {
+      const v = c.pos[i * 4 + a]; if (v < mn[a]) mn[a] = v; if (v > mx[a]) mx[a] = v;
+    }
+    const spread = (v) => { v &= 0x3ff; v = (v | (v << 16)) & 0x030000ff; v = (v | (v << 8)) & 0x0300f00f; v = (v | (v << 4)) & 0x030c30c3; return (v | (v << 2)) & 0x09249249; };
+    const code = new Uint32Array(c.n), idx = new Uint32Array(c.n);
+    for (let i = 0; i < c.n; i++) {
+      const q = [0, 1, 2].map((a) => Math.floor((c.pos[i * 4 + a] - mn[a]) / (mx[a] - mn[a] + 1e-9) * 1023));
+      code[i] = (spread(q[0]) | (spread(q[1]) << 1) | (spread(q[2]) << 2)) >>> 0;
+      idx[i] = i;
+    }
+    idx.sort((a, b) => code[a] - code[b]);
+    const pos = new Float32Array(c.n * 4), aux = new Float32Array(c.n * 4);
+    idx.forEach((s, d) => { pos.set(c.pos.subarray(s * 4, s * 4 + 4), d * 4); aux.set(c.aux.subarray(s * 4, s * 4 + 4), d * 4); });
+    c.pos = pos; c.aux = aux;
+    return c;
+  }
+
+  const S = { SEED: 0, NET: 1, EYE: 2, GAL: 3, EARTH: 4, DOC: 5, CODE: 6, HUMAN: 7, CONST: 8, CORE: 9, TITLE: 10 };
+  const GENERATORS = [genSeed, genNetwork, genEye, genGalaxy, genEarth, genDoc, genCode, genHuman, genConstellation, genCore, genTitle];
+  const NSHAPES = GENERATORS.length;
+
+  // linear colours: [tint, accent, gain]
+  const LOOK = [
+    [[0.85, 0.9, 1.0], [1.0, 0.8, 0.6], 1],
+    [[0.62, 0.78, 1.0], [1.0, 0.78, 0.55], 0.9],
+    [[0.66, 0.8, 1.0], [1.0, 0.6, 0.28], 0.95],
+    [[0.62, 0.74, 1.0], [1.0, 0.76, 0.5], 0.9],
+    [[0.36, 0.6, 1.0], [1.0, 0.66, 0.3], 1.0],
+    [[1.0, 0.9, 0.78], [1.0, 0.52, 0.3], 0.95],
+    [[0.86, 0.9, 1.0], [1.0, 0.45, 0.26], 0.95],
+    [[1.0, 0.86, 0.74], [1.0, 0.46, 0.28], 0.95],
+    [[0.96, 0.88, 0.8], [1.0, 0.42, 0.22], 0.9],
+    [[1.0, 0.9, 0.8], [1.0, 0.55, 0.35], 1],
+    [[1.0, 0.91, 0.8], [1.0, 0.34, 0.16], 0.62],
+  ];
+
+  // ---------- timeline ----------
+  const E_MORPH = [0.7, 0, 0.2, 1], E_GROW = [0.2, 0.6, 0.35, 1], E_FALL = [0.55, 0, 0.95, 0.5], E_BURST = [0.12, 0.8, 0.25, 1];
+  // [from, to, start, span, stagger, ease, noise, burst, swirl, randomness]
+  const SEGS = [
+    [S.SEED, S.SEED, 0, 1, 0, E_MORPH, 0, 0, 0],
+    [S.SEED, S.NET, 1.05, 1.15, 0.78, E_GROW, 0.03, 0, 0],
+    [S.NET, S.EYE, 2.1, 0.42, 0.35, E_MORPH, 0.16, 0, 0.7],
+    [S.EYE, S.GAL, 2.66, 0.4, 0.3, E_MORPH, 0.1, 0, 1.6],
+    [S.GAL, S.EARTH, 3.2, 0.4, 0.3, E_MORPH, 0.12, 0, -0.9],
+    [S.EARTH, S.DOC, 3.74, 0.4, 0.45, E_MORPH, 0.14, 0, 0],
+    [S.DOC, S.CODE, 4.28, 0.38, 0.4, E_MORPH, 0.08, 0, 0],
+    [S.CODE, S.HUMAN, 4.8, 0.42, 0.35, E_MORPH, 0.14, 0, 0.35],
+    [S.HUMAN, S.CONST, 5.4, 0.95, 0.3, E_MORPH, 0.2, 0, 0],
+    [S.CONST, S.CORE, 8.0, 0.95, 0.22, E_FALL, 0.06, 0, 1.3],
+    [S.CORE, S.TITLE, 9.0, 1.55, 0.3, E_BURST, 0.22, 0.95, 0, 0.65],
+  ];
+  function segAt(t) {
+    let s = SEGS[0];
+    for (const g of SEGS) if (t >= g[2]) s = g;
+    return s;
+  }
+
+  function model(shape, t) {
+    switch (shape) {
+      case S.NET: return M4.rotY(0.06 * t);
+      case S.EYE: return M4.chain(M4.scale(1 + 0.12 * seg(t, 2.1, 2.9)), M4.rotY(-0.08), M4.rotX(0.05));
+      case S.GAL: return M4.chain(M4.scale(1.2 + 0.1 * seg(t, 2.6, 3.4)), M4.rotZ(0.3), M4.rotX(-1.05), M4.rotY(-0.9 * t));
+      case S.EARTH: return M4.chain(M4.rotZ(0.38), M4.rotY(-1.2 * t + 1.2));
+      case S.DOC: return M4.chain(M4.trans(0, 0.02, 0), M4.rotY(-0.32 + 0.1 * seg(t, 3.7, 4.6)), M4.rotX(0.1));
+      case S.CODE: return M4.chain(M4.rotY(0.3 - 0.1 * seg(t, 4.2, 5.1)), M4.rotX(0.06));
+      case S.HUMAN: return M4.chain(M4.rotY(0.2 - 0.25 * seg(t, 4.7, 5.8)));
+      case S.CONST: return M4.chain(M4.rotX(0.1), M4.rotY(0.32 * (t - 5.4)));
+      default: return M4.ident();
+    }
+  }
+
+  function cameraAt(t) {
+    let dist, yaw = 0, pitch = 0;
+    if (t < 2.1) dist = lerp(4.6, 3.95, easeSoft(seg(t, 0, 2.1)));
+    else if (t < 5.4) dist = lerp(3.95, 3.45, seg(t, 2.1, 5.4));
+    else if (t < 8.0) dist = lerp(3.45, 5.4, easeInOut(seg(t, 5.4, 7.2)));
+    else if (t < 9.0) dist = lerp(5.4, 4.25, easeInOut(seg(t, 8.0, 9.0)));
+    else dist = lerp(4.25, 3.9, easeSoft(seg(t, 9.0, 12)));
+    yaw += 0.05 * Math.sin(t * 0.7) * (1 - seg(t, 8, 9));
+    yaw += 0.22 * easeInOut(seg(t, 5.4, 7.6)) * (1 - easeInOut(seg(t, 8.0, 9.0)));
+    pitch += 0.12 * easeInOut(seg(t, 5.4, 7.2)) * (1 - easeInOut(seg(t, 8.0, 9.0)));
+    const pan = -0.36 * easeInOut(seg(t, 5.4, 7.2)) * (1 - easeInOut(seg(t, 8.0, 9.0)));
+    const eye = [Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist + pan, Math.cos(yaw) * Math.cos(pitch) * dist];
+    return { eye, dist, target: [0, pan, 0] };
+  }
+
+  function look(t) {
+    return {
+      threads: lerp(lerp(lerp(0, 1, seg(t, 1.1, 1.8)), 0.28, seg(t, 2.1, 2.6)), 0.85, seg(t, 5.6, 6.6)) * (1 - 0.8 * seg(t, 8.0, 8.8)),
+      aperture: t < 5.4 ? lerp(6, 11, seg(t, 1.5, 2.4)) : lerp(11, 4, seg(t, 5.4, 9.5)),
+      warmth: easeSoft(seg(t, 5.2, 9.4)),
+      exposure: 1 + 1.4 * Math.exp(-Math.max(0, t - 9.0) / 0.14) * (t >= 9 ? 1 : 0),
+      twinkle: lerp(0.1, 0.25, seg(t, 9.5, 11)),
+    };
+  }
+
+  // ---------- GL ----------
+  const COMMON = `#version 300 es
+  precision highp float;
+  precision highp int;
+  precision highp sampler2D;
+  uniform sampler2D u_targets, u_aux, u_pdata;
+  uniform int u_cols, u_rows;
+  uniform float u_gain[${NSHAPES}];
+  uniform vec3 u_tint[${NSHAPES}];
+  uniform vec3 u_acc[${NSHAPES}];
+  struct State { int a; int b; vec4 seg; vec4 ease; vec4 style; mat4 ma; mat4 mb; };
+  uniform State u_now, u_prev;
+  uniform float u_time, u_shutter;
+
+  mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
+  float bez(float x, vec4 c) {
+    float cx = 3.0 * c.x, bx = 3.0 * (c.z - c.x) - cx, ax = 1.0 - cx - bx;
+    float t = x;
+    for (int i = 0; i < 8; i++) {
+      float xt = ((ax * t + bx) * t + cx) * t - x;
+      float dx = (3.0 * ax * t + 2.0 * bx) * t + cx;
+      if (abs(dx) < 1e-5) break;
+      t = clamp(t - xt / dx, 0.0, 1.0);
+    }
+    float cy = 3.0 * c.y, by = 3.0 * (c.w - c.y) - cy, ay = 1.0 - cy - by;
+    return ((ay * t + by) * t + cy) * t;
+  }
+  vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
+  float snoise(vec3 v) {
+    const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
+    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+    vec3 i = floor(v + dot(v, C.yyy));
+    vec3 x0 = v - i + dot(i, C.xxx);
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min(g.xyz, l.zxy);
+    vec3 i2 = max(g.xyz, l.zxy);
+    vec3 x1 = x0 - i1 + C.xxx, x2 = x0 - i2 + C.yyy, x3 = x0 - D.yyy;
+    i = mod289(i);
+    vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+    vec3 ns = 0.142857142857 * D.wyz - D.xzx;
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_);
+    vec4 x = x_ * ns.x + ns.yyyy, y = y_ * ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+    vec4 b0 = vec4(x.xy, y.xy), b1 = vec4(x.zw, y.zw);
+    vec4 s0 = floor(b0) * 2.0 + 1.0, s1 = floor(b1) * 2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+    vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy, a1 = b1.xzyw + s1.xzyw * sh.zzww;
+    vec3 p0 = vec3(a0.xy, h.x), p1 = vec3(a0.zw, h.y), p2 = vec3(a1.xy, h.z), p3 = vec3(a1.zw, h.w);
+    vec4 nrm = 1.79284291400159 - 0.85373472095314 * vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3));
+    p0 *= nrm.x; p1 *= nrm.y; p2 *= nrm.z; p3 *= nrm.w;
+    vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+    m = m * m;
+    return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+  }
+
+  struct P { vec3 pos; float e; float w; vec3 col; vec4 pd; };
+  P evalState(State S, float t, int id) {
+    ivec2 c = ivec2(id % u_cols, id / u_cols);
+    vec4 A = texelFetch(u_targets, c + ivec2(0, S.a * u_rows), 0);
+    vec4 B = texelFetch(u_targets, c + ivec2(0, S.b * u_rows), 0);
+    vec4 xa = texelFetch(u_aux, c + ivec2(0, S.a * u_rows), 0);
+    vec4 xb = texelFetch(u_aux, c + ivec2(0, S.b * u_rows), 0);
+    vec4 pd = texelFetch(u_pdata, c, 0);
+    float span = S.seg.y, st = S.seg.z;
+    float delay = mix(xb.x, pd.x, S.style.w) * st * span;
+    float u = clamp((t - S.seg.x - delay) / max(span * (1.0 - st), 1e-3), 0.0, 1.0);
+    float e = bez(u, S.ease);
+    vec3 pa = (S.ma * vec4(A.xyz, 1.0)).xyz;
+    vec3 pb = (S.mb * vec4(B.xyz, 1.0)).xyz;
+    vec3 p = mix(pa, pb, e);
+    float bump = sin(3.14159265 * clamp(e, 0.0, 1.0));
+    if (S.style.x > 0.0 && bump > 0.001) {
+      vec3 q = p * 1.4 + vec3(pd.x * 7.0, pd.w * 5.0, 0.0);
+      p += S.style.x * bump * vec3(snoise(q), snoise(q + 31.7), snoise(q + 57.3));
+    }
+    if (S.style.y > 0.0) {
+      vec3 dir = normalize(pb + (pd.yzw - 0.5) * 0.6 + 1e-4);
+      p += dir * S.style.y * bump * (0.35 + pd.w);
+    }
+    if (S.style.z != 0.0) p.xy = rot(S.style.z * bump * (0.6 + 0.8 * pd.z)) * p.xy;
+    P r;
+    r.pos = p;
+    r.e = e;
+    r.w = mix(A.w * u_gain[S.a], B.w * u_gain[S.b], e);
+    r.col = mix(mix(u_tint[S.a], u_acc[S.a], xa.y), mix(u_tint[S.b], u_acc[S.b], xb.y), e);
+    r.pd = pd;
+    return r;
+  }
+  `;
+
+  const PARTICLE_VS = COMMON + `
+  uniform mat4 u_vp, u_vpPrev;
+  uniform vec2 u_res;
+  uniform float u_scale, u_focus, u_aperture, u_refDist, u_twinkle;
+  out vec2 v_local;
+  out float v_half, v_r, v_bokeh;
+  out vec3 v_col;
+  void main() {
+    int id = gl_InstanceID;
+    P s0 = evalState(u_now, u_time, id);
+    P s1 = evalState(u_prev, u_time - u_shutter, id);
+    vec4 c0 = u_vp * vec4(s0.pos, 1.0);
+    vec4 c1 = u_vpPrev * vec4(s1.pos, 1.0);
+    if (c0.w < 0.1) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+    vec2 p0 = c0.xy / c0.w * u_res * 0.5;
+    vec2 p1 = c1.w > 0.1 ? c1.xy / c1.w * u_res * 0.5 : p0;
+    float depth = c0.w;
+    float rCore = (0.55 + s0.pd.y * 0.75) * u_scale * clamp(u_refDist / depth, 0.5, 2.6);
+    float coc = abs(1.0 / depth - 1.0 / u_focus) * u_aperture * u_scale;
+    float r = sqrt(rCore * rCore + coc * coc);
+    vec2 dv = p0 - p1;
+    float len = length(dv);
+    vec2 dir = len > 1e-3 ? dv / len : vec2(1.0, 0.0);
+    vec2 nrm = vec2(-dir.y, dir.x);
+    float tw = 1.0 - u_twinkle + u_twinkle * (0.5 + 0.5 * sin(u_time * (2.0 + 5.0 * s0.pd.z) + s0.pd.x * 60.0));
+    float peak = s0.w * tw * (rCore * rCore) / (r * (r + len)) / (u_scale * u_scale) * 1.4;
+    v_bokeh = smoothstep(1.6 * u_scale, 5.0 * u_scale, coc);
+    float ext = r * mix(2.4, 1.15, v_bokeh) + 1.0;
+    int vid = gl_VertexID;
+    vec2 corner = vec2((vid & 1) == 1 ? 1.0 : -1.0, (vid & 2) == 2 ? 1.0 : -1.0);
+    vec2 local = vec2(corner.x * (len * 0.5 + ext), corner.y * ext);
+    vec2 pos = (p0 + p1) * 0.5 + dir * local.x + nrm * local.y;
+    v_local = local;
+    v_half = len * 0.5;
+    v_r = r;
+    v_col = s0.col * peak;
+    gl_Position = peak < 0.002 ? vec4(2.0, 2.0, 2.0, 1.0) : vec4(pos / (u_res * 0.5), 0.0, 1.0);
+  }`;
+
+  const PARTICLE_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_local;
+  in float v_half, v_r, v_bokeh;
+  in vec3 v_col;
+  out vec4 o;
+  void main() {
+    float dx = max(abs(v_local.x) - v_half, 0.0);
+    float d = length(vec2(dx, v_local.y)) / v_r;
+    float g = exp(-2.0 * d * d);
+    float disc = smoothstep(1.0, 0.86, d) * (0.8 + 0.32 * smoothstep(0.5, 0.95, d)) * 0.5;
+    o = vec4(v_col * mix(g, disc, v_bokeh), 1.0);
+  }`;
+
+  const LINE_VS = COMMON + `
+  uniform mat4 u_vp;
+  uniform vec2 u_res;
+  uniform float u_scale, u_threads, u_maxLen;
+  uniform int u_half, u_n;
+  out float v_across;
+  out vec3 v_col;
+  void main() {
+    int inst = gl_InstanceID, i, j;
+    if (inst < u_half) { i = inst * 2; j = i + 1; } else { i = (inst - u_half) * 4; j = i + 9; }
+    j = min(j, u_n - 1);
+    P a = evalState(u_now, u_time, i);
+    P b = evalState(u_now, u_time, j);
+    vec4 ca = u_vp * vec4(a.pos, 1.0), cb = u_vp * vec4(b.pos, 1.0);
+    vec2 pa = ca.xy / ca.w * u_res * 0.5, pb = cb.xy / cb.w * u_res * 0.5;
+    float len = length(pb - pa);
+    float maxL = u_maxLen * u_scale;
+    float alpha = u_threads * smoothstep(maxL, maxL * 0.3, len) * sqrt(max(a.w * b.w, 0.0)) * 0.55;
+    if (ca.w < 0.1 || cb.w < 0.1 || alpha < 0.003 || len < 0.5) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+    int vid = gl_VertexID;
+    vec2 corner = vec2((vid & 1) == 1 ? 1.0 : 0.0, (vid & 2) == 2 ? 1.0 : -1.0);
+    vec2 dir = (pb - pa) / len, nrm = vec2(-dir.y, dir.x);
+    vec2 pos = mix(pa, pb, corner.x) + nrm * corner.y * (0.9 * u_scale);
+    v_across = corner.y;
+    v_col = mix(a.col, b.col, corner.x) * alpha;
+    gl_Position = vec4(pos / (u_res * 0.5), 0.0, 1.0);
+  }`;
+
+  const LINE_FS = `#version 300 es
+  precision highp float;
+  in float v_across;
+  in vec3 v_col;
+  out vec4 o;
+  void main() { o = vec4(v_col * (1.0 - v_across * v_across), 1.0); }`;
+
+  const FULLSCREEN_VS = `#version 300 es
+  out vec2 v_uv;
+  void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    v_uv = p;
+    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+  }`;
+
+  const DOWN_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv; out vec4 o;
+  uniform sampler2D u_tex; uniform vec2 u_texel;
+  void main() {
+    vec2 h = u_texel;
+    vec3 s = texture(u_tex, v_uv).rgb * 4.0 + texture(u_tex, v_uv - h).rgb + texture(u_tex, v_uv + h).rgb
+      + texture(u_tex, v_uv + vec2(h.x, -h.y)).rgb + texture(u_tex, v_uv - vec2(h.x, -h.y)).rgb;
+    o = vec4(s / 8.0, 1.0);
+  }`;
+
+  const UP_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv; out vec4 o;
+  uniform sampler2D u_tex, u_add; uniform vec2 u_texel;
+  void main() {
+    vec2 h = u_texel;
+    vec3 s = texture(u_tex, v_uv + vec2(-2.0 * h.x, 0.0)).rgb + texture(u_tex, v_uv + vec2(2.0 * h.x, 0.0)).rgb
+      + texture(u_tex, v_uv + vec2(0.0, 2.0 * h.y)).rgb + texture(u_tex, v_uv + vec2(0.0, -2.0 * h.y)).rgb
+      + 2.0 * (texture(u_tex, v_uv + vec2(-h.x, h.y)).rgb + texture(u_tex, v_uv + h).rgb
+             + texture(u_tex, v_uv + vec2(h.x, -h.y)).rgb + texture(u_tex, v_uv - h).rgb);
+    o = vec4(s / 12.0 + texture(u_add, v_uv).rgb, 1.0);
+  }`;
+
+  // horizontal anamorphic streak from a low bloom level
+  const STREAK_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv; out vec4 o;
+  uniform sampler2D u_tex; uniform vec2 u_texel;
+  void main() {
+    vec3 s = vec3(0.0); float wsum = 0.0;
+    for (int i = -24; i <= 24; i++) {
+      float w = exp(-abs(float(i)) / 9.0);
+      vec3 c = texture(u_tex, v_uv + vec2(float(i) * u_texel.x * 2.0, 0.0)).rgb;
+      s += max(c - vec3(2.0), vec3(0.0)) * w;
+      wsum += w;
+    }
+    o = vec4(s / wsum, 1.0);
+  }`;
+
+  const COMPOSITE_FS = `#version 300 es
+  precision highp float;
+  in vec2 v_uv; out vec4 o;
+  uniform sampler2D u_scene, u_bloom, u_streak, u_text, u_title;
+  uniform float u_time, u_aspect, u_exposure, u_warmth, u_scope;
+  uniform vec4 u_textRect, u_titleRect;
+  uniform vec4 u_line1, u_line2;      // reveal start, letter spread, out start, -
+  uniform float u_titleAlpha, u_glint, u_heart, u_heartRing, u_shock;
+  vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+  float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+  float revealAt(vec4 L, float x) {
+    float rin = clamp((u_time - L.x - x * L.y) / 0.55, 0.0, 1.0);
+    rin = 1.0 - pow(1.0 - rin, 3.0);
+    float rout = clamp((u_time - L.z - x * 0.25) / 0.45, 0.0, 1.0);
+    return rin * (1.0 - rout * rout);
+  }
+  void main() {
+    vec2 uv = v_uv;
+    vec2 c = (uv - 0.5) * vec2(u_aspect, 1.0);
+    float r = length(c);
+
+    // ignition ring refracts what lies beneath it
+    float ringR = u_shock * 1.05;
+    float fade = (1.0 - u_shock) * (1.0 - u_shock);
+    float ring = u_shock > 0.0 ? exp(-pow((r - ringR) / (0.006 + 0.02 * u_shock), 2.0)) * fade : 0.0;
+    uv -= normalize(c + 1e-5) * ring * 0.016 / vec2(u_aspect, 1.0);
+
+    vec2 ca = (uv - 0.5) * 0.0035;
+    vec3 col;
+    col.r = texture(u_scene, uv - ca).r;
+    col.g = texture(u_scene, uv).g;
+    col.b = texture(u_scene, uv + ca).b;
+    vec3 bloom = texture(u_bloom, uv).rgb / 6.0;
+    col += bloom * vec3(1.06, 0.98, 0.92) * 0.85;
+    col += (1.0 - 0.85 * u_titleAlpha) * texture(u_streak, uv).rgb * mix(vec3(0.55, 0.75, 1.0), vec3(1.0, 0.72, 0.5), u_warmth) * 0.25;
+
+    // heartbeat light
+    col += vec3(1.0, 0.92, 0.85) * u_heart * (exp(-r * r / 0.00012) * 6.0 + exp(-r * r / 0.004) * 0.6 + exp(-r * r / 0.05) * 0.08);
+    col += vec3(0.7, 0.82, 1.0) * u_heartRing;
+    col += vec3(1.0, 0.82, 0.66) * ring * 0.2;
+
+    // words: soft focus pull + rise, letter by letter
+    vec2 tuv = (uv - u_textRect.xy) / u_textRect.zw;
+    float textA = 0.0;
+    vec3 textCol = vec3(0.0);
+    if (all(greaterThan(tuv, vec2(-0.05))) && all(lessThan(tuv, vec2(1.05)))) {
+      bool top = tuv.y > 0.5;
+      float rv = revealAt(top ? u_line1 : u_line2, tuv.x);
+      vec2 su = tuv - vec2(0.0, (1.0 - rv) * 0.035);
+      float lod = (1.0 - rv) * 4.0;
+      vec4 tx = textureLod(u_text, su, lod);
+      vec4 glow = textureLod(u_text, su, 4.5);
+      textA = tx.a * rv;
+      col *= 1.0 - 0.7 * smoothstep(0.0, 0.35, textureLod(u_text, su, 6.0).a) * rv;
+      col += vec3(1.0, 0.86, 0.72) * glow.a * rv * 0.25;
+      textCol = vec3(0.96, 0.93, 0.88);
+    }
+
+    // crisp title over its particles, with a passing glint
+    vec2 quv = (uv - u_titleRect.xy) / u_titleRect.zw;
+    float titleA = 0.0;
+    vec3 titleCol = vec3(0.0);
+    if (u_titleAlpha > 0.0 && all(greaterThan(quv, vec2(0.0))) && all(lessThan(quv, vec2(1.0)))) {
+      float lod = (1.0 - u_titleAlpha) * 3.0;
+      vec4 tt = textureLod(u_title, quv, lod);
+      vec4 tg = textureLod(u_title, quv, 5.0);
+      float band = exp(-pow((quv.x * 1.0 + quv.y * 0.35 - u_glint) / 0.05, 2.0));
+      col += tg.rgb * tg.a * u_titleAlpha * 0.25;
+      titleA = tt.a * u_titleAlpha;
+      titleCol = tt.rgb / max(tt.a, 1e-3) + band * 0.6;
+      col += vec3(1.0, 0.95, 0.88) * band * tt.a * 1.6 * u_titleAlpha;
+    }
+
+    col *= u_exposure;
+    col *= mix(vec3(0.96, 1.0, 1.05), vec3(1.05, 1.0, 0.93), u_warmth);
+    col = aces(col);
+    col = pow(col, vec3(1.0 / 2.2));
+    float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    col += mix(vec3(-0.002, 0.002, 0.007), vec3(0.006, 0.002, -0.002), u_warmth) * (1.0 - smoothstep(0.0, 0.2, l));
+    col = mix(col, textCol, textA * 0.94);
+    col = mix(col, min(titleCol, vec3(1.0)), titleA * 0.9);
+
+    float vig = smoothstep(1.05, 0.25, length((v_uv - 0.5) * vec2(1.0, 1.25)));
+    col *= mix(0.5, 1.0, vig);
+    col += (hash(gl_FragCoord.xy + fract(u_time * 7.31) * 913.0) - 0.5) * mix(0.03, 0.012, l);
+    float bar = step(0.5 / u_scope * u_aspect, abs(v_uv.y - 0.5));
+    o = vec4(col * (1.0 - bar), 1.0);
+  }`;
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function program(vs, fs) {
+    const p = gl.createProgram();
+    gl.attachShader(p, compile(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {};
+    const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) {
+      const name = gl.getActiveUniform(p, i).name.replace(/\[0\]$/, '');
+      u[name] = gl.getUniformLocation(p, gl.getActiveUniform(p, i).name);
+    }
+    return { p, u };
+  }
+
+  const progParticle = program(PARTICLE_VS, PARTICLE_FS);
+  const progLine = program(LINE_VS, LINE_FS);
+  const progDown = program(FULLSCREEN_VS, DOWN_FS);
+  const progUp = program(FULLSCREEN_VS, UP_FS);
+  const progStreak = program(FULLSCREEN_VS, STREAK_FS);
+  const progComposite = program(FULLSCREEN_VS, COMPOSITE_FS);
+  const vao = gl.createVertexArray();
+
+  function dataTexture(w, h, data) {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, data);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    return t;
+  }
+  function imageTexture(cv) {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
+
+  // build every shape
+  const targets = new Float32Array(COLS * ROWS * NSHAPES * 4);
+  const aux = new Float32Array(COLS * ROWS * NSHAPES * 4);
+  GENERATORS.forEach((gen, s) => {
+    const c = mortonSort(gen(N));
+    targets.set(c.pos, s * N * 4);
+    aux.set(c.aux, s * N * 4);
+  });
+  const pdata = new Float32Array(N * 4);
+  for (let i = 0; i < N; i++) pdata.set([rnd(), Math.pow(rnd(), 3), rnd(), rnd()], i * 4);
+  const texTargets = dataTexture(COLS, ROWS * NSHAPES, targets);
+  const texAux = dataTexture(COLS, ROWS * NSHAPES, aux);
+  const texPdata = dataTexture(COLS, ROWS, pdata);
+
+  // words and title as textures
+  const TEXT = { w: 2000, h: 440 };
+  const [textCv, tx] = makeCanvas(TEXT.w, TEXT.h);
+  tx.clearRect(0, 0, TEXT.w, TEXT.h);
+  tx.fillStyle = '#fff';
+  tx.textAlign = 'center';
+  tx.textBaseline = 'alphabetic';
+  tx.font = "italic 500 140px 'Cormorant Garamond'";
+  tx.letterSpacing = '3px';
+  tx.fillText('Different minds.', TEXT.w / 2, 170);
+  tx.fillText('Shared destiny.', TEXT.w / 2, 390);
+  const texText = imageTexture(textCv);
+  const [titleCv, ttx] = makeCanvas(TITLE.w, TITLE.h);
+  ttx.clearRect(0, 0, TITLE.w, TITLE.h);
+  drawTitle(ttx, 'rgb(246, 238, 226)', 'rgb(232, 124, 92)');
+  const texTitle = imageTexture(titleCv);
+
+  // ---------- render targets ----------
+  function target(w, h) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    return { tex, fbo, w, h };
+  }
+  const release = (t) => { if (t) { gl.deleteTexture(t.tex); gl.deleteFramebuffer(t.fbo); } };
+  let PW = 0, PH = 0, scene, streak, downs = [], ups = [];
+
+  function resize() {
+    let w, h;
+    if (CAPTURE) { w = FRAME_W; h = FRAME_H; }
+    else {
+      w = window.innerWidth; h = w * 9 / 16;
+      if (h > window.innerHeight) { h = window.innerHeight; w = h * 16 / 9; }
+    }
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    const dpr = CAPTURE ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+    let pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+    if (pw > FRAME_W) { ph = Math.round(ph * FRAME_W / pw); pw = FRAME_W; }
+    if (pw === PW && ph === PH) return;
+    PW = pw; PH = ph;
+    canvas.width = PW; canvas.height = PH;
+    [scene, streak, ...downs, ...ups].forEach(release);
+    scene = target(PW, PH);
+    downs = []; ups = [];
+    let dw = PW, dh = PH;
+    for (let i = 0; i < 6; i++) {
+      dw = Math.max(1, Math.ceil(dw / 2)); dh = Math.max(1, Math.ceil(dh / 2));
+      downs.push(target(dw, dh));
+      if (i < 5) ups.push(target(dw, dh));
+    }
+    streak = target(downs[2].w, downs[2].h);
+  }
+  function bind(t) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, t ? t.fbo : null);
+    gl.viewport(0, 0, t ? t.w : PW, t ? t.h : PH);
+  }
+  function tex(unit, t, loc) {
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, t.tex || t);
+    gl.uniform1i(loc, unit);
+  }
+
+  const SHUTTER = 1 / 60; // 180° at 30fps
+  const FOV = 30 * Math.PI / 180;
+
+  function viewProj(t) {
+    const cam = cameraAt(t);
+    return { vp: M4.mul(M4.persp(FOV, FRAME_W / FRAME_H, 0.05, 50), M4.lookAt(cam.eye, cam.target, [0, 1, 0])), dist: cam.dist };
+  }
+
+  function setState(u, prefix, t) {
+    const g = segAt(t);
+    gl.uniform1i(u[`${prefix}.a`], g[0]);
+    gl.uniform1i(u[`${prefix}.b`], g[1]);
+    gl.uniform4f(u[`${prefix}.seg`], g[2], g[3], g[4], 0);
+    gl.uniform4f(u[`${prefix}.ease`], ...g[5]);
+    gl.uniform4f(u[`${prefix}.style`], g[6], g[7], g[8], g[9] ?? 0.2);
+    gl.uniformMatrix4fv(u[`${prefix}.ma`], false, model(g[0], t));
+    gl.uniformMatrix4fv(u[`${prefix}.mb`], false, model(g[1], t));
+  }
+  function setCommon(u, t) {
+    tex(0, texTargets, u.u_targets);
+    tex(1, texAux, u.u_aux);
+    tex(2, texPdata, u.u_pdata);
+    gl.uniform1i(u.u_cols, COLS);
+    gl.uniform1i(u.u_rows, ROWS);
+    gl.uniform1fv(u.u_gain, LOOK.map((l) => l[2]));
+    gl.uniform3fv(u.u_tint, LOOK.flatMap((l) => l[0]));
+    gl.uniform3fv(u.u_acc, LOOK.flatMap((l) => l[1]));
+    gl.uniform1f(u.u_time, t);
+    gl.uniform1f(u.u_shutter, SHUTTER);
+    setState(u, 'u_now', t);
+    setState(u, 'u_prev', t - SHUTTER);
+  }
+
+  function screenRect(vp, cx, cy, w, h) {
+    const a = M4.apply(vp, cx - w / 2, cy - h / 2, 0), b = M4.apply(vp, cx + w / 2, cy + h / 2, 0);
+    const x0 = (a[0] / a[3]) * 0.5 + 0.5, y0 = (a[1] / a[3]) * 0.5 + 0.5;
+    const x1 = (b[0] / b[3]) * 0.5 + 0.5, y1 = (b[1] / b[3]) * 0.5 + 0.5;
+    return [x0, y0, x1 - x0, y1 - y0];
+  }
+
+  function render(t) {
+    const L = look(t);
+    const { vp, dist } = viewProj(t);
+    const { vp: vpPrev } = viewProj(t - SHUTTER);
+    const scale = PH / FRAME_H;
+    gl.bindVertexArray(vao);
+
+    // particles + threads (HDR, additive)
+    bind(scene);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+
+    if (L.threads > 0.01) {
+      const u = progLine.u;
+      gl.useProgram(progLine.p);
+      setCommon(u, t);
+      gl.uniformMatrix4fv(u.u_vp, false, vp);
+      gl.uniform2f(u.u_res, PW, PH);
+      gl.uniform1f(u.u_scale, scale);
+      gl.uniform1f(u.u_threads, L.threads);
+      gl.uniform1f(u.u_maxLen, 30);
+      gl.uniform1i(u.u_half, N / 2);
+      gl.uniform1i(u.u_n, N);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, N / 2 + N / 4);
+    }
+
+    {
+      const u = progParticle.u;
+      gl.useProgram(progParticle.p);
+      setCommon(u, t);
+      gl.uniformMatrix4fv(u.u_vp, false, vp);
+      gl.uniformMatrix4fv(u.u_vpPrev, false, vpPrev);
+      gl.uniform2f(u.u_res, PW, PH);
+      gl.uniform1f(u.u_scale, scale);
+      gl.uniform1f(u.u_focus, dist);
+      gl.uniform1f(u.u_aperture, L.aperture);
+      gl.uniform1f(u.u_refDist, 4);
+      gl.uniform1f(u.u_twinkle, L.twinkle);
+      gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, N);
+    }
+    gl.disable(gl.BLEND);
+
+    // bloom
+    gl.useProgram(progDown.p);
+    let src = scene;
+    for (const d of downs) {
+      bind(d);
+      tex(0, src, progDown.u.u_tex);
+      gl.uniform2f(progDown.u.u_texel, 1 / src.w, 1 / src.h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      src = d;
+    }
+    gl.useProgram(progUp.p);
+    for (let i = ups.length - 1; i >= 0; i--) {
+      bind(ups[i]);
+      tex(0, src, progUp.u.u_tex);
+      tex(1, downs[i], progUp.u.u_add);
+      gl.uniform2f(progUp.u.u_texel, 0.5 / src.w, 0.5 / src.h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      src = ups[i];
+    }
+    bind(streak);
+    gl.useProgram(progStreak.p);
+    tex(0, downs[2], progStreak.u.u_tex);
+    gl.uniform2f(progStreak.u.u_texel, 1 / downs[2].w, 1 / downs[2].h);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // composite
+    bind(null);
+    const c = progComposite.u;
+    gl.useProgram(progComposite.p);
+    tex(0, scene, c.u_scene);
+    tex(1, src, c.u_bloom);
+    tex(2, streak, c.u_streak);
+    tex(3, texText, c.u_text);
+    tex(4, texTitle, c.u_title);
+    gl.uniform1f(c.u_time, t);
+    gl.uniform1f(c.u_aspect, PW / PH);
+    gl.uniform1f(c.u_exposure, L.exposure);
+    gl.uniform1f(c.u_warmth, L.warmth);
+    gl.uniform1f(c.u_scope, SCOPE);
+    const tw = TEXT.w / 2 / FRAME_W, th = TEXT.h / 2 / FRAME_H;
+    gl.uniform4f(c.u_textRect, 0.5 - tw / 2, 0.245 - th / 2, tw, th);
+    gl.uniform4f(c.u_line1, 5.75, 0.55, 7.75, 0);
+    gl.uniform4f(c.u_line2, 6.55, 0.55, 7.85, 0);
+    gl.uniform4f(c.u_titleRect, ...screenRect(vp, 0, 0, TITLE.world, TITLE.world * TITLE.h / TITLE.w));
+    gl.uniform1f(c.u_titleAlpha, easeSoft(seg(t, 10.3, 11.3)) * 0.92);
+    gl.uniform1f(c.u_glint, lerp(-0.3, 1.5, easeInOut(seg(t, 11.0, 12.0))));
+    const beat = (c0) => Math.exp(-(((t - c0) / 0.07) ** 2));
+    const heart = (0.12 * seg(t, 0, 0.3) + 1.6 * beat(0.38) + 1.2 * beat(0.74)) * (1 - easeSoft(seg(t, 1.1, 2.3))) + 0.5 * seg(t, 0.8, 1.2) * (1 - seg(t, 1.2, 2.2));
+    gl.uniform1f(c.u_heart, heart);
+    gl.uniform1f(c.u_heartRing, 0);
+    gl.uniform1f(c.u_shock, t >= 9 && t < 10.3 ? easeOut(seg(t, 9, 10.3)) : 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  // ---------- playback ----------
+  let elapsed = 0, last = 0, raf = 0;
+  function frame(now) {
+    const dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+    last = now;
+    elapsed = Math.min(elapsed + dt, DURATION + 60);
+    render(Math.min(elapsed, DURATION));
+    if (elapsed >= DURATION) replay.toggleAttribute('data-visible', true);
+    raf = requestAnimationFrame(frame);
+  }
+  function play() {
+    cancelAnimationFrame(raf);
+    replay.toggleAttribute('data-visible', false);
+    elapsed = 0;
+    last = 0;
+    raf = requestAnimationFrame(frame);
+  }
+
+  resize();
+  window.addEventListener('resize', () => { resize(); render(Math.min(elapsed, DURATION)); });
+
+  if (CAPTURE) {
+    replay.hidden = true;
+    window.renderAt = (t) => { render(t); gl.finish(); };
+    window.DURATION = DURATION;
+    window.FPS = 30;
+    window.ready = true;
+  } else if (REDUCED) {
+    replay.hidden = true;
+    render(DURATION);
+  } else {
+    replay.addEventListener('click', play);
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); play(); }
+    });
+    play();
+  }
+})().catch((err) => {
+  console.error(err);
+  document.body.textContent = '';
+  document.body.append(Object.assign(document.createElement('p'), { className: 'notice', textContent: 'Something went wrong while starting the piece.' }));
+});
+</script>
+</body>
+</html>
