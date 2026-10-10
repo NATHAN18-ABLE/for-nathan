@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:P;src:url(fonts/Pretendard-Black.otf);font-weight:900}
+@font-face{font-family:P;src:url(fonts/Pretendard-Bold.otf);font-weight:700}
+html,body{margin:0;background:#fff;overflow:hidden}
+#c{position:absolute;inset:0}
+.t{position:absolute;left:0;right:0;top:820px;text-align:center;font-family:P;font-weight:900;font-size:120px;letter-spacing:-0.04em;color:#000}
+</style></head><body><svg id="c" width="1080" height="1920"></svg><div class="t" id="t">거대한 혜택이<br>찾아온다!</div>
+<script>
+window.COMP={w:1080,h:1920,fps:30,frames:45};
+const svg=document.getElementById('c'),t=document.getElementById('t');
+const outExpo=x=>x>=1?1:1-Math.pow(2,-10*x);
+// burst shards: thin wedges from centre, alternating green/purple with black outline (KV-like test, not final art)
+const shards=[...Array(14)].map((_,i)=>({a:i/14*Math.PI*2+0.13*(i%3),w:0.09+0.05*(i%2),c:i%2?'#9162FF':'#00F550',d:i*0.6}));
+window.renderFrame=f=>{
+  const cx=540,cy=900;let h='';
+  shards.forEach(s=>{const p=outExpo(Math.max(0,(f-s.d)/16));const r=1600*p,r0=260*p;
+    const pt=(a,rr)=>`${cx+Math.cos(a)*rr},${cy+Math.sin(a)*rr}`;
+    h+=`<polygon points="${pt(s.a-s.w,r0)} ${pt(s.a,r)} ${pt(s.a+s.w,r0)}" fill="${s.c}" stroke="#000" stroke-width="14" stroke-linejoin="miter"/>`;});
+  svg.innerHTML=h;
+  const p=outExpo(Math.max(0,(f-8)/14));t.style.transform=`scale(${0.6+0.4*p})`;t.style.opacity=p;
+};
+</script></body></html>
