@@ -5,3 +5,8 @@
 2026-10-10T07:04:34.585Z render motion/v3.html -> out/v3_style.mp4 frames 0-606 step 1 1080x1920@30 in 5.6s ffmpeg=skipped (preview stills)
 2026-10-10T07:07:30.517Z render motion/v3.html -> out/v3_draft.mp4 frames 0-606 step 1 1080x1920@30 in 156.5s ffmpeg=0
 2026-10-10T07:10:34.232Z render motion/v3.html -> out/v3_draft.mp4 frames 0-606 step 1 1080x1920@30 in 157.3s ffmpeg=0
+2026-10-10T07:24:21.946Z render motion/shard_lab.html -> out/shard_lab.mp4 frames 0-1 step 1 1080x1920@30 in 0.9s ffmpeg=skipped (preview stills)
+2026-10-10T07:24:47.198Z render motion/shard_lab.html -> out/shard_lab.mp4 frames 0-1 step 1 1080x1920@30 in 0.8s ffmpeg=skipped (preview stills)
+2026-10-10T07:26:21.502Z render motion/v4.html -> out/v4_style.mp4 frames 0-690 step 1 1080x1920@30 in 9.4s ffmpeg=skipped (preview stills)
+2026-10-10T07:27:10.717Z render motion/v4.html -> out/v4_style.mp4 frames 0-690 step 1 1080x1920@30 in 7.5s ffmpeg=skipped (preview stills)
+2026-10-10T07:31:22.526Z render motion/v4.html -> out/v4_draft.mp4 frames 0-690 step 1 1080x1920@30 in 240.5s ffmpeg=0

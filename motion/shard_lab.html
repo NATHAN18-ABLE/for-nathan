@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#fff}canvas{display:block}</style></head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script type="module">
+import { burst } from './kvburst.js';
+const ctx = document.getElementById('c').getContext('2d');
+window.COMP = { w: 1080, h: 1920, fps: 30, frames: 1 };
+const kvImg = new Image(); kvImg.src = '../assets/kv/kv_banner_from_jpg.png'; await kvImg.decode();
+window.renderFrame = () => {
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 1080, 1920);
+  ctx.drawImage(kvImg, 0, 0, 1080, 1080 * kvImg.height / kvImg.width);         // reference: official KV
+  burst(ctx, { cx: 540, cy: 1180, rx: 300, ry: 260, t: 1, seed: 3, scale: 0.85 });
+  ctx.font = '900 120px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000'; ctx.fillText('11.8', 540, 1180);
+};
+window.ready = true;
+</script></body></html>
