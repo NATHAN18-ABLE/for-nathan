@@ -93,3 +93,10 @@
 - 날짜 카드: 흰 바탕 + 공식 KV 섬광(컷마다 다른 조합) + KV 키라인 스타일의 기울어진 브랜드 컬러 판 위에 날짜 + 요일 태그
 - 엔딩: 사용자 레퍼런스 영상(클릭 버튼)에 맞춰 「네이버플러스 스토어 ›」 버튼 등장 → 눌림(네온 그린) → 공식 KV 배너 전환 + 버튼으로 마무리
 - `motion/v6.html` → `out/v6_draft.mp4` (25.0초), 콘택트 시트 `proof/contact_sheets/v6_style_sheet.png`, `v6_draft_sheet.png`
+
+### v7 (3·4·5번 개선)
+- 3. 테이프 로고 인쇄: `tools/print_tape.py`. 초록 테이프 픽셀을 검출하고, 테이프 길이 방향으로 넾다세일 로고를 반복 배치해 곱하기(multiply) 합성. 테이프의 주름과 광택은 잉크 위에 유지
+  - `assets/gen/img02_box_hero_v1_logo.jpg`, `img03_box_strain_v1_logo.jpg`, `img05_box_giantface_v1_logo.jpg` (AI 원본 이미지 + 코드 합성)
+- 4. 가운데 구간 반복 해소: "거대한"은 글자만, KV는 "혜택이 찾아온다!"에서 처음 등장. 날짜 카드는 컷마다 다른 큰 KV 섬광 조합(왼쪽 위+오른쪽 아래 / 오른쪽 위+왼쪽 아래)
+- 5. 엔딩 정지 구간 3.7초 → 2.1초, 마지막 배너에 미세하게 다가가는 움직임
+- `motion/v7.html` → `out/v7_draft.mp4` (23.5초)
