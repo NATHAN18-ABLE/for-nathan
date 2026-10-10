@@ -1,0 +1,224 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>넾다세일 — 작게 올 리 없다 (v5)</title>
+<style>
+@font-face{font-family:P;src:url(fonts/Pretendard-Black.otf);font-weight:900}
+@font-face{font-family:P;src:url(fonts/Pretendard-ExtraBold.otf);font-weight:800}
+@font-face{font-family:P;src:url(fonts/Pretendard-Bold.otf);font-weight:700}
+@font-face{font-family:P;src:url(fonts/Pretendard-SemiBold.otf);font-weight:600}
+@font-face{font-family:P;src:url(fonts/Pretendard-Medium.otf);font-weight:500}
+html,body{margin:0;background:#fff;overflow:hidden}
+canvas{display:block}
+</style></head>
+<body><canvas id="c" width="1080" height="1920"></canvas>
+<script type="module">
+// v5: one idea per cut, centred, official KV shards (traced), quiet type motion (no shake), white studio /
+// colour fields for rhythm. 120BPM → 1 beat = 15 frames @30fps.
+const W = 1080, H = 1920, FPS = 30, BEAT = 15;
+const C = { white: '#FFFFFF', green: '#00F550', purple: '#9162FF', black: '#000000', studio: '#F3F3F1' };
+const CUTS = [
+  { id: 'drop',      at: 0,   len: 36 },  // 상자 낙하 (AI 영상 V1 예정, 현재 코드)
+  { id: 'arrived',   at: 36,  len: 36 },  // 택배 왔다.
+  { id: 'strain',    at: 72,  len: 45 },  // 떨림·빛 (AI 영상 V2 앞부분 예정)
+  { id: 'nosmall',   at: 117, len: 45 },  // 작게 올 리 / 없지.
+  { id: 'grow',      at: 162, len: 75 },  // 커진다 (AI 영상 V2 뒷부분 예정)
+  { id: 'geodae',    at: 237, len: 60 },  // 거 · 대 · 한
+  { id: 'open',      at: 297, len: 63 },  // 터진다 (AI 영상 V3 예정)
+  { id: 'benefit',   at: 360, len: 60 },  // 혜택이 찾아온다!
+  { id: 'from',      at: 420, len: 60 },  // 언제부터? 10.26 월요일
+  { id: 'until',     at: 480, len: 60 },  // 언제까지? 11.8 일요일
+  { id: 'end',       at: 540, len: 150 }, // 엔딩
+];
+const FRAMES = CUTS.at(-1).at + CUTS.at(-1).len;
+window.COMP = { w: W, h: H, fps: FPS, frames: FRAMES, cuts: CUTS }; window.ready = false;
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (f, a, b) => clamp((f - a) / (b - a));
+const outExpo = t => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+const outBack = (t, s = 1.7) => 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2);
+const outQuart = t => 1 - Math.pow(1 - t, 4);
+const inOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const inQuad = t => t * t, inCubic = t => t * t * t;
+const lerp = (a, b, t) => a + (b - a) * t;
+const shake = (lf, at, amp, len = 7) => { const t = lf - at; if (t < 0 || t > len) return [0, 0];
+  const k = amp * Math.pow(1 - t / len, 2); return [Math.sin(t * 2.9 + at) * k, Math.cos(t * 3.7 + at) * k]; };
+
+// ── backgrounds: type cuts live in the same seamless studio as the photos (soft floor falloff), or in a KV colour
+function studio() {
+  ctx.fillStyle = C.studio; ctx.fillRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(W / 2, 880, 80, W / 2, 980, 1250);
+  g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.55, 'rgba(255,255,255,0.75)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+const fill = col => { ctx.fillStyle = col; ctx.fillRect(0, 0, W, H); };
+
+// ── type
+function text(str, x, y, { size = 160, weight = 900, color = C.black, track = -0.045 } = {}) {
+  ctx.font = `${weight} ${size}px P`; ctx.letterSpacing = `${track * size}px`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = color; ctx.fillText(str, x, y);
+}
+// rise out of the baseline (mask) and settle from a hair larger
+function rise(str, y, t, o = {}) {
+  if (t <= 0) return; const k = outExpo(t), size = o.size ?? 160;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, y - size * 0.66, W, size * 1.32); ctx.clip();
+  ctx.translate(W / 2, y + (1 - k) * size * 0.95); const s = lerp(1.06, 1, k); ctx.scale(s, s);
+  text(str, 0, 0, o); ctx.restore();
+}
+// slam: scales down onto the page with a little overshoot
+function slam(str, y, t, o = {}) {
+  if (t <= 0) return; const k = outExpo(clamp(t));
+  ctx.save(); ctx.translate(W / 2, y); const s = lerp(1.5, 1, k); ctx.scale(s, s); ctx.globalAlpha = clamp(t * 4);
+  text(str, 0, 0, o); ctx.restore();
+}
+// ── media
+const IMG = {};
+function cover(img, { s = 1, dx = 0, dy = 0, ax = 0.5, ay = 0.5 } = {}) {
+  if (!img) return; const k = Math.max(W / img.width, H / img.height) * s, w = img.width * k, h = img.height * k;
+  ctx.drawImage(img, (W - w) * ax + dx, (H - h) * ay + dy, w, h);
+}
+
+// ── logo
+let LOGO = null;
+function logoAt(x, y, width, color = C.black) {
+  const s = width / LOGO.w; ctx.save(); ctx.translate(x - width / 2, y - LOGO.h * s / 2); ctx.scale(s, s);
+  ctx.fillStyle = color; LOGO.pieces.forEach(p => ctx.fill(p.path, 'evenodd')); ctx.restore(); return LOGO.h * s;
+}
+
+// ── official KV shards traced from the guide, regrouped for 9:16 (same layout as v3). Each group keeps its black
+//    keyline with its colour shard; edges the banner frame cut are pushed past the 9:16 frame edge.
+let KV = null;
+const KVFILL = { green: C.green, purple: C.purple, black: C.black };
+const KVG = [
+  { p: [0, 5],     clip: [85, 0, 678, 259],      s: 1.3, at: [-300, -6],              from: [-1, -1] },
+  { p: [1, 6, 9],  clip: [1194, 0, 1832, 232],   s: 1.3, at: [500, -6],               from: [1, -1] },
+  { p: [2, 10, 3], clip: [0, 120, 641, 514],     s: 1.3, at: [-330, 1920 - 512 + 8],  from: [-1, 1] },
+  { p: [1, 7],     clip: [1194, 232, 1832, 514], s: 1.3, at: [560, 1920 - 367 + 8],   from: [1, 1] },
+  { p: [4, 8],     clip: [774, 446, 1054, 514],  s: 1.3, at: [540 - 182, 1920 - 88 + 6], from: [0, 1] },
+];
+function kv(t, { stagger = 0.08, drift = 0 } = {}) {
+  if (!KV || t <= 0) return;
+  KVG.forEach((g, i) => {
+    const ti = clamp((t - i * stagger) / (1 - stagger * (KVG.length - 1))), k = outExpo(ti);
+    if (ti <= 0) return;
+    const [x0, y0, x1, y1] = g.clip, off = (1 - k) * 900;
+    ctx.save();
+    ctx.translate(g.at[0] + g.from[0] * (off - drift * 30), g.at[1] + g.from[1] * (off - drift * 30));
+    ctx.scale(g.s, g.s); ctx.translate(-x0, -y0);
+    ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+    g.p.forEach(pi => { const p = KV.pieces[pi]; ctx.fillStyle = KVFILL[p.color]; ctx.fill(p.path, 'evenodd'); });
+    ctx.restore();
+  });
+}
+
+const R = {
+  drop(lf) {
+    fill(C.white);
+    const land = 7, fall = prog(lf, 0, land), y = lf < land ? lerp(-820, 0, inQuad(fall)) : 0;
+    const bounce = lf >= land ? Math.exp(-(lf - land) / 3) * Math.sin((lf - land) * 0.9) * -10 : 0;
+    const [sx, sy] = shake(lf, land, 16);
+    ctx.save(); ctx.translate(sx, sy);
+    ctx.globalAlpha = lf >= land ? 1 : 0; cover(IMG.heroPlate); ctx.globalAlpha = 1;
+    const push = 1 + 0.02 * outQuart(prog(lf, land, 36));
+    ctx.translate(W / 2, H / 2); ctx.scale(push, push); ctx.translate(-W / 2, -H / 2);
+    cover(IMG.heroCut, { dy: y + bounce }); ctx.restore();
+  },
+  arrived(lf) { studio(); rise('택배 왔다.', 940, prog(lf, -3, 8), { size: 190 }); },
+  strain(lf) {
+    const k = inOutCubic(prog(lf, 0, 45)), tr = 1.5 + 5 * k;
+    cover(IMG.strain, { s: lerp(1.0, 1.1, k), dx: Math.sin(lf * 2.3) * tr, dy: Math.cos(lf * 3.1) * tr });
+  },
+  nosmall(lf) {
+    fill(C.black);
+    rise('작게 올 리', 850, prog(lf, -3, 8), { size: 170, color: C.white });
+    rise('없지.', 1070, prog(lf, 10, 20), { size: 230, color: C.green });
+  },
+  grow(lf) { // placeholder until AI video V2: push from the small box into the giant face
+    const k = prog(lf, 0, 40);
+    if (k < 1) { fill(C.white); cover(IMG.hero, { s: lerp(1, 3.2, inCubic(k)) }); }
+    else { const k2 = outQuart(prog(lf, 40, 75)); cover(IMG.giantface, { s: lerp(1.12, 1.0, k2) }); }
+  },
+  geodae(lf) {
+    const b = Math.floor(lf / BEAT), bt = lf - b * BEAT;
+    const bgs = [C.white, C.green, C.purple, C.white];
+    fill(bgs[b]); if (b === 3) studio();
+    ctx.save();
+    if (b < 3) { const pk = outExpo(prog(bt, -1, 5)); ctx.save(); ctx.translate(W / 2, 960); const s = lerp(1.3, 1, pk); ctx.scale(s, s);
+      text('거대한'[b], 0, 20, { size: 720, track: 0 }); ctx.restore(); }
+    else { kv(prog(bt, -7, 8), { drift: bt / 15 }); slam('거대한', 960, prog(bt, -2, 6), { size: 300, track: -0.05 }); }
+    ctx.restore();
+  },
+  open(lf) { // placeholder until AI video V3: the stressed face trembles, then bursts to white
+    const k = prog(lf, 0, 40), tr = 2 + 10 * k;
+    cover(IMG.giantface, { s: lerp(1.0, 1.08, k), dx: Math.sin(lf * 2.7) * tr, dy: Math.cos(lf * 3.3) * tr });
+    if (lf >= 40) { fill(`rgba(0,245,80,${prog(lf, 40, 46)})`); fill(`rgba(255,255,255,${prog(lf, 46, 56)})`); }
+  },
+  benefit(lf) {
+    studio();
+    ctx.save();
+    kv(prog(lf, -7, 8), { drift: lf / 60 });
+    slam('혜택이', 870, prog(lf, -2, 6), { size: 180 });
+    slam('찾아온다!', 1070, prog(lf, 2, 9), { size: 180 });
+    ctx.restore();
+  },
+  from(lf) { dateCut(lf, C.green, '언제부터?', '10.26', '월요일'); },
+  until(lf) { dateCut(lf, C.purple, '언제까지?', '11.8', '일요일'); },
+  end(lf) {
+    fill(C.white); studio();
+    const hit = 6, sx = 0, sy = 0;
+    const punch = 1 + 0.05 * (1 - outQuart(prog(lf, hit, hit + 14))) * (lf >= hit ? 1 : 0), drift = 1 + 0.03 * prog(lf, hit, 150);
+    ctx.save(); ctx.translate(W / 2 + sx, 900 + sy); ctx.scale(punch * drift, punch * drift); ctx.translate(-W / 2, -900);
+    kv(prog(lf, -6, hit + 8), { drift: lf / 150 });
+    // logo slams in from the camera
+    const lt = prog(lf, 0, hit), ls = lf < hit ? lerp(3.2, 1, outQuart(lt)) : 1;
+    ctx.save(); ctx.translate(W / 2, 880); ctx.scale(ls, ls); const lh = logoAt(0, 0, 860); ctx.restore();
+    ctx.restore();
+    rise('거대한 혜택이 찾아온다!', 1250, prog(lf, 16, 26), { size: 62, weight: 800, track: -0.03 });
+    rise('10.26.~ 11.8.', 1335, prog(lf, 20, 30), { size: 54, weight: 600, track: -0.01 });
+    rise('네이버플러스 스토어', 1440, prog(lf, 26, 36), { size: 40, weight: 700, track: 0, color: '#222' });
+  },
+};
+// question → answer → weekday, all inside one colour field
+function dateCut(lf, bgc, q, ans, day) {
+  fill(bgc);
+  rise(q, 680, prog(lf, -3, 6), { size: 76, weight: 800, track: -0.03 });
+  const hit = 12;
+  slam(ans, 990, prog(lf, hit, hit + 7), { size: 340, track: -0.05 });
+  // weekday tag
+  const t = prog(lf, hit + 8, hit + 16);
+  if (t > 0) { const k = outExpo(t); ctx.save(); ctx.translate(W / 2, 1230 + (1 - k) * 30); ctx.globalAlpha = clamp(t * 2);
+    ctx.fillStyle = C.black; ctx.beginPath(); ctx.roundRect(-118, -46, 236, 92, 46); ctx.fill();
+    text(day, 0, 3, { size: 50, weight: 800, color: bgc, track: -0.02 }); ctx.restore(); }
+}
+
+function render(f) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.filter = 'none'; ctx.globalAlpha = 1; ctx.clearRect(0, 0, W, H);
+  const cut = CUTS.findLast(c => f >= c.at); R[cut.id](f - cut.at, f);
+}
+window.renderFrame = render;
+
+const load = src => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
+function keyHero(img) { // separate the box from its white plate for the drop
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d');
+  x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, c.width, c.height), a = d.data;
+  const plate = document.createElement('canvas'); plate.width = c.width; plate.height = c.height; const px = plate.getContext('2d');
+  const pd = px.createImageData(c.width, c.height), p = pd.data;
+  for (let i = 0; i < a.length; i += 4) {
+    const mn = Math.min(a[i], a[i + 1], a[i + 2]), al = clamp((232 - mn) / 26);
+    p[i] = a[i]; p[i + 1] = a[i + 1]; p[i + 2] = a[i + 2]; p[i + 3] = 255;
+    if (al > 0.98) p[i] = p[i + 1] = p[i + 2] = 252;
+    a[i + 3] = Math.round(al * 255);
+  }
+  x.putImageData(d, 0, 0); px.putImageData(pd, 0, 0); return [c, plate];
+}
+const [lg, kvj, hero, strain, giantface] = await Promise.all([
+  fetch('logo_pieces.json').then(r => r.json()), fetch('kv_pieces.json').then(r => r.json()),
+  load('../assets/gen/img02_box_hero_v1_1080.jpg'), load('../assets/gen/img03_box_strain_v1_1080.jpg'), load('../assets/gen/img05_box_giantface_v1_1080.jpg'),
+  ...[900, 800, 700, 600, 500].map(w => document.fonts.load(`${w} 40px P`)),
+]);
+lg.pieces.forEach(p => p.path = new Path2D(p.d)); LOGO = lg;
+kvj.pieces.forEach(p => p.path = new Path2D(p.d)); KV = kvj;
+IMG.hero = hero; [IMG.heroCut, IMG.heroPlate] = keyHero(hero); IMG.strain = strain; IMG.giantface = giantface;
+render(0); window.ready = true;
+</script>
+</body></html>
