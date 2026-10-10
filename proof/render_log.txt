@@ -14,3 +14,6 @@
 2026-10-10T07:44:13.811Z render motion/v5.html -> out/v5_draft.mp4 frames 0-690 step 1 1080x1920@30 in 232.4s ffmpeg=0
 2026-10-10T07:44:36.284Z render motion/v5.html -> out/v5_check.mp4 frames 0-690 step 1 1080x1920@30 in 2.9s ffmpeg=skipped (preview stills)
 2026-10-10T07:48:43.868Z render motion/v5.html -> out/v5_draft.mp4 frames 0-690 step 1 1080x1920@30 in 232.4s ffmpeg=0
+2026-10-10T08:03:07.497Z render motion/v6.html -> out/v6_style.mp4 frames 0-750 step 1 1080x1920@30 in 6.0s ffmpeg=skipped (preview stills)
+2026-10-10T08:03:26.361Z render motion/v6.html -> out/v6_style.mp4 frames 0-750 step 1 1080x1920@30 in 1.8s ffmpeg=skipped (preview stills)
+2026-10-10T08:07:48.277Z render motion/v6.html -> out/v6_draft.mp4 frames 0-750 step 1 1080x1920@30 in 246.0s ffmpeg=0
