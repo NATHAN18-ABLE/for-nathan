@@ -23,3 +23,13 @@
 - motion/render.mjs (Playwright 프레임 캡처 → ffmpeg libx264 crf16 yuv420p faststart)
 - motion/smoke_test.html → out/smoke_test.mp4 (1080×1920, 30fps, 1.5초) — 기술 테스트용, 채택 안 함
 - 콘택트 시트: proof/contact_sheets/smoke_test.png
+
+### KV 에셋 확보 (PSD 대체 경로)
+- 사용자 제공: KV 가이드 평면 이미지 `assets/ref/kv_guide_2576.jpg` (2576×2125, 원본 PSD 3070×2532를 약 84%로 줄인 버전으로 추정)
+- 로고 벡터화: `tools/trace_logo.py` (potracer). 8배 업샘플 → 블러로 JPEG 노이즈 제거 → 트레이싱
+  - 결과 `assets/kv/logo_traced.svg`: 곡선 14개(글자 조각 12개 + 내부 구멍), 원본 대비 픽셀 일치율(IoU) **99.87%**
+  - 손으로 다시 그린 것이 아니라 공식 아트워크를 그대로 트레이싱함. 원본 PSD를 받으면 원본 벡터로 교체 예정
+- 배너 크롭: `assets/kv/kv_banner_from_jpg.png`
+
+### 3D 렌더 가능성 테스트
+- three.js 0.170 + 헤드리스 Chromium(SwiftShader WebGL) → `out/three_test.mp4`, 1080×1920, 그림자 포함, 프레임당 약 1.07초

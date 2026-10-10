@@ -1,1 +1,2 @@
 2026-10-10T06:04:49.744Z render motion/smoke_test.html -> out/smoke_test.mp4 frames 0-45 1080x1920@30 in 6.7s ffmpeg=0
+2026-10-10T06:22:25.234Z render motion/three_test.html -> out/three_test.mp4 frames 0-30 step 1 1080x1920@30 in 32.1s ffmpeg=0
