@@ -1,0 +1,271 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>넾다세일 — 작게 올 리 없다 (animatic v2)</title>
+<style>
+@font-face{font-family:P;src:url(fonts/Pretendard-Black.otf);font-weight:900}
+@font-face{font-family:P;src:url(fonts/Pretendard-ExtraBold.otf);font-weight:800}
+@font-face{font-family:P;src:url(fonts/Pretendard-Bold.otf);font-weight:700}
+@font-face{font-family:P;src:url(fonts/Pretendard-SemiBold.otf);font-weight:600}
+@font-face{font-family:P;src:url(fonts/Pretendard-Medium.otf);font-weight:500}
+html,body{margin:0;background:#fff;overflow:hidden}
+canvas{display:block}
+</style></head>
+<body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// ── Composition: 1080×1920, 30fps, 21s. 120BPM → 1 beat = 15 frames. render(f) is a pure function of f.
+const W = 1080, H = 1920, FPS = 30, FRAMES = 630, BEAT = 15;
+window.COMP = { w: W, h: H, fps: FPS, frames: FRAMES }; window.ready = false;
+const MODE = new URLSearchParams(location.search).get('mode') || 'animatic'; // 'animatic' draws placeholder box/products
+
+const C = { white: '#FFFFFF', green: '#00F550', purple: '#9162FF', black: '#000000', studio: '#F4F4F2',
+  kraft: '#C9A57B', kraftSide: '#A9855D', kraftTop: '#DDBF95', ink: '#111111', mute: '#7A7A7A' };
+// Safe zone: core copy lives between y=230 (top 12%) and y=1500 (above bottom 22%), x ≤ 960 (right UI rail).
+const M = 96, TOP = 250;
+
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (f, a, b) => clamp((f - a) / (b - a));
+const outExpo = t => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+const inExpo = t => t <= 0 ? 0 : Math.pow(2, 10 * t - 10);
+const outBack = (t, s = 1.7) => 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2);
+const inQuad = t => t * t;
+const lerp = (a, b, t) => a + (b - a) * t;
+const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+// decaying camera shake triggered at frame `at`
+const shake = (f, at, amp, len = 7) => { const t = f - at; if (t < 0 || t > len) return [0, 0];
+  const k = amp * (1 - t / len); return [Math.sin(t * 2.7 + at) * k, Math.cos(t * 3.3 + at) * k]; };
+
+// ── Typography: canvas text with mask-rise reveal (text rises out of its own baseline line, no fades)
+function line(text, x, y, { size = 120, weight = 900, color = C.black, align = 'left', track = -0.045, t = 1, out = 0 } = {}) {
+  if (t <= 0 || out >= 1) return;
+  ctx.save();
+  ctx.font = `${weight} ${size}px P`; ctx.letterSpacing = `${track * size}px`; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
+  ctx.beginPath(); ctx.rect(0, y - size * 1.02, W, size * 1.3); ctx.clip();
+  const dy = (1 - outExpo(t)) * size * 1.05 - outExpo(out) * size * 1.1;
+  ctx.fillStyle = color; ctx.fillText(text, x, y + dy);
+  ctx.restore();
+}
+// editorial micro chrome: label row + hairline + scene index (fills the frame without competing with the headline)
+function chrome(f, idx, total, { color = C.black, label = '넾다세일   10.26 — 11.8', t = 1 } = {}) {
+  if (t <= 0) return;
+  ctx.save(); ctx.globalAlpha = clamp(t * 1.5);
+  ctx.font = '600 26px P'; ctx.letterSpacing = '3px'; ctx.fillStyle = color; ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left'; ctx.fillText(label, M, TOP);
+  ctx.textAlign = 'right'; ctx.fillText(`${String(idx).padStart(2, '0')} / ${String(total).padStart(2, '0')}`, W - M, TOP);
+  ctx.fillRect(M, TOP + 22, (W - 2 * M) * outExpo(t), 2);
+  ctx.restore();
+}
+
+// ── KV shard: a spike with the KV's lightning notch, flat fill + heavy black keyline
+function shardPath(cx, cy, a, w, r0, r1) {
+  const P = (ang, r) => [cx + Math.cos(ang) * r, cy + Math.sin(ang) * r];
+  const pts = [P(a - w, r0), P(a - w * 0.35, lerp(r0, r1, 0.55)), P(a + w * 0.25, lerp(r0, r1, 0.5)), P(a, r1), P(a + w, r0)];
+  ctx.beginPath(); ctx.moveTo(...pts[0]); for (let i = 1; i < pts.length; i++) ctx.lineTo(...pts[i]); ctx.closePath();
+}
+function burst(cx, cy, t, { seed = 7, n = 16, inner = 360, outer = 1900, spin = 0, colors = [C.green, C.purple, C.black], stroke = 14 } = {}) {
+  if (t <= 0) return;
+  const R = rng(seed); ctx.save(); ctx.lineJoin = 'miter'; ctx.miterLimit = 6;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2 + (R() - 0.5) * 0.25 + spin, w = 0.07 + R() * 0.09;
+    const delay = R() * 0.25, k = outExpo(clamp((t - delay) / (1 - delay)));
+    if (k <= 0) continue;
+    const r0 = inner * (0.9 + R() * 0.25) * k, r1 = lerp(r0, outer * (0.75 + R() * 0.4), k);
+    shardPath(cx, cy, a, w, r0, r1);
+    const col = colors[i % colors.length];
+    ctx.fillStyle = col; ctx.fill();
+    if (col !== C.black) { ctx.lineWidth = stroke; ctx.strokeStyle = C.black; ctx.stroke(); }
+  }
+  ctx.restore();
+}
+// KV-style iris transition: a spiky star of the next colour blooms from a point and covers the frame
+function iris(cx, cy, t, color, seed = 3) {
+  if (t <= 0) return;
+  const R = rng(seed), n = 14, r = outExpo(t) * 2600;
+  ctx.save(); ctx.beginPath();
+  for (let i = 0; i < n * 2; i++) { const a = i / (n * 2) * Math.PI * 2, rr = i % 2 ? r * (0.55 + R() * 0.2) : r;
+    const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 16; ctx.strokeStyle = C.black; ctx.stroke(); ctx.restore();
+}
+
+// ── Placeholder 2D box (animatic only; replaced by the three.js render in the final)
+function box(cx, cy, s, { bulge = 0, leak = 0, sx = 1, sy = 1, rot = 0 } = {}) {
+  const w = s, h = s * 0.68, d = s * 0.34, b = bulge * s * 0.07;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(sx, sy);
+  // contact shadow
+  ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = '#000'; ctx.beginPath();
+  ctx.ellipse(d * 0.3, h / 2 + 6, w * 0.62, s * 0.06, 0, 0, Math.PI * 2); ctx.filter = `blur(${s * 0.03}px)`; ctx.fill(); ctx.restore();
+  const face = (pts, col, bul) => { ctx.beginPath(); ctx.moveTo(...pts[0]);
+    for (let i = 1; i <= pts.length; i++) { const p0 = pts[i - 1], p1 = pts[i % pts.length];
+      const mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2, nx = -(p1[1] - p0[1]), ny = p1[0] - p0[0], L = Math.hypot(nx, ny) || 1;
+      ctx.quadraticCurveTo(mx - nx / L * bul, my - ny / L * bul, ...p1); }
+    ctx.closePath(); ctx.fillStyle = col; ctx.fill(); };
+  const fx = -w / 2, fy = -h / 2;
+  face([[fx, fy], [fx + w, fy], [fx + w, fy + h], [fx, fy + h]], C.kraft, b);                       // front
+  face([[fx + w, fy], [fx + w + d, fy - d * 0.6], [fx + w + d, fy + h - d * 0.6], [fx + w, fy + h]], C.kraftSide, b * 0.7); // side
+  face([[fx, fy], [fx + d, fy - d * 0.6], [fx + w + d, fy - d * 0.6], [fx + w, fy]], C.kraftTop, b * 0.5);   // top
+  // brand tape: neon green with black keylines, across the lid seam and down the front
+  ctx.fillStyle = C.green; ctx.strokeStyle = C.black; ctx.lineWidth = Math.max(2, s * 0.008);
+  const tw = s * 0.16;
+  ctx.beginPath(); ctx.moveTo(fx + w / 2 - tw / 2, fy); ctx.lineTo(fx + w / 2 - tw / 2 + d, fy - d * 0.6); ctx.lineTo(fx + w / 2 + tw / 2 + d, fy - d * 0.6);
+  ctx.lineTo(fx + w / 2 + tw / 2, fy); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.rect(fx + w / 2 - tw / 2, fy, tw, h * 0.3); ctx.fill(); ctx.stroke();
+  // light leak along the lid seam
+  if (leak > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(0,245,80,${0.85 * leak})`;
+    ctx.lineWidth = s * 0.012 * (1 + leak); ctx.shadowColor = C.green; ctx.shadowBlur = s * 0.08 * leak;
+    ctx.beginPath(); ctx.moveTo(fx + 4, fy + 2); ctx.lineTo(fx + w - 4, fy + 2); ctx.lineTo(fx + w + d - 4, fy - d * 0.6 + 2); ctx.stroke(); ctx.restore(); }
+  ctx.restore();
+}
+// placeholder product card (animatic) — final uses AI-generated unbranded product cutouts
+function product(cx, cy, t, label, { rot = -0.08, seed = 1, f = 0 } = {}) {
+  if (t <= 0) return;
+  const k = outBack(clamp(t), 1.4), y = cy + (1 - k) * 1100, r = lerp(rot - 0.5, rot, k) + Math.sin(f / 18 + seed) * 0.025;
+  ctx.save(); ctx.translate(cx, y + Math.sin(f / 14 + seed) * 10); ctx.rotate(r);
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.roundRect(-250 + 18, -190 + 26, 500, 380, 40); ctx.fill();
+  ctx.fillStyle = '#E4E4E4'; ctx.strokeStyle = C.black; ctx.lineWidth = 6; ctx.beginPath(); ctx.roundRect(-250, -190, 500, 380, 40); ctx.fill(); ctx.stroke();
+  ctx.font = '700 34px P'; ctx.fillStyle = '#555'; ctx.textAlign = 'center'; ctx.letterSpacing = '0px'; ctx.fillText(label, 0, 12);
+  ctx.restore();
+}
+
+// ── Logo (12 pieces traced from the official KV) ──
+let LOGO = null;
+function logo(f, x, y, width, start) {
+  if (!LOGO) return;
+  const s = width / LOGO.w, R = rng(42);
+  LOGO.pieces.forEach((p, i) => {
+    const ang = R() * Math.PI * 2, dist = 1500 + R() * 600, spinA = (R() - 0.5) * 2.4;
+    const t = prog(f, start + i * 2, start + i * 2 + 16), k = outExpo(t);
+    if (t <= 0) return;
+    const [pcx, pcy] = p.c;
+    ctx.save();
+    ctx.translate(x + pcx * s + Math.cos(ang) * dist * (1 - k), y + pcy * s + Math.sin(ang) * dist * (1 - k));
+    ctx.rotate(spinA * (1 - k)); const sc = lerp(1.8, 1, k); ctx.scale(s * sc, s * sc); ctx.translate(-pcx, -pcy);
+    ctx.fillStyle = t < 0.82 ? (i % 2 ? C.purple : C.green) : C.black;
+    ctx.fill(p.path, 'evenodd'); ctx.restore();
+  });
+}
+
+// ── Film grain (static noise tiles cycled per frame; subtle) ──
+const grains = [...Array(4)].map((_, k) => { const g = document.createElement('canvas'); g.width = 540; g.height = 960;
+  const gx = g.getContext('2d'), im = gx.createImageData(540, 960), R = rng(100 + k);
+  for (let i = 0; i < im.data.length; i += 4) { const v = 128 + (R() - 0.5) * 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
+  gx.putImageData(im, 0, 0); return g; });
+function grain(f, a = 0.05) { ctx.save(); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'overlay'; ctx.drawImage(grains[f % 4], 0, 0, W, H); ctx.restore(); }
+
+// ── SCENES ──
+function render(f) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
+
+  if (f < 165) {                           // S1–S3: studio + box
+    ctx.fillStyle = C.studio; ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(W / 2, 1150, 100, W / 2, 1150, 1300); g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // S3 growth beats
+    const beats = [105, 120, 135];
+    let scale = 1; beats.forEach(b => { scale *= lerp(1, 1.72, outExpo(prog(f, b, b + 7))); });
+    const hold = prog(f, 150, 165); scale *= 1 + 0.06 * hold;
+    let [sx, sy] = shake(f, 9, 14); beats.forEach(b => { const s2 = shake(f, b, 22); sx += s2[0]; sy += s2[1]; });
+    ctx.save(); ctx.translate(sx, sy);
+    // S1 drop + squash
+    const drop = prog(f, 0, 9), land = prog(f, 9, 24);
+    const by = f < 9 ? lerp(-600, 1130, inQuad(drop)) : 1130 + (scale - 1) * 110;
+    const squash = f < 9 ? 0 : Math.exp(-land * 5) * Math.cos(land * 14) * 0.14;
+    const breathe = f >= 45 ? Math.sin((f - 45) / 6) * 0.5 + 0.5 : 0;
+    const bul = f >= 45 ? clamp((f - 45) / 50) * (0.6 + 0.4 * breathe) + (f > 105 ? 0.4 : 0) : 0;
+    const leak = f >= 30 ? clamp((f - 30) / 60) * (0.5 + 0.5 * breathe) + hold : 0.15;
+    const tremble = f >= 150 ? Math.sin(f * 2.1) * 0.004 : 0;
+    box(W / 2 - 50, by, 450 * scale, { bulge: bul, leak, sx: 1 + squash, sy: 1 - squash, rot: tremble });
+    ctx.restore();
+
+    // copy
+    chrome(f, f < 45 ? 1 : f < 105 ? 2 : 3, 5, { t: prog(f, 4, 20) });
+    line('택배 왔다.', M, 420, { size: 132, t: prog(f, 12, 22), out: prog(f, 44, 52) });
+    line('작게 올 리', M, 420, { size: 132, t: prog(f, 50, 60), out: prog(f, 103, 110) });
+    line('없지.', M, 560, { size: 132, t: prog(f, 56, 66), out: prog(f, 103, 110) });
+    const big = [['거', 600], ['대', 1000], ['한', 1400]];
+    big.forEach(([ch, yy], i) => line(ch, W / 2, yy, { size: 430, align: 'center', track: 0, t: prog(f, beats[i], beats[i] + 5) }));
+    // shipping-label data block: size field escalates on every growth beat
+    const size = f < 105 ? '소' : f < 120 ? '중' : f < 135 ? '대' : f < 150 ? '특대' : '측정 불가';
+    const rowT = prog(f, 14, 26);
+    if (rowT > 0) { ctx.save(); ctx.globalAlpha = clamp(rowT * 1.5); ctx.fillStyle = C.black; ctx.fillRect(M, 1418, (W - 2 * M) * outExpo(rowT), 2);
+      ctx.font = '600 28px P'; ctx.letterSpacing = '2px'; ctx.textAlign = 'left';
+      ctx.fillStyle = C.mute; ctx.fillText('배송 상태', M, 1466); ctx.fillText('상자 크기', M, 1508);
+      ctx.fillStyle = C.black; ctx.fillText('도착', M + 190, 1466);
+      ctx.font = `${f >= 150 ? 800 : 600} 28px P`; ctx.fillStyle = f >= 150 ? '#00B83C' : C.black; ctx.fillText(size, M + 190, 1508);
+      ctx.restore(); }
+    if (MODE === 'animatic') grain(f);
+    return;
+  }
+
+  if (f < 210) {                           // S4: burst → 혜택이 찾아온다!
+    const t = prog(f, 165, 181);
+    ctx.fillStyle = C.white; ctx.fillRect(0, 0, W, H);
+    const [sx, sy] = shake(f, 165, 26, 9); ctx.save(); ctx.translate(sx, sy);
+    burst(W / 2, 900, t, { seed: 11, n: 18, inner: 330, spin: (f - 165) * 0.002 });
+    // kraft flap fragments flying past camera
+    const R = rng(5);
+    for (let i = 0; i < 7; i++) { const a = R() * Math.PI * 2, sp = 900 + R() * 900, k = outExpo(prog(f, 165, 185));
+      ctx.save(); ctx.translate(W / 2 + Math.cos(a) * sp * k, 900 + Math.sin(a) * sp * k); ctx.rotate(a + k * (R() * 4 - 2));
+      ctx.fillStyle = i % 2 ? C.kraft : C.kraftTop; const s = 120 + R() * 220 * (1 + k); ctx.fillRect(-s / 2, -s / 3, s, s * 0.66); ctx.restore(); }
+    ctx.restore();
+    chrome(f, 4, 5, { t: prog(f, 172, 186) });
+    const pop = outBack(prog(f, 170, 182), 2.2);
+    ctx.save(); ctx.translate(W / 2, 900); ctx.scale(lerp(1.4, 1, pop), lerp(1.4, 1, pop)); ctx.translate(-W / 2, -900);
+    line('혜택이', W / 2, 880, { size: 168, align: 'center', t: prog(f, 170, 178) });
+    line('찾아온다!', W / 2, 1060, { size: 168, align: 'center', t: prog(f, 174, 182) });
+    ctx.restore();
+    // white impact frame on the cut
+    if (f === 165) { ctx.fillStyle = C.white; ctx.fillRect(0, 0, W, H); }
+    grain(f); return;
+  }
+
+  if (f < 390) {                           // S5: dates montage, one per 2 beats
+    const beatsM = [
+      { at: 210, bg: C.green, fg: C.black, label: '시작', big: '10.26', prod: '상품 01 · 운동화', shard: C.purple },
+      { at: 270, bg: C.purple, fg: C.black, label: '종료', big: '11.8', prod: '상품 02 · 헤드폰', shard: C.green },
+      { at: 330, bg: C.black, fg: C.white, label: '기간', big: '단 14일.', prod: '상품 03 · 화장품', shard: C.green },
+    ];
+    const i = beatsM.findLastIndex(b => f >= b.at), b = beatsM[i], prev = i ? beatsM[i - 1] : { bg: C.white };
+    ctx.fillStyle = prev.bg; ctx.fillRect(0, 0, W, H);
+    iris(i === 0 ? W / 2 : 260, i === 0 ? 900 : 1300, prog(f, b.at, b.at + 9), b.bg, 20 + i);
+    if (f >= b.at + 6) { ctx.fillStyle = b.bg; ctx.fillRect(0, 0, W, H); }
+    const lf = f - b.at;
+    // corner shards framing the product
+    ctx.save(); ctx.globalAlpha = 1;
+    burst(W + 80, 1500, prog(f, b.at + 3, b.at + 18), { seed: 30 + i, n: 9, inner: 300, outer: 900, colors: [b.shard, C.black], stroke: 12 });
+    burst(-60, 1560, prog(f, b.at + 5, b.at + 20), { seed: 40 + i, n: 7, inner: 260, outer: 700, colors: [b.shard, C.black], stroke: 12 });
+    ctx.restore();
+    product(W / 2 + 40, 1190, prog(f, b.at + 4, b.at + 20), b.prod, { seed: i, f, rot: [-0.1, 0.08, -0.05][i] });
+    chrome(f, 5, 5, { color: b.fg, t: 1 });
+    line(b.label, M, 420, { size: 44, weight: 700, track: 0.02, color: b.fg, t: prog(f, b.at + 2, b.at + 9) });
+    if (i < 2) line(b.big, M - 8, 720, { size: 300, color: b.fg, t: prog(f, b.at + 3, b.at + 11), out: prog(f, b.at + 56, b.at + 60) });
+    else { line('단', M, 620, { size: 150, color: C.white, t: prog(f, b.at + 3, b.at + 10) });
+           line('14일.', M - 8, 900, { size: 300, color: C.green, t: prog(f, b.at + 6, b.at + 14) }); }
+    grain(f, 0.04); return;
+  }
+
+  // S6–S7: logo assembly → KV end card → fold back to white (loops into frame 0)
+  ctx.fillStyle = C.white; ctx.fillRect(0, 0, W, H);
+  const fold = inExpo(prog(f, 600, 626));
+  ctx.save(); ctx.translate(W / 2, 900); const sc = (1 - fold) * (1 + 0.012 * Math.sin(prog(f, 470, 600) * Math.PI)); ctx.scale(sc, sc); ctx.translate(-W / 2, -900);
+  if (fold < 1) {
+    burst(W / 2, 900, prog(f, 418, 440), { seed: 77, n: 14, inner: 520, outer: 1900, spin: (f - 418) * 0.0012 });
+    // clean white stage behind the lockup (KV centre is always white)
+    ctx.fillStyle = C.white; ctx.beginPath(); ctx.ellipse(W / 2, 960, 470 * outExpo(prog(f, 418, 432)) + 1, 380 * outExpo(prog(f, 418, 432)) + 1, 0, 0, Math.PI * 2); ctx.fill();
+    const LW = 820; logo(f, (W - LW) / 2, 760, LW, 392);
+    const lh = LOGO ? LW * LOGO.h / LOGO.w : 250;
+    line('거대한 혜택이 찾아온다!', W / 2, 760 + lh + 110, { size: 60, weight: 700, align: 'center', track: -0.02, t: prog(f, 438, 448) });
+    line('10.26.~ 11.8.', W / 2, 760 + lh + 190, { size: 54, weight: 500, align: 'center', track: -0.01, t: prog(f, 444, 454) });
+    ctx.fillStyle = C.black; const rw = 260 * outExpo(prog(f, 450, 464)); ctx.fillRect(W / 2 - rw / 2, 760 + lh + 262, rw, 3);
+    line('네이버플러스 스토어', W / 2, 760 + lh + 340, { size: 40, weight: 600, align: 'center', track: 0.02, t: prog(f, 452, 462) });
+  }
+  ctx.restore();
+  grain(f, 0.035);
+}
+
+window.renderFrame = f => render(f);
+fetch('logo_pieces.json').then(r => r.json()).then(j => { j.pieces.forEach(p => p.path = new Path2D(p.d)); LOGO = j; })
+  .then(() => document.fonts.load('900 100px P')).then(() => Promise.all([700, 600, 500].map(w => document.fonts.load(`${w} 40px P`))))
+  .then(() => { render(0); window.ready = true; });
+</script>
+</body></html>
