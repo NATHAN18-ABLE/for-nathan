@@ -47,3 +47,26 @@
 - `motion/comp.html` (Canvas 2D, `render(f)`는 프레임 번호만으로 화면이 정해지는 순수 함수) → `out/animatic_v2.mp4`, 1080×1920, 30fps, 21초, 렌더 306초
 - 로고 조각 분리: `tools/split_logo.py` → `motion/logo_pieces.json` (12조각)
 - 콘택트 시트: `proof/contact_sheets/animatic_v2_sheet.png`
+
+### KV 섬광 벡터화
+- `tools/trace_kv.py`: 공식 KV 배너에서 색(그린·퍼플·블랙)별 연결 영역을 추출해 조각마다 트레이싱 → `motion/kv_pieces.json` (11조각), 확인용 `assets/kv/kv_traced.svg`
+- 로고·카피·날짜 영역은 섬광이 아니므로 제외. 손으로 그린 도형은 없음
+
+### IMG-02 상자 히어로 (C1 낙하 컷)
+- 2026-10-10 15:59 KST / `gpt_image_2_5` quality=high, resolution=2k, 9:16 / 2.75크레딧 / job `7f6f191c-60da-4bbd-89d0-77fc1be20288`
+- 프롬프트: Minimal premium product photograph, vertical 9:16 frame. A single small closed corrugated cardboard shipping box sits alone in the exact horizontal center of an infinite pure white seamless studio cyclorama, slightly below the vertical center, occupying only about 30% of the frame width, with generous clean negative space above and below. The box is sealed with one strip of vivid neon green packing tape (#00F550) running across the middle of the lid and folding down the front face; the tape is plain glossy plastic with no print, no text, no logos. Natural matte kraft cardboard with visible fibres, subtly soft worn edges, faint corrugation visible at the cut edges, one tiny dent on a corner - real, not perfect. Camera: slight high angle, three-quarter view, 85mm lens, f/8, everything sharp. Lighting: one very large soft overhead light with gentle wraparound fill, a soft natural contact shadow directly under the box, floor fading seamlessly into the white background. Clean neutral whites, no color cast. Absolutely no text, no labels, no barcodes, no shipping stickers, no logos anywhere. Photorealistic Apple-style commercial product photography, crisp, high detail, not CGI, not illustration.
+- 결과: 1520×2688 → `assets/gen/img02_box_hero_v1_1080.jpg` / **채택**
+
+### IMG-03 긴장감 클로즈업 (C3 컷)
+- 2026-10-10 16:00 KST / `gpt_image_2_5` high 2k 9:16, 참조 이미지 IMG-02 / 2.75크레딧 / job `ea41ad43-02f4-4d7d-9a02-eafbe52be63a`
+- 프롬프트: Use the referenced box exactly: same natural kraft corrugated cardboard, same plain neon green (#00F550) tape with no print. Vertical 9:16 macro close-up, centered composition: the camera is very close to the top edge of the box where the green tape crosses the lid seam. The box is under enormous pressure from inside: the lid flaps bulge upward in a gentle dome, the cardboard edges strain and slightly crease, the green tape is stretched taut and wrinkled with a small split beginning at one edge. Through the thin gap along the lid seam, a razor-thin line of vivid neon green light glows outward, softly lighting the cardboard fibres near the seam. Pure white studio background, soft and out of focus. 100mm macro lens, f/5.6, shallow depth of field, focus on the seam and tape. Soft large overhead light, natural, slightly imperfect. Absolutely no text, no labels, no logos, no barcodes. Photorealistic commercial product photography, not CGI, not illustration.
+- 결과: `assets/gen/img03_box_strain_v1_1080.jpg` / **채택**
+
+### IMG-04 거대한 상자 (C5 컷)
+- 2026-10-10 16:00 KST / `gpt_image_2_5` high 2k 9:16, 참조 이미지 IMG-02 / 2.75크레딧 / job `50431ddb-222b-4ef6-93cc-b68a7d9dcdd1`
+- 프롬프트: Use the referenced box design exactly: natural kraft corrugated cardboard, plain neon green (#00F550) tape with no print running over the lid and down the front. Vertical 9:16, centered composition. The box is now ENORMOUS - as tall as a three-story building - standing alone in an infinite pure white seamless studio. Shot from a low camera near the floor looking up, 24mm wide lens, strong upward perspective, the top of the giant box is cropped off by the top edge of the frame so it feels endless. For scale, the original small box (identical design, tiny) sits on the floor in front of the giant box at the bottom center of the frame. Soft overhead studio light, gentle soft shadows, giant cardboard texture visible in huge detail: fibres, corrugation, slight dents and creases. Clean neutral whites. Absolutely no people, no text, no labels, no logos, no barcodes. Photorealistic commercial photography, surreal scale, not CGI, not illustration.
+- 결과: `assets/gen/img04_box_giant_v1_1080.jpg` / **채택**
+
+### v3 드래프트 (사용자 피드백 반영 전면 재구성)
+- `motion/v3.html` → `out/v3_draft.mp4` (1080×1920, 30fps, 20.2초)
+- 콘택트 시트: `proof/contact_sheets/v3_style_sheet.png`, `proof/contact_sheets/v3_draft_sheet.png`

@@ -10,6 +10,7 @@ import path from 'node:path';
 const { chromium } = createRequire(import.meta.url)('playwright'); // resolved via NODE_PATH (preinstalled)
 
 const args = process.argv.slice(2);
+const framesIdx = args.indexOf('--frames'); const only = framesIdx >= 0 ? args.splice(framesIdx, 2)[1].split(',').map(Number) : null;
 const everyIdx = args.indexOf('--every'); const every = everyIdx >= 0 ? Number(args.splice(everyIdx, 2)[1]) : 1;
 const [compPath, outPath, s, e] = args;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml',
@@ -34,13 +35,14 @@ const start = Number(s ?? 0), end = Number(e ?? comp.frames);
 const dir = outPath.replace(/\.mp4$/, '_frames');
 rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
 const t0 = Date.now();
-for (let f = start; f < end; f += every) {
+const list = only ?? Array.from({ length: Math.ceil((end - start) / every) }, (_, i) => start + i * every);
+for (const f of list) {
   await page.evaluate(f => window.renderFrame(f), f);
   await page.screenshot({ path: `${dir}/${String(f).padStart(5, '0')}.png`, clip: { x: 0, y: 0, width: comp.w, height: comp.h } });
 }
 await browser.close(); server.close();
 let ff = { status: 'skipped (preview stills)' };
-if (every === 1) ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(comp.fps), '-start_number', String(start),
+if (every === 1 && !only) ff = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(comp.fps), '-start_number', String(start),
   '-i', `${dir}/%05d.png`, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '16', '-movflags', '+faststart', outPath], { stdio: 'inherit' });
 const log = `${new Date().toISOString()} render ${compPath} -> ${outPath} frames ${start}-${end} step ${every} ${comp.w}x${comp.h}@${comp.fps} in ${((Date.now() - t0) / 1000).toFixed(1)}s ffmpeg=${ff.status}\n`;
 appendFileSync('proof/render_log.txt', log); process.stdout.write(log);
