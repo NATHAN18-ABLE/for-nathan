@@ -70,3 +70,13 @@
 ### v3 드래프트 (사용자 피드백 반영 전면 재구성)
 - `motion/v3.html` → `out/v3_draft.mp4` (1080×1920, 30fps, 20.2초)
 - 콘택트 시트: `proof/contact_sheets/v3_style_sheet.png`, `proof/contact_sheets/v3_draft_sheet.png`
+
+### IMG-05 상자가 화면을 꽉 채운 끝 프레임 (AI 영상 V2의 end_image, V3의 start_image)
+- 2026-10-10 16:22 KST / `gpt_image_2_5` high 2k 9:16, 참조 이미지 IMG-02 / 2.75크레딧 / job `bd3cb0d8-8d82-4284-b814-2472e410aea3`
+- 프롬프트: Same studio, same camera position and same lighting as the reference photo, but the very same box has grown ENORMOUS: it is now so large that its front face fills almost the entire vertical 9:16 frame edge to edge. The plain neon green (#00F550) tape runs vertically down the exact center of the frame. The bottom edge of the giant box rests on the white studio floor just above the bottom of the frame, with a thin strip of white floor and a soft contact shadow visible below it; the top of the box is cropped off by the top of the frame. The cardboard is under pressure: faint bulging, subtle stress creases radiating from the center, tape stretched taut and slightly wrinkled. Huge-scale kraft texture detail: fibres, corrugation flutes visible at the left and right vertical edges. Pure white seamless background visible only as narrow slivers at the far left and right edges. No small box, no people, no text, no labels, no logos, no barcodes. Photorealistic commercial product photography, not CGI.
+- 결과: `assets/gen/img05_box_giantface_v1_1080.jpg` / **채택**
+- IMG-04(작은 상자가 함께 있는 거대 상자)는 맥락이 없다는 피드백에 따라 **불채택**
+
+### v4 드래프트
+- KV 스타일 섬광 `motion/kvburst.js`: 화면 안에서 온전한 형태로 보이는 날, 카피 영역을 자동으로 피함
+- `motion/v4.html` → `out/v4_draft.mp4` (23.0초). 성장·폭발 컷은 AI 영상이 들어갈 자리를 임시 이미지로 채움
