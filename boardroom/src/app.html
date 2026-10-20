@@ -6,6 +6,7 @@
     </div>
     <nav class="tabs" role="tablist" aria-label="화면">
       <button class="tab" role="tab" id="tab-room" aria-selected="true" aria-controls="view-room">회의실</button>
+      <button class="tab" role="tab" id="tab-work" aria-selected="false" aria-controls="view-work">업무 지시 <span class="badge" id="workBadge" hidden></span></button>
       <button class="tab" role="tab" id="tab-staff" aria-selected="false" aria-controls="view-staff">인사 관리</button>
       <button class="tab" role="tab" id="tab-minutes" aria-selected="false" aria-controls="view-minutes">회의록</button>
     </nav>
@@ -122,6 +123,45 @@
     </div>
   </section>
 
+  <!-- ===== 업무 지시 ===== -->
+  <section id="view-work" role="tabpanel" aria-labelledby="tab-work" hidden>
+    <div class="work">
+      <div class="col">
+        <div class="win w-tasks">
+          <div class="row-actions spread"><h2>맡긴 업무</h2><span class="note" id="workCount"></span></div>
+          <ul class="tasks" id="taskList"></ul>
+          <p class="note" id="workNote"></p>
+        </div>
+        <div class="win settings w-form" id="taskForm">
+          <h2 id="taskFormTitle">새 업무 지시</h2>
+          <div class="grid2">
+            <div class="field"><label for="tkHead">담당 팀장</label><select id="tkHead"></select></div>
+            <div class="field"><label for="tkRepeat">보고 주기</label>
+              <select id="tkRepeat"><option value="weekly">매주</option><option value="daily">매일</option><option value="once">한 번만</option></select>
+            </div>
+          </div>
+          <div class="field" id="tkDayWrap"><label for="tkDay">보고 요일</label><select id="tkDay"></select></div>
+          <div class="field"><label for="tkTitle">업무 이름</label><input type="text" id="tkTitle" maxlength="40" autocomplete="off" placeholder="예: 경쟁 채널 분석"></div>
+          <div class="field"><label for="tkInst">지시 내용</label><textarea id="tkInst" maxlength="800" placeholder="예: 우리와 비슷한 AI 영상 채널 5개를 골라 무엇이 잘 되는지 정리해 주세요."></textarea></div>
+          <div class="field"><label for="tkRefs">참고 자료 (선택)</label><textarea id="tkRefs" maxlength="3000" placeholder="링크나 메모를 붙여 넣으면 보고서에 반영합니다."></textarea></div>
+          <div class="row-actions">
+            <button class="btn primary" id="tkSave" type="button">업무 지시</button>
+            <button class="btn small" id="tkCancel" type="button" hidden>취소</button>
+            <p class="note grow" id="tkNote"></p>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="win w-reports">
+          <div class="row-actions spread"><h2>보고함</h2><button class="btn small" id="reportRefresh" type="button">새로고침</button></div>
+          <ul class="mlist" id="reportList"></ul>
+          <p class="note" id="reporterNote"></p>
+        </div>
+        <div class="win mdetail w-detail" id="reportDetail" hidden></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== 인사 관리 ===== -->
   <section id="view-staff" role="tabpanel" aria-labelledby="tab-staff" hidden>
     <div class="staff">
@@ -139,6 +179,24 @@
           <h2>회사</h2>
           <div class="field"><label for="coNameIn">회사 이름</label><input type="text" id="coNameIn" maxlength="40" autocomplete="off"></div>
           <div class="field"><label for="coDescIn">업종과 상황</label><textarea id="coDescIn" maxlength="300" style="min-height:72px"></textarea></div>
+        </div>
+        <div class="win settings" id="realitySettings">
+          <h2>실제 자원</h2>
+          <p class="note">팀장들은 이 숫자 안에서만 계획합니다. 비워 둔 칸은 지금 잔액 기준으로 계산합니다.</p>
+          <div class="field"><label for="reTeam">실제로 일하는 사람</label><textarea id="reTeam" maxlength="300"></textarea></div>
+          <div class="grid2">
+            <div class="field"><label for="reHours">주당 작업 시간</label><input type="text" id="reHours" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="예: 15"></div>
+            <div class="field"><label for="reBudget">한 달 예산 (원)</label><input type="text" id="reBudget" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="예: 50000"></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label for="reCreditWon">크레딧 1개 가격 (원)</label><input type="text" id="reCreditWon" inputmode="decimal" maxlength="8" autocomplete="off" placeholder="모르면 비워 두기"></div>
+            <div class="field"><label for="reTools">쓰는 도구</label><input type="text" id="reTools" maxlength="120" autocomplete="off"></div>
+          </div>
+          <div class="field">
+            <label>힉스필드</label>
+            <p class="note hf-info" id="hfInfo"></p>
+          </div>
+          <div class="row-actions"><button class="btn small" id="hfBtn" type="button" hidden>힉스필드에서 다시 불러오기</button></div>
         </div>
         <div class="win settings" id="aiSettings">
           <h2>AI 연결</h2>

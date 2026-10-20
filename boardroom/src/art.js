@@ -321,3 +321,12 @@ function drawStance(g, cx, y, stance) {
     for (let i = 0; i < 7; i++) { g.fillRect(cx - 3 + i, y + i, 1, 1); g.fillRect(cx + 3 - i, y + i, 1, 1); }
   }
 }
+
+function drawEnvelope(g, cx, y, t) {
+  const b = (t >> 3) & 1;
+  const x = cx - 5, yy = y - b;
+  g.fillStyle = "#0a0f1f"; g.fillRect(x - 1, yy - 1, 12, 9);
+  g.fillStyle = "#ffb547"; g.fillRect(x, yy, 10, 7);
+  g.fillStyle = "#b8741a";
+  for (let i = 0; i < 4; i++) { g.fillRect(x + i + 1, yy + i, 1, 1); g.fillRect(x + 8 - i, yy + i, 1, 1); }
+}

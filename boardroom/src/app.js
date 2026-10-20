@@ -11,6 +11,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const S = {
   company: clone(DEFAULT_COMPANY),
   heads: clone(DEFAULT_HEADS),
+  reality: clone(DEFAULT_REALITY),
+  mcp: null,
+  tasks: [],
+  reports: [],
+  openReport: null,
+  editTask: null,
+  writing: new Set(),
   tier: "default",
   autoplay: true,
   paused: false,
@@ -42,6 +49,11 @@ const HARSH = [
 ];
 const HARSH_LABEL = ["", "온화", "정중", "직설", "냉정", "냉혹"];
 const TIER_MODEL = { quick: "claude-haiku-5-5", default: "claude-sonnet-5-5", complex: "claude-opus-5-5" };
+// Anthropic API list prices, USD per million tokens (input / output). Thinking is billed as output.
+const TIER_PRICE = { quick: [0.1, 0.5], default: [2, 10], complex: [4, 20] };
+const TIER_EFFORT = { quick: "low", default: "medium", complex: "high" };
+const WON_PER_USD = 1400;
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const DECISION = { approve: "승인", hold: "보류", reject: "기각" };
 const CEO = { id: "ceo", name: "CEO", title: "최종 결정권자", look: CEO_LOOK };
 const EXT_AUDITOR = { id: "ext-audit", name: "외부 감사관", title: "감사", short: "감사", role: "회의 전체를 감사하고 성공 확률과 조건을 낸다.", persona: "누구 편도 아니다. 근거가 약한 주장을 지적한다.", harsh: 5, auditor: true, look: EXT_AUDIT_LOOK };
@@ -69,7 +81,7 @@ const Store = {
     return LS.get("boardroom.roster", null);
   },
   async saveRoster() {
-    const body = { company: S.company, heads: S.heads, tier: S.tier, updatedAt: new Date().toISOString() };
+    const body = { company: S.company, heads: S.heads, reality: S.reality, tier: S.tier, updatedAt: new Date().toISOString() };
     if (S.db) {
       try { await this.rosterRef().set(clone(body)); return true; } catch { return false; }
     }
@@ -123,10 +135,28 @@ function parseLooseJSON(text) {
   throw { code: "invalid_json", message: "no json" };
 }
 
+function newMeter() {
+  return { calls: 0, input: 0, output: 0, tier: S.tier, mode: S.mode };
+}
+function meterCost(mt) {
+  if (!mt || mt.mode !== "api") return null;
+  const [pi, po] = TIER_PRICE[mt.tier] || TIER_PRICE.default;
+  return (mt.input * pi + mt.output * po) / 1e6;
+}
+function meterLine(mt) {
+  if (!mt || !mt.calls) return "";
+  if (mt.mode === "claude") return `Claude 호출 ${mt.calls}번. claude.ai 요금제 사용량에서 차감되고 따로 돈이 나가지 않습니다.`;
+  if (mt.mode !== "api") return "";
+  const usd = meterCost(mt);
+  return `API 호출 ${mt.calls}번, 입력 ${mt.input.toLocaleString()} · 출력 ${mt.output.toLocaleString()} 토큰, 약 $${usd.toFixed(3)} (약 ${Math.round(usd * WON_PER_USD).toLocaleString()}원)`;
+}
+
 const AI = {
-  async json(prompt, signal) {
+  async json(prompt, signal, meter) {
     if (S.mode === "claude" && S.sample) {
-      return S.sample.json(prompt, { signal, modelTier: S.tier, cache: false });
+      const r = await S.sample.json(prompt, { signal, modelTier: S.tier, cache: false });
+      if (meter) meter.calls++;
+      return r;
     }
     if (S.mode === "api" && S.apiKey) {
       let res;
@@ -140,7 +170,13 @@ const AI = {
             "anthropic-version": "2023-06-01",
             "anthropic-dangerous-direct-browser-access": "true",
           },
-          body: JSON.stringify({ model: TIER_MODEL[S.tier] || TIER_MODEL.default, max_tokens: 2000, messages: [{ role: "user", content: prompt }] }),
+          // Thinking shares max_tokens with the answer, so leave plenty of room or long answers get cut off.
+          body: JSON.stringify({
+            model: TIER_MODEL[S.tier] || TIER_MODEL.default,
+            max_tokens: 16000,
+            output_config: { effort: TIER_EFFORT[S.tier] || "medium" },
+            messages: [{ role: "user", content: prompt }],
+          }),
         });
       } catch (e) {
         if (signal?.aborted) throw { code: "cancelled" };
@@ -151,6 +187,12 @@ const AI = {
         throw { code, message: await res.text().catch(() => "") };
       }
       const j = await res.json();
+      if (meter && j.usage) {
+        meter.calls++;
+        meter.input += j.usage.input_tokens || 0;
+        meter.output += j.usage.output_tokens || 0;
+      }
+      if (j.stop_reason === "refusal") throw { code: "refused" };
       const text = (j.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
       return parseLooseJSON(text);
     }
@@ -177,16 +219,44 @@ const FATAL = new Set(["not_granted", "sampling_disabled", "rate_limited", "sess
 // ---------------------------------------------------------------------------
 // Prompts
 // ---------------------------------------------------------------------------
-const RULES = `[회의 규칙]
+const RULES = `[말하는 방식]
+- 쉬운 말로 한다. 중학생도 바로 알아듣게 쓴다. 전문용어와 영어 약어는 피하고, 꼭 써야 하면 괄호 안에 쉬운 말로 풀어 준다.
+- 문장은 짧게. 한 문장에 한 가지 내용만.
+- 회의 말투의 존댓말. 이모지, 마크다운, 목록 기호 금지.
+
+[판단 규칙]
 - 아첨 금지. CEO의 아이디어라도 칭찬으로 시작하지 않는다. "좋은 아이디어입니다" 같은 말은 쓰지 않는다.
-- 판단마다 근거를 대고 숫자를 최소 1개 쓴다(비용, 기간, 확률, 규모, 인원). 확인되지 않은 숫자에는 "(추정)"을 붙인다.
+- 판단마다 근거를 대고 숫자를 최소 1개 쓴다(크레딧, 시간, 확률, 개수). 확인되지 않은 숫자에는 "(추정)"을 붙인다.
 - 일반론과 교과서적인 조언은 금지. 이 안건에만 해당하는 구체적인 내용만 말한다.
 - 문제가 있으면 돌려 말하지 않는다. 실행이 불가능하면 불가능하다고 말한다.
 - 모르는 것은 모른다고 하고, 무엇을 확인해야 하는지 말한다.
-- 회의 말투의 존댓말. 이모지, 마크다운, 목록 기호 금지.`;
 
+[현실 기준: 반드시 지킨다]
+- 이 회사는 큰 회사처럼 팀장을 둔 역할극이다. 실제로 일하는 사람은 아래 [실제 자원]에 적힌 사람뿐이고, 팀장인 너희는 조언만 한다.
+- 사람을 뽑거나, 외주를 주거나, 사무실과 장비를 사는 계획은 세우지 않는다. 수백만 원, 수천만 원 단위 예산은 꺼내지 않는다.
+- 비용은 먼저 힉스필드 크레딧으로 계산한다. [실제 자원]의 실제 단가를 쓰고, 지금 잔액과 비교해서 모자라면 몇 크레딧이 모자라는지 말한다.
+- 원화는 크레딧 1개 가격이 주어졌을 때만 환산한다. 한 달 예산이 정해져 있지 않으면 지금 잔액과 100크레딧 충전 1번 안에서 계획한다.
+- 시간은 CEO 1명이 직접 쓰는 시간으로 계산한다.`;
+
+function fmtCredits(n) {
+  return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+function realityBlock() {
+  const r = S.reality || DEFAULT_REALITY;
+  const hf = r.hf || {};
+  const L = ["[실제 자원: 모든 숫자는 이 안에서]"];
+  L.push(`- 실제로 일하는 사람: ${r.team || "CEO 1명"}`);
+  L.push(`- 주당 작업 시간: ${r.hours ? r.hours + "시간" : "정해지지 않음 (물어보기 전에는 주 10시간으로 가정하고, 가정이라고 말한다)"}`);
+  L.push(`- 한 달 예산: ${r.budget ? r.budget + "원" : "정해지지 않음 (지금 잔액 + 100크레딧 충전 1번 안에서 계획)"}`);
+  L.push(`- 쓰는 도구: ${r.tools || "힉스필드, Claude"}`);
+  if (hf.credits != null) L.push(`- 힉스필드: ${String(hf.plan || "").toUpperCase() || "?"} 요금제, 잔액 ${fmtCredits(hf.credits)}크레딧 (${hf.at ? fmtDate(hf.at) : "날짜 모름"} 기준)`);
+  for (const c of hf.costs || []) L.push(`- 실제 단가: ${c.name} 1번에 평균 ${fmtCredits(c.avg)}크레딧 (최소 ${fmtCredits(c.min)}, 최대 ${fmtCredits(c.max)}, 최근 ${c.n}번)`);
+  if (hf.topup) L.push(`- 충전: ${hf.topup}`);
+  if (r.creditWon) L.push(`- 크레딧 1개 = ${r.creditWon}원`);
+  return L.join("\n");
+}
 function companyLine() {
-  return `[회사] ${S.company.name}: ${S.company.desc}`;
+  return `[회사] ${S.company.name}: ${S.company.desc}\n\n${realityBlock()}`;
 }
 function headLine(h) {
   return `${h.title} ${h.name} (id: ${h.id}) | 담당: ${h.role} | 관점: ${h.persona} | 말투: ${HARSH[h.harsh] || HARSH[4]}`;
@@ -525,6 +595,7 @@ function draw() {
     const lift = st ? Math.round(st.lift) : 0;
     const headTop = s.y - lift - (s.h.look.style === 3 ? 2 : 0);
     if (S.thinking.has(s.h.id)) drawBubble(g, s.x + 10, headTop - 11, tick);
+    else if (!S.m && S.reports.some((r) => !r.read && r.headId === s.h.id)) drawEnvelope(g, s.x + 8, headTop - 10, reduceMotion.matches ? 0 : tick);
     else if (S.speaker !== s.h.id) {
       const stc = stanceOf(s.h.id);
       if (stc) drawStance(g, s.x + 8, headTop - 10, stc);
@@ -574,6 +645,8 @@ scene.addEventListener("click", (e) => {
   const lx = ((e.clientX - r.left) / r.width) * W;
   const ly = ((e.clientY - r.top) / r.height) * H;
   const hit = SEATS.find((s) => s.h.id !== "ceo" && lx >= s.x - 2 && lx <= s.x + 18 && ly >= s.y - 4 && ly <= s.y + 26);
+  const mail = hit && !S.m && S.reports.find((r) => !r.read && r.headId === hit.h.id);
+  if (mail) { showView("work"); openReport(mail.id); return; }
   if (hit) pick(hit.h.id === S.picked ? null : hit.h.id);
   else Dialogue.advance();
 });
@@ -872,6 +945,7 @@ function newMeeting(agenda) {
     hp: null,
     hpShown: null,
     decision: null,
+    meter: newMeter(),
     demo: S.mode !== "claude" && S.mode !== "api",
     ctl: new AbortController(),
     aborted: false,
@@ -888,6 +962,10 @@ async function runMeeting(m) {
     $("railAgenda").textContent = m.agenda;
     $("railAgenda").classList.remove("muted");
 
+    // ----- real credit balance first, so every head plans against today's numbers
+    if (S.mcp && !m.demo) await Promise.race([refreshHF(true), sleep(4000)]);
+    alive(m);
+
     // ----- 1R briefing: every head answers blind, in parallel
     m.phase = "brief";
     await guard(banner("1라운드", "브리핑"));
@@ -898,7 +976,7 @@ async function runMeeting(m) {
         const d = DEMO.briefs[i];
         return sleep(900 + i * 300).then(() => (d ? { ...d } : null));
       }
-      return AI.json(briefPrompt(m, h), m.ctl.signal).then(cleanBrief);
+      return AI.json(briefPrompt(m, h), m.ctl.signal, m.meter).then(cleanBrief);
     });
     jobs.forEach((p) => p.catch(() => {}));
 
@@ -955,7 +1033,7 @@ async function runMeeting(m) {
         briefed.forEach((h) => S.thinking.add(h.id));
         Dialogue.thinking(m.auditor, "팀장들이 서로의 약점을 찾고 있습니다.");
         try {
-          clashes = cleanClashes(await guard(AI.json(clashPrompt(m, n), m.ctl.signal)), briefed, n);
+          clashes = cleanClashes(await guard(AI.json(clashPrompt(m, n), m.ctl.signal, m.meter)), briefed, n);
         } catch (e) {
           if (e === ABORT) throw e;
           if (FATAL.has(e && e.code)) { S.thinking.clear(); return stopWithError(m, e); }
@@ -1001,7 +1079,7 @@ async function runMeeting(m) {
       S.speaker = a.id;
       Dialogue.thinking(a, `${a.name} ${a.title}이 회의 전체를 검토하고 있습니다.`);
       try {
-        audit = cleanAudit(await guard(AI.json(auditPrompt(m, a), m.ctl.signal)));
+        audit = cleanAudit(await guard(AI.json(auditPrompt(m, a), m.ctl.signal, m.meter)));
       } catch (e) {
         if (e === ABORT) throw e;
         S.thinking.delete(a.id);
@@ -1062,7 +1140,7 @@ async function drainCEO(m) {
     Dialogue.thinking(waitOn || m.auditor, waitOn ? `${waitOn.name} ${waitOn.title}이 답을 준비하고 있습니다.` : "누가 답할지 정하고 있습니다.");
     let r = null;
     try {
-      r = await guard(AI.json(replyPrompt(m, msg.text, msg.target), m.ctl.signal));
+      r = await guard(AI.json(replyPrompt(m, msg.text, msg.target), m.ctl.signal, m.meter));
     } catch (e) {
       if (e === ABORT) throw e;
       r = null;
@@ -1163,7 +1241,8 @@ async function sign() {
   S.minutes.unshift(rec);
   renderMinutes();
   Dialogue.plain(CEO, `${DECISION[m.decision.k]}. ${m.decision.memo || "결재를 마쳤습니다."}`, [{ k: "생존율", v: m.hp + "%" }]);
-  $("postNote").textContent = ok ? "회의록에 저장했습니다." : "회의록을 저장하지 못했습니다. 이 화면을 닫기 전에 회의록 탭에서 내려받으세요.";
+  const cost = meterLine(m.meter);
+  $("postNote").textContent = (ok ? "회의록에 저장했습니다." : "회의록을 저장하지 못했습니다. 이 화면을 닫기 전에 회의록 탭에서 내려받으세요.") + (cost ? " " + cost : "");
   $("postNote").className = ok ? "note grow" : "note grow err";
   showConsole("post");
 }
@@ -1183,6 +1262,7 @@ function toRecord(m) {
     audit: m.audit,
     hp: m.hp,
     decision: m.decision,
+    usage: m.meter && m.meter.calls ? { ...m.meter, usd: meterCost(m.meter) } : null,
   };
 }
 
@@ -1568,6 +1648,7 @@ function renderMinuteDetail() {
   const add = (tag, text, cls) => { const el = document.createElement(tag); el.textContent = text; if (cls) el.className = cls; box.append(el); return el; };
   add("h2", r.agenda);
   add("p", `${fmtDate(r.at)} · ${r.company} · 결재: ${DECISION[r.decision?.k] || "미결"}${r.decision?.memo ? ` (${r.decision.memo})` : ""}`, "muted");
+  if (r.usage) add("p", "사용량: " + meterLine(r.usage), "muted");
   add("h3", "1라운드 브리핑");
   for (const b of r.briefs) {
     if (b.stance === "결석") { add("p", `${b.title} ${b.name}: 결석`); continue; }
@@ -1629,6 +1710,7 @@ function toMarkdown(r) {
   const L = [];
   L.push(`# 회의록: ${r.agenda}`, "", `- 일시: ${fmtDate(r.at)}`, `- 회사: ${r.company}`, `- 결재: ${DECISION[r.decision?.k] || "미결"}${r.decision?.memo ? ` (${r.decision.memo})` : ""}`, `- 최종 생존율: ${r.hp ?? "--"}%`);
   if (r.demo) L.push("- 데모 대본으로 진행한 회의");
+  if (r.usage) L.push(`- 사용량: ${meterLine(r.usage)}`);
   L.push("", "## 1라운드 브리핑", "");
   for (const b of r.briefs) L.push(b.stance === "결석" ? `- **${b.title} ${b.name}**: 결석` : `- **${b.title} ${b.name}** (${b.stance}, ${b.score}): ${b.say} 핵심 숫자: ${b.number}. 약점: ${b.risk}.`);
   if (r.clashes?.length) {
@@ -1670,16 +1752,18 @@ async function saveFile(name, text) {
 // Tabs, console wiring, AI settings
 // ---------------------------------------------------------------------------
 function showView(v) {
-  for (const k of ["room", "staff", "minutes"]) {
+  for (const k of ["room", "work", "staff", "minutes"]) {
     $("view-" + k).hidden = k !== v;
     $("tab-" + k).setAttribute("aria-selected", String(k === v));
   }
-  if (v === "staff") renderStaff();
+  if (v === "staff") { renderStaff(); renderReality(); }
+  if (v === "work") renderWork();
   if (v === "minutes") renderMinutes();
   if (v === "room") fitCanvas();
 }
 $("tab-room").addEventListener("click", () => showView("room"));
 $("tab-staff").addEventListener("click", () => showView("staff"));
+$("tab-work").addEventListener("click", () => showView("work"));
 $("tab-minutes").addEventListener("click", () => showView("minutes"));
 $("linkPill").addEventListener("click", () => { showView("staff"); $("aiSettings").scrollIntoView({ block: "start", behavior: reduceMotion.matches ? "auto" : "smooth" }); });
 
@@ -1804,7 +1888,8 @@ function greet() {
     S.mode === "checking" ? "AI 연결을 확인하고 있습니다."
     : S.mode === "demo" ? "AI가 연결되지 않았습니다. 지금은 예시 안건 1번의 데모 대본으로 회의를 보여 드립니다. 회의 시작을 누르세요."
     : `안건을 주시면 ${S.heads.filter((h) => !h.auditor).length}명이 각자 따로 판단해서 브리핑하고, 서로의 약점을 공격한 뒤, 제가 감사 판정을 내립니다. 듣기 좋은 말은 하지 않겠습니다.`;
-  Dialogue.plain(sec, msg, []);
+  const unread = typeof unreadFor === "function" ? unreadFor().length : 0;
+  Dialogue.plain(sec, unread ? `${msg}\n\n새 보고가 ${unread}건 들어와 있습니다. 봉투가 뜬 팀장을 누르면 바로 열립니다.` : msg, []);
 }
 
 // ---------------------------------------------------------------------------
@@ -1813,7 +1898,11 @@ function greet() {
 function applyRoster(r) {
   if (!r || !Array.isArray(r.heads) || !r.heads.length) return;
   S.heads = r.heads.map((h) => ({ ...h, look: { skin: 0, hair: 0, style: 0, suit: 0, acc: 0, ...(h.look || {}) }, harsh: clamp(Number(h.harsh) || 4, 1, 5) }));
-  if (r.company && r.company.name) S.company = { name: r.company.name, desc: r.company.desc || "" };
+  if (r.company && r.company.name) {
+    const desc = r.company.desc === OLD_COMPANY_DESC ? DEFAULT_COMPANY.desc : r.company.desc || "";
+    S.company = { name: r.company.name, desc };
+  }
+  if (r.reality && typeof r.reality === "object") S.reality = { ...clone(DEFAULT_REALITY), ...r.reality, hf: { ...DEFAULT_REALITY.hf, ...(r.reality.hf || {}) } };
   if (r.tier && TIER_MODEL[r.tier]) S.tier = r.tier;
   $("tierSel").value = S.tier;
 }
@@ -1837,14 +1926,18 @@ async function boot() {
     applyRoster(LS.get("boardroom.roster", null));
     S.minutes = LS.get("boardroom.minutes", []);
     syncCompany();
+    renderReality();
     relayout();
     renderUnits();
     setMode(S.apiKey ? "api" : "demo");
+    await loadWork();
+    if (!S.m) greet();
     return;
   }
-  const [sample, db, user, downloads] = await Promise.all(["sample", "db", "user", "downloads"].map((n) => window.claude.use(n).catch(() => null)));
+  const [sample, db, user, downloads, mcp] = await Promise.all(["sample", "db", "user", "downloads", "mcp"].map((n) => window.claude.use(n).catch(() => null)));
   S.sample = sample;
   S.downloads = downloads;
+  S.mcp = mcp;
   if (db && user) {
     try {
       const uid = await user.id();
@@ -1855,8 +1948,10 @@ async function boot() {
   if (!S.m) applyRoster(r);
   S.minutes = await Store.listMinutes();
   syncCompany();
+  renderReality();
   if (!S.m) { relayout(); renderUnits(); }
   setMode(sample ? "claude" : "demo");
+  await loadWork();
+  if (!S.m) greet();
 }
 
-boot();
