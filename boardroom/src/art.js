@@ -11,7 +11,7 @@ const CEO_LOOK = { skin: 1, hair: 0, style: 1, suit: 6, acc: 3 };
 const EXT_AUDIT_LOOK = { skin: 2, hair: 4, style: 4, suit: 4, acc: 1 };
 
 const W = 384, H = 216;
-const TABLE = { x: 92, y: 104, w: 200, h: 42, face: 8 };
+const TABLE = { x: 132, y: 92, w: 120, h: 30, face: 6 };
 
 function shade(hex, f) {
   const n = parseInt(hex.slice(1), 16);
@@ -56,6 +56,15 @@ function drawPerson(g, x, y, look, o = {}) {
     rect(g, x + 7, y + 15, 2, 9, shade(suit, 0.86));
   } else {
     rect(g, x + 7, y + 14, 2, 10, cd);
+  }
+  // legs, when standing or walking (seated people have none)
+  if (o.legs) {
+    const pants = shade(suit, 0.5), shoe = "#14121c";
+    const lUp = o.legs === 2 ? 1 : 0, rUp = o.legs === 3 ? 1 : 0;
+    rect(g, x + 4, y + 25, 3, 4 - lUp, pants);
+    rect(g, x + 4, y + 29 - lUp, 3, 1, shoe);
+    rect(g, x + 9, y + 25, 3, 4 - rUp, pants);
+    rect(g, x + 9, y + 29 - rUp, 3, 1, shoe);
   }
   // neck
   rect(g, x + 7, y + 10, 2, 2, sd);
@@ -207,33 +216,29 @@ function buildRoom() {
   }
   rect(g, 0, 60, W, 2, "#0a1029");
 
-  // whiteboard with a hand-drawn chart, right side
-  rect(g, 330, 66, 34, 26, "#0b1129");
-  rect(g, 331, 67, 32, 24, "#d9deef");
-  rect(g, 334, 84, 3, 4, "#3fd6c4");
-  rect(g, 339, 80, 3, 8, "#3fd6c4");
-  rect(g, 344, 76, 3, 12, "#ffb547");
-  rect(g, 349, 82, 3, 6, "#ff5468");
-  rect(g, 354, 72, 3, 16, "#3fd6c4");
-  rect(g, 333, 88, 28, 1, "#55607f");
-  rect(g, 340, 92, 2, 22, "#2a3145");
-  rect(g, 352, 92, 2, 22, "#2a3145");
-
-  // plant, front right
-  rect(g, 348, 190, 16, 14, "#6b4a32");
-  rect(g, 348, 190, 16, 2, "#87603f");
+  // plant, front left corner
+  rect(g, 4, 190, 16, 14, "#6b4a32");
+  rect(g, 4, 190, 16, 2, "#87603f");
   const leaf = "#2f8a5c", leafD = "#226947";
-  rect(g, 350, 176, 4, 14, leaf);
-  rect(g, 356, 170, 4, 20, leafD);
-  rect(g, 360, 178, 4, 12, leaf);
-  rect(g, 346, 182, 4, 8, leafD);
-  rect(g, 354, 166, 3, 6, leaf);
+  rect(g, 6, 176, 4, 14, leaf);
+  rect(g, 12, 170, 4, 20, leafD);
+  rect(g, 16, 178, 4, 12, leaf);
+  rect(g, 2, 182, 4, 8, leafD);
 
   // water cooler, back left
-  rect(g, 18, 70, 12, 8, "#7fb6e6");
-  rect(g, 17, 78, 14, 22, "#c8d4ff");
-  rect(g, 17, 78, 14, 2, "#a3afdc");
-  rect(g, 21, 84, 6, 2, "#3a4670");
+  rect(g, 67, 56, 12, 8, "#7fb6e6");
+  rect(g, 66, 64, 14, 24, "#c8d4ff");
+  rect(g, 66, 64, 14, 2, "#a3afdc");
+  rect(g, 70, 70, 6, 2, "#3a4670");
+  rect(g, 66, 88, 14, 2, "#55607f");
+
+  // coffee counter, back right
+  rect(g, 294, 70, 28, 20, "#2f2540");
+  rect(g, 294, 70, 28, 2, "#6a5784");
+  rect(g, 300, 58, 12, 12, "#1b1f2e");
+  rect(g, 302, 60, 8, 3, "#ff5468");
+  rect(g, 304, 66, 4, 4, "#d9deef");
+  rect(g, 314, 64, 5, 6, "#d9deef");
   return cv;
 }
 
@@ -247,7 +252,7 @@ function drawTable(g, flash) {
   for (let gx = x + 8; gx < x + w; gx += 8) rect(g, gx, y + 2, 1, h - 3, "#114652");
   for (let gy = y + 8; gy < y + h; gy += 8) rect(g, x + 2, gy, w - 3, 1, "#114652");
   // tactical map in the middle
-  const mx = x + 70, my = y + 14;
+  const mx = x + 34, my = y + 4;
   const land = flash ? "#9c2134" : "#1d7a80";
   const landD = flash ? "#7a1a2a" : "#166169";
   rect(g, mx, my + 8, 22, 12, landD);
@@ -329,4 +334,23 @@ function drawEnvelope(g, cx, y, t) {
   g.fillStyle = "#ffb547"; g.fillRect(x, yy, 10, 7);
   g.fillStyle = "#b8741a";
   for (let i = 0; i < 4; i++) { g.fillRect(x + i + 1, yy + i, 1, 1); g.fillRect(x + 8 - i, yy + i, 1, 1); }
+}
+
+// Office desk. (x, y) is the seated person's sprite origin; the desk sits in front of them.
+function drawDesk(g, x, y, working, t) {
+  const dx = x - 6, dy = y + 12;
+  // monitor seen from behind, to the person's left
+  rect(g, x + 17, y + 3, 10, 9, "#1b1f2e");
+  rect(g, x + 18, y + 4, 8, 7, "#232a40");
+  rect(g, x + 21, y + 12, 3, 1, "#1b1f2e");
+  rect(g, x + 17, y + 3, 1, 9, working && (t >> 3) % 2 ? "#3fd6c4" : "#2a3a7a");
+  // desk
+  rect(g, dx, dy, 34, 7, "#4a3a5e");
+  rect(g, dx, dy, 34, 1, "#6a5784");
+  rect(g, dx, dy + 7, 34, 6, "#2f2540");
+  rect(g, dx + 1, dy + 13, 2, 3, "#2f2540");
+  rect(g, dx + 31, dy + 13, 2, 3, "#2f2540");
+  // paperwork
+  rect(g, dx + 2, dy + 2, 6, 3, "#d9deef");
+  rect(g, dx + 3, dy + 1, 6, 1, "#a3afdc");
 }

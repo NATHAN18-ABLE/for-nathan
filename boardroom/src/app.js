@@ -12,6 +12,9 @@ const S = {
   company: clone(DEFAULT_COMPANY),
   heads: clone(DEFAULT_HEADS),
   reality: clone(DEFAULT_REALITY),
+  profile: clone(DEFAULT_PROFILE),
+  talkTo: null,
+  suggestTask: null,
   mcp: null,
   tasks: [],
   reports: [],
@@ -81,7 +84,7 @@ const Store = {
     return LS.get("boardroom.roster", null);
   },
   async saveRoster() {
-    const body = { company: S.company, heads: S.heads, reality: S.reality, tier: S.tier, updatedAt: new Date().toISOString() };
+    const body = { team: TEAM_VERSION, company: S.company, heads: S.heads, reality: S.reality, profile: S.profile, tier: S.tier, updatedAt: new Date().toISOString() };
     if (S.db) {
       try { await this.rosterRef().set(clone(body)); return true; } catch { return false; }
     }
@@ -119,6 +122,7 @@ function queueSave() {
     const ok = await Store.saveRoster();
     $("staffNote").textContent = ok ? "저장했습니다." : "저장하지 못했습니다. 이 화면을 닫으면 변경 사항이 사라집니다.";
     $("staffNote").className = ok ? "note" : "note err";
+    $("profileNote").textContent = ok ? "저장했습니다." : "저장하지 못했습니다.";
   }, 600);
 }
 
@@ -256,7 +260,18 @@ function realityBlock() {
   return L.join("\n");
 }
 function companyLine() {
-  return `[회사] ${S.company.name}: ${S.company.desc}\n\n${realityBlock()}`;
+  return `[회사] ${S.company.name}: ${S.company.desc}\n여기서 CEO는 원준 님 본인이다.\n\n${profileBlock()}\n\n${realityBlock()}`;
+}
+function profileBlock() {
+  const p = S.profile || DEFAULT_PROFILE;
+  const L = [`[${p.name || "원준"} 님 프로필: 모든 조언은 이 사람에게 맞춘다]`];
+  for (const [k, label] of PROFILE_FIELDS) {
+    let v = String(p[k] || "").trim();
+    if (!v) continue;
+    if (k === "notes" && v.length > 1500) v = "…" + v.slice(-1500);
+    L.push(`- ${label}: ${v.replace(/\n+/g, " / ")}`);
+  }
+  return L.join("\n");
 }
 function headLine(h) {
   return `${h.title} ${h.name} (id: ${h.id}) | 담당: ${h.role} | 관점: ${h.persona} | 말투: ${HARSH[h.harsh] || HARSH[4]}`;
@@ -432,35 +447,11 @@ const seatState = new Map(); // id -> {lift, blinkAt}
 function activeHeads() {
   return S.m ? S.m.heads : S.heads;
 }
-
-function layoutSeats() {
-  const heads = activeHeads();
-  const auditor = heads.find((h) => h.auditor) || null;
-  const others = heads.filter((h) => h !== auditor);
-  const top = others.filter((_, i) => i % 2 === 0);
-  const bot = others.filter((_, i) => i % 2 === 1);
-  const seats = [];
-  const spread = (row, y, facing) => {
-    const n = row.length;
-    const span = TABLE.w - 40;
-    row.forEach((h, i) => {
-      const cx = Math.round(TABLE.x + 20 + (n === 1 ? span / 2 : (span * i) / (n - 1)));
-      seats.push({ h, x: cx - 8, y, facing, row: facing === "front" ? "top" : "bot" });
-    });
-  };
-  spread(top, 74, "front");
-  spread(bot, 138, "back");
-  seats.push({ h: CEO, x: 64, y: 100, facing: "front", row: "ceo" });
-  if (auditor) seats.push({ h: auditor, x: 304, y: 100, facing: "front", row: "aud" });
-  return seats;
-}
-let SEATS = [];
 function relayout() {
-  SEATS = layoutSeats();
+  Office.sync();
 }
-
 function seatFor(id) {
-  return SEATS.find((s) => s.h.id === id);
+  return Office.get(id);
 }
 
 function stanceOf(id) {
@@ -468,9 +459,9 @@ function stanceOf(id) {
 }
 
 function drawScreen() {
-  const phaseLabel = {
-    idle: "대기", brief: "1R 브리핑", clash: "2R 교전", audit: "감사 판정", decide: "CEO 결재", done: "결재 완료",
-  }[S.m ? S.m.phase : "idle"];
+  const phaseLabel = S.m
+    ? { brief: "1R 브리핑", clash: "2R 교전", audit: "감사 판정", decide: "CEO 결재", done: "결재 완료", idle: "회의" }[S.m.phase]
+    : "근무 중";
   g.save();
   g.beginPath();
   g.rect(138, 8, 108, 42);
@@ -481,7 +472,8 @@ function drawScreen() {
   g.fillStyle = S.m && S.m.phase === "done" ? deciColor(S.m.decision?.k) : "#3fd6c4";
   g.fillText(phaseLabel, 143, 11);
   const sp = S.speaker && (seatFor(S.speaker) || {}).h;
-  const line2 = sp ? `${sp.title} ${sp.name}` : S.m ? S.m.agenda : "안건 미정";
+  const today = new Date();
+  const line2 = sp ? `${sp.title} ${sp.name}` : S.m ? S.m.agenda : `${today.getMonth() + 1}월 ${today.getDate()}일 (${WEEKDAYS[today.getDay()]})`;
   g.fillStyle = "#a3e9df";
   g.fillText(fit(line2, 100), 143, 25);
   const hpTxt = S.m && S.m.hp != null ? `생존율 ${S.m.hp}%` : clock();
@@ -516,45 +508,24 @@ function drawPlate(x, y, text, color) {
   g.fillText(text, px + 3, y + 1);
 }
 
-function personOpts(s) {
-  let st = seatState.get(s.h.id);
-  if (!st) { st = { lift: 0, blinkAt: tick + 40 + ((Math.random() * 120) | 0) }; seatState.set(s.h.id, st); }
-  const speaking = S.speaker === s.h.id;
-  const target = speaking ? 5 : 0;
-  st.lift = reduceMotion.matches ? target : st.lift + (target - st.lift) * 0.25;
-  let blink = false;
-  if (tick >= st.blinkAt) {
-    blink = true;
-    if (tick >= st.blinkAt + 3) st.blinkAt = tick + 60 + ((Math.random() * 140) | 0);
-  }
-  const typing = speaking && Dialogue.typing;
-  return {
-    lift: Math.round(st.lift),
-    o: { facing: s.facing, blink: reduceMotion.matches ? false : blink, talk: typing && (tick >> 2) % 2 === 0, frown: speaking && S.m?.phase === "clash" },
-  };
-}
-
-function drawPerson2(s) {
-  const { lift, o } = personOpts(s);
-  drawPerson(g, s.x, s.y - lift, s.h.look, o);
-}
-
 function draw() {
   if (!room) return;
   g.imageSmoothingEnabled = false;
   g.drawImage(room, 0, 0);
   drawScreen();
 
-  // table light on the floor
-  g.fillStyle = "rgba(63, 214, 196, 0.08)";
-  g.beginPath();
-  g.ellipse(TABLE.x + TABLE.w / 2, TABLE.y + TABLE.h / 2 + 6, TABLE.w / 2 + 34, TABLE.h / 2 + 30, 0, 0, Math.PI * 2);
-  g.fill();
+  // table light, only while a meeting is on
+  if (S.m) {
+    g.fillStyle = "rgba(63, 214, 196, 0.08)";
+    g.beginPath();
+    g.ellipse(TABLE.x + TABLE.w / 2, TABLE.y + TABLE.h / 2 + 4, TABLE.w / 2 + 28, TABLE.h / 2 + 24, 0, 0, Math.PI * 2);
+    g.fill();
+  }
 
-  // spotlight on the speaker
+  // spotlight on whoever is talking
   const sp = S.speaker && seatFor(S.speaker);
   if (sp) {
-    const cx = sp.x + 8;
+    const cx = Math.round(sp.x) + 8;
     g.fillStyle = sp.h.id === "ceo" ? "rgba(255, 196, 110, 0.10)" : "rgba(220, 230, 255, 0.09)";
     g.beginPath();
     g.moveTo(cx - 5, 0);
@@ -565,48 +536,14 @@ function draw() {
     g.fill();
   }
 
-  const flash = S.flash > 0 && (S.flash >> 2) % 2 === 0;
-  const top = SEATS.filter((s) => s.row === "top");
-  const bot = SEATS.filter((s) => s.row === "bot");
-  const ends = SEATS.filter((s) => s.row === "ceo" || s.row === "aud");
+  drawOffice();
+  drawOfficeOverlays();
 
-  for (const s of top) drawChairBack(g, s.x + 8, s.y + 7, "#2a3366");
-  for (const s of top) drawPerson2(s);
-  drawTable(g, flash);
-  for (const s of top) drawPlate(s.x + 8, TABLE.y + 1, s.h.short || s.h.title.slice(0, 3), "#1c2b66");
-
-  for (const s of ends) {
-    const ceo = s.row === "ceo";
-    drawChairBack(g, s.x + 8, s.y + 6, ceo ? "#7a4a12" : "#3b2c5c");
-    if (ceo) rect(g, s.x, s.y + 6, 16, 1, "#ffb547");
-    drawPerson2(s);
-    drawPlate(s.x + 8, s.y + 26, ceo ? "CEO" : s.h.short || "감사", ceo ? "#8a5410" : "#3b2c5c");
-  }
-
-  for (const s of bot) {
-    drawPerson2(s);
-    drawChairBack(g, s.x + 8, s.y + 15, "#2a3366");
-    drawPlate(s.x + 8, s.y + 31, s.h.short || s.h.title.slice(0, 3), "#1c2b66");
-  }
-
-  // overlays: stance marks, thinking bubbles, cursors
-  for (const s of SEATS) {
-    const st = seatState.get(s.h.id);
-    const lift = st ? Math.round(st.lift) : 0;
-    const headTop = s.y - lift - (s.h.look.style === 3 ? 2 : 0);
-    if (S.thinking.has(s.h.id)) drawBubble(g, s.x + 10, headTop - 11, tick);
-    else if (!S.m && S.reports.some((r) => !r.read && r.headId === s.h.id)) drawEnvelope(g, s.x + 8, headTop - 10, reduceMotion.matches ? 0 : tick);
-    else if (S.speaker !== s.h.id) {
-      const stc = stanceOf(s.h.id);
-      if (stc) drawStance(g, s.x + 8, headTop - 10, stc);
-    }
-    if (S.picked === s.h.id) drawCursor(g, s.x, headTop, 16, 22, 0, "#3fd6c4");
-  }
   if (sp) {
-    const st = seatState.get(sp.h.id);
-    const lift = st ? Math.round(st.lift) : 0;
-    drawCursor(g, sp.x, sp.y - lift, 16, 22, tick, "#ffb547");
-    if (!S.thinking.has(sp.h.id)) drawArrow(g, sp.x + 8, sp.y - lift - 11, reduceMotion.matches ? 0 : tick, "#ffb547");
+    const x = sp.drawX ?? Math.round(sp.x), y = sp.drawY ?? Math.round(sp.y);
+    const tall = sp.mode === "sit" || sp.mode === "meet" ? 22 : 29;
+    drawCursor(g, x, y, 16, tall, tick, "#ffb547");
+    if (!S.thinking.has(sp.h.id)) drawArrow(g, x + 8, y - 11, reduceMotion.matches ? 0 : tick, "#ffb547");
   }
 
   sg.imageSmoothingEnabled = false;
@@ -621,6 +558,8 @@ function loop(ts) {
   lastFrame = ts;
   tick++;
   if (S.flash > 0) S.flash--;
+  Office.update();
+  if (tick % 15 === 0 && !$("view-room").hidden) refreshStatuses();
   draw();
 }
 document.addEventListener("visibilitychange", () => {
@@ -644,11 +583,12 @@ scene.addEventListener("click", (e) => {
   const r = scene.getBoundingClientRect();
   const lx = ((e.clientX - r.left) / r.width) * W;
   const ly = ((e.clientY - r.top) / r.height) * H;
-  const hit = SEATS.find((s) => s.h.id !== "ceo" && lx >= s.x - 2 && lx <= s.x + 18 && ly >= s.y - 4 && ly <= s.y + 26);
-  const mail = hit && !S.m && S.reports.find((r) => !r.read && r.headId === hit.h.id);
+  const hit = hitAgent(lx, ly);
+  if (!hit) { Dialogue.advance(); return; }
+  if (S.m) { pick(hit.h.id === S.picked ? null : hit.h.id); return; }
+  const mail = S.reports.find((r) => !r.read && r.headId === hit.h.id);
   if (mail) { showView("work"); openReport(mail.id); return; }
-  if (hit) pick(hit.h.id === S.picked ? null : hit.h.id);
-  else Dialogue.advance();
+  openTalk(hit.h.id);
 });
 
 function pick(id) {
@@ -831,6 +771,7 @@ document.addEventListener("keydown", (e) => {
 // ---------------------------------------------------------------------------
 function setHP(v, kind) {
   const hp = $("hp");
+  hp.hidden = !S.m;
   if (v == null) {
     $("hpNum").textContent = "--";
     $("hpFill").style.transform = "scaleX(0)";
@@ -921,9 +862,10 @@ function alive(m) {
   if (!S.m || S.m !== m || m.aborted) throw ABORT;
 }
 
-function newMeeting(agenda) {
+function newMeeting(agenda, participantIds) {
   const heads = clone(S.heads);
   const auditor = heads.find((h) => h.auditor) || EXT_AUDITOR;
+  const speakers = heads.filter((h) => !h.auditor && !h.secretary && (!participantIds || participantIds.includes(h.id)));
   let abortFn;
   const abortP = new Promise((_, rej) => (abortFn = rej));
   abortP.catch(() => {});
@@ -932,7 +874,7 @@ function newMeeting(agenda) {
     at: new Date().toISOString(),
     agenda,
     heads,
-    speakers: heads.filter((h) => !h.auditor),
+    speakers,
     auditor,
     phase: "brief",
     briefs: {},
@@ -956,11 +898,14 @@ function newMeeting(agenda) {
 
 async function runMeeting(m) {
   try {
-    relayout();
+    S.talkTo = null;
     setHP(null);
     renderUnits();
-    $("railAgenda").textContent = m.agenda;
-    $("railAgenda").classList.remove("muted");
+    Dialogue.plain(m.auditor, "회의실로 모이는 중입니다.", []);
+    await guard(Office.gather(m));
+    alive(m);
+    $("railAgenda").textContent = "회의 안건: " + m.agenda;
+    $("railAgenda").hidden = false;
 
     // ----- real credit balance first, so every head plans against today's numbers
     if (S.mcp && !m.demo) await Promise.race([refreshHF(true), sleep(4000)]);
@@ -1171,6 +1116,7 @@ function stopWithError(m, e) {
 }
 
 function showConsole(which) {
+  $("talkBox").hidden = which !== "talk";
   $("preMeeting").hidden = which !== "pre";
   $("inMeeting").hidden = which !== "in";
   $("decideBox").hidden = which !== "decide";
@@ -1195,12 +1141,18 @@ function startMeeting() {
     $("agenda").focus();
     return;
   }
-  if (!S.heads.some((h) => !h.auditor)) {
+  const parts = [...$("partList").querySelectorAll("input:checked")].map((i) => i.value);
+  if (!parts.length) {
+    $("preNote").textContent = "회의에 부를 팀을 한 명 이상 고르세요.";
+    $("preNote").className = "note grow err";
+    return;
+  }
+  if (!S.heads.some((h) => !h.auditor && !h.secretary)) {
     $("preNote").textContent = "브리핑할 팀장이 없습니다. 인사 관리에서 팀장을 추가하세요.";
     $("preNote").className = "note grow err";
     return;
   }
-  const m = newMeeting(agenda);
+  const m = newMeeting(agenda, parts);
   S.m = m;
   S.paused = false;
   $("pauseBtn").setAttribute("aria-pressed", "false");
@@ -1221,10 +1173,12 @@ function endMeeting(keepScene) {
     S.m = null;
     S.speaker = null;
     $("stampLayer").hidden = true;
-    relayout();
+    Office.dismiss();
     setHP(null);
     renderUnits();
-    showConsole("pre");
+    showConsole("talk");
+    renderTalk();
+    $("railAgenda").hidden = true;
   }
 }
 
@@ -1284,7 +1238,8 @@ function unitRow(h, opts = {}) {
   n.textContent = h.name;
   const t = document.createElement("div");
   t.className = "t";
-  t.textContent = h.title + (h.auditor ? " · 최종 판정" : "");
+  t.textContent = opts.status ? `${h.title} · ${opts.status}` : h.title + (h.auditor ? " · 최종 판정" : "");
+  t.dataset.role = "status";
   mid.append(n, t);
   const sc = document.createElement("div");
   sc.className = "sc";
@@ -1310,12 +1265,17 @@ function renderUnits() {
   ul.innerHTML = "";
   for (const h of activeHeads()) {
     const b = S.m && S.m.briefs[h.id];
-    const li = unitRow(h, h.auditor ? { right: S.m?.audit ? `${S.m.audit.probability}%` : "관찰" } : { score: b ? b.score : null, stance: b ? b.stance : null });
+    const unread = S.reports.filter((r) => !r.read && r.headId === h.id).length;
+    const li = S.m
+      ? unitRow(h, h.auditor ? { right: S.m?.audit ? `${S.m.audit.probability}%` : "관찰" } : !S.m.speakers.some((x) => x.id === h.id) ? { right: "불참" } : { score: b ? b.score : null, stance: b ? b.stance : null })
+      : unitRow(h, { right: unread ? `새 보고 ${unread}` : "", status: Office.status(Office.get(h.id)) });
     li.dataset.speaking = S.speaker === h.id ? "1" : "0";
     li.dataset.picked = S.picked === h.id ? "1" : "0";
     li.setAttribute("aria-label", `${h.title} ${h.name}${b ? `, ${b.stance} ${b.score ?? ""}` : ""}. 눌러서 지목`);
-    li.addEventListener("click", () => pick(S.picked === h.id ? null : h.id));
-    li.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(S.picked === h.id ? null : h.id); } });
+    const act = () => (S.m ? pick(S.picked === h.id ? null : h.id) : openTalk(h.id));
+    li.addEventListener("click", act);
+    li.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); act(); } });
+    li.dataset.picked = (S.m ? S.picked : S.talkTo) === h.id ? "1" : "0";
     ul.append(li);
   }
 }
@@ -1752,18 +1712,20 @@ async function saveFile(name, text) {
 // Tabs, console wiring, AI settings
 // ---------------------------------------------------------------------------
 function showView(v) {
-  for (const k of ["room", "work", "staff", "minutes"]) {
+  for (const k of ["room", "work", "profile", "staff", "minutes"]) {
     $("view-" + k).hidden = k !== v;
     $("tab-" + k).setAttribute("aria-selected", String(k === v));
   }
   if (v === "staff") { renderStaff(); renderReality(); }
   if (v === "work") renderWork();
+  if (v === "profile") renderProfile();
   if (v === "minutes") renderMinutes();
   if (v === "room") fitCanvas();
 }
 $("tab-room").addEventListener("click", () => showView("room"));
 $("tab-staff").addEventListener("click", () => showView("staff"));
 $("tab-work").addEventListener("click", () => showView("work"));
+$("tab-profile").addEventListener("click", () => showView("profile"));
 $("tab-minutes").addEventListener("click", () => showView("minutes"));
 $("linkPill").addEventListener("click", () => { showView("staff"); $("aiSettings").scrollIntoView({ block: "start", behavior: reduceMotion.matches ? "auto" : "smooth" }); });
 
@@ -1844,10 +1806,7 @@ $("newBtn").addEventListener("click", () => {
   $("signBtn").textContent = "도장 찍기";
   $("decideMemo").value = "";
   $("agenda").value = "";
-  $("railAgenda").textContent = "안건을 적고 회의를 시작하세요.";
-  $("railAgenda").classList.add("muted");
   greet();
-  $("agenda").focus({ preventScroll: true });
 });
 $("toMinutesBtn").addEventListener("click", () => { S.openMinute = S.minutes[0]?.id || null; showView("minutes"); });
 
@@ -1882,14 +1841,15 @@ function setMode(mode) {
 }
 
 function greet() {
-  const sec = S.heads.find((h) => h.auditor) || S.heads[0];
+  if (S.talkTo) return;
+  const sec = S.heads.find((h) => h.secretary) || S.heads.find((h) => h.auditor) || S.heads[0];
   if (!sec) return;
   const msg =
     S.mode === "checking" ? "AI 연결을 확인하고 있습니다."
-    : S.mode === "demo" ? "AI가 연결되지 않았습니다. 지금은 예시 안건 1번의 데모 대본으로 회의를 보여 드립니다. 회의 시작을 누르세요."
-    : `안건을 주시면 ${S.heads.filter((h) => !h.auditor).length}명이 각자 따로 판단해서 브리핑하고, 서로의 약점을 공격한 뒤, 제가 감사 판정을 내립니다. 듣기 좋은 말은 하지 않겠습니다.`;
+    : S.mode === "demo" ? "AI가 연결되지 않아서 지금은 대화를 못 해. 회의 소집을 누르면 예시 안건 1번의 데모 회의는 볼 수 있어."
+    : `원준 님 왔어? 팀원을 누르면 그 사람이랑만 따로 얘기할 수 있어. 다 같이 의논할 일이 있으면 회의 소집을 눌러 줘. 나를 누르면 오늘 이슈부터 알려 줄게.`;
   const unread = typeof unreadFor === "function" ? unreadFor().length : 0;
-  Dialogue.plain(sec, unread ? `${msg}\n\n새 보고가 ${unread}건 들어와 있습니다. 봉투가 뜬 팀장을 누르면 바로 열립니다.` : msg, []);
+  Dialogue.plain(sec, unread ? `${msg}\n\n새 보고가 ${unread}건 와 있어. 머리 위에 봉투가 뜬 사람을 누르면 바로 열려.` : msg, []);
 }
 
 // ---------------------------------------------------------------------------
@@ -1897,6 +1857,18 @@ function greet() {
 // ---------------------------------------------------------------------------
 function applyRoster(r) {
   if (!r || !Array.isArray(r.heads) || !r.heads.length) return;
+  if (r.team !== TEAM_VERSION) {
+    // older company layout: switch to the career team, keep the looks people already picked
+    const looks = new Map(r.heads.map((h) => [h.id, h.look]));
+    S.heads = clone(DEFAULT_HEADS).map((h) => (looks.has(h.id) ? { ...h, look: { ...h.look, ...looks.get(h.id) } } : h));
+    S.company = clone(DEFAULT_COMPANY);
+    if (r.reality && typeof r.reality === "object") S.reality = { ...clone(DEFAULT_REALITY), ...r.reality, team: DEFAULT_REALITY.team, tools: DEFAULT_REALITY.tools, hf: { ...DEFAULT_REALITY.hf, ...(r.reality.hf || {}) } };
+    if (r.tier && TIER_MODEL[r.tier]) S.tier = r.tier;
+    $("tierSel").value = S.tier;
+    queueSave();
+    return;
+  }
+  if (r.profile && typeof r.profile === "object") S.profile = { ...clone(DEFAULT_PROFILE), ...r.profile };
   S.heads = r.heads.map((h) => ({ ...h, look: { skin: 0, hair: 0, style: 0, suit: 0, acc: 0, ...(h.look || {}) }, harsh: clamp(Number(h.harsh) || 4, 1, 5) }));
   if (r.company && r.company.name) {
     const desc = r.company.desc === OLD_COMPANY_DESC ? DEFAULT_COMPANY.desc : r.company.desc || "";
@@ -1913,7 +1885,8 @@ async function boot() {
   relayout();
   renderUnits();
   setHP(null);
-  showConsole("pre");
+  showConsole("talk");
+  renderConvene();
   S.apiKey = LS.get("boardroom.apiKey", "") || "";
 
   const fontReady = document.fonts ? Promise.all(["12px Galmuri11", "8px Galmuri7", "16px \"Galmuri11 Bold\""].map((f) => document.fonts.load(f))).catch(() => {}) : Promise.resolve();
@@ -1927,6 +1900,7 @@ async function boot() {
     S.minutes = LS.get("boardroom.minutes", []);
     syncCompany();
     renderReality();
+    renderProfile();
     relayout();
     renderUnits();
     setMode(S.apiKey ? "api" : "demo");
@@ -1949,6 +1923,7 @@ async function boot() {
   S.minutes = await Store.listMinutes();
   syncCompany();
   renderReality();
+  renderProfile();
   if (!S.m) { relayout(); renderUnits(); }
   setMode(sample ? "claude" : "demo");
   await loadWork();

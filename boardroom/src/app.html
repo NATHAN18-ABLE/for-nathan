@@ -5,9 +5,10 @@
       <span class="co" id="coName"></span>
     </div>
     <nav class="tabs" role="tablist" aria-label="화면">
-      <button class="tab" role="tab" id="tab-room" aria-selected="true" aria-controls="view-room">회의실</button>
-      <button class="tab" role="tab" id="tab-work" aria-selected="false" aria-controls="view-work">업무 지시 <span class="badge" id="workBadge" hidden></span></button>
-      <button class="tab" role="tab" id="tab-staff" aria-selected="false" aria-controls="view-staff">인사 관리</button>
+      <button class="tab" role="tab" id="tab-room" aria-selected="true" aria-controls="view-room">사무실</button>
+      <button class="tab" role="tab" id="tab-work" aria-selected="false" aria-controls="view-work">업무 <span class="badge" id="workBadge" hidden></span></button>
+      <button class="tab" role="tab" id="tab-profile" aria-selected="false" aria-controls="view-profile">내 프로필</button>
+      <button class="tab" role="tab" id="tab-staff" aria-selected="false" aria-controls="view-staff">팀 관리</button>
       <button class="tab" role="tab" id="tab-minutes" aria-selected="false" aria-controls="view-minutes">회의록</button>
     </nav>
     <button class="link-pill" id="linkPill" type="button" data-mode="demo" aria-controls="view-staff">AI <b id="linkLabel">확인 중</b></button>
@@ -18,7 +19,7 @@
     <div class="room">
       <div class="col">
         <div class="stage" id="stage">
-          <canvas id="scene" width="384" height="216" aria-label="회의실 장면. 팀장을 누르면 지목할 수 있습니다." role="img"></canvas>
+          <canvas id="scene" width="384" height="216" aria-label="사무실 장면. 팀원을 누르면 1:1로 대화합니다." role="img"></canvas>
           <div class="hp win" id="hp" data-tier="hi">
             <div class="row"><span>안건 생존율</span><b id="hpNum">--</b></div>
             <div class="bar"><i class="ghost" id="hpGhost"></i><i class="fill" id="hpFill"></i></div>
@@ -51,15 +52,44 @@
         </div>
 
         <div class="win console" id="console">
-          <!-- before the meeting -->
-          <div id="preMeeting" class="console">
+          <!-- 1:1 talk, the default -->
+          <div id="talkBox" class="console">
+            <div class="talk-head"><h3 id="talkWho">팀원을 누르면 그 사람과 1:1로 대화합니다</h3><span class="note" id="talkStatus"></span></div>
+            <ol class="talk-log" id="talkLog" hidden></ol>
+            <div class="suggest" id="taskSuggest" hidden>
+              <span>업무 제안: <b id="suggestText"></b></span>
+              <div class="row-actions">
+                <button class="btn small primary" id="acceptTask" type="button">업무로 등록</button>
+                <button class="btn small" id="dismissTask" type="button">괜찮아요</button>
+              </div>
+            </div>
+            <div class="row-actions">
+              <label class="sr" for="talkMsg">메시지</label>
+              <input type="text" id="talkMsg" class="grow" maxlength="600" enterkeyhint="send" autocomplete="off" disabled>
+              <button class="btn primary" id="talkSend" type="button" disabled>보내기</button>
+            </div>
+            <div class="row-actions">
+              <button class="btn small" id="talkTask" type="button" disabled>업무 맡기기</button>
+              <button class="btn small" id="convene" type="button">회의 소집</button>
+              <p class="note grow" id="talkNote"></p>
+            </div>
+          </div>
+          <!-- calling a meeting -->
+          <div id="preMeeting" class="console" hidden>
+            <h3>회의 소집</h3>
             <div>
-              <label for="agenda">오늘의 안건</label>
-              <textarea id="agenda" maxlength="600" placeholder="예: AI로 만든 1분짜리 숏드라마를 매주 3편씩 유튜브 쇼츠에 올려 6개월 안에 구독자 10만을 만든다." enterkeyhint="done"></textarea>
+              <label for="agenda">안건</label>
+              <textarea id="agenda" maxlength="600" placeholder="예: 졸업 전까지 AI 광고 영상 3편으로 포트폴리오를 만들고 상반기 공채에 지원한다." enterkeyhint="done"></textarea>
             </div>
             <div class="samples" id="samples" aria-label="예시 안건"></div>
+            <div>
+              <label>참석할 팀</label>
+              <div class="parts" id="partList"></div>
+              <p class="note" id="partNote"></p>
+            </div>
             <div class="row-actions">
               <button class="btn primary" id="startBtn" type="button">회의 시작</button>
+              <button class="btn small" id="cancelConvene" type="button">취소</button>
               <label class="toggle"><input type="checkbox" id="autoplay" checked> 자동 진행</label>
               <p class="note grow" id="preNote"></p>
             </div>
@@ -111,11 +141,12 @@
 
       <aside class="rail">
         <div class="win agenda-card">
-          <h2>작전판</h2>
-          <p id="railAgenda" class="muted">안건을 적고 회의를 시작하세요.</p>
+          <h2>오늘</h2>
+          <p id="todayInfo" class="today"></p>
+          <p id="railAgenda" class="muted" hidden></p>
         </div>
         <div class="win">
-          <h2>참석 팀장</h2>
+          <h2>팀원</h2>
           <ul class="units" id="units"></ul>
           <div class="legend"><span><span class="chip" data-s="찬성">찬성</span></span><span><span class="chip" data-s="조건부">조건부</span></span><span><span class="chip" data-s="반대">반대</span></span></div>
         </div>
@@ -158,6 +189,19 @@
           <p class="note" id="reporterNote"></p>
         </div>
         <div class="win mdetail w-detail" id="reportDetail" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 내 프로필 ===== -->
+  <section id="view-profile" role="tabpanel" aria-labelledby="tab-profile" hidden>
+    <div class="profile">
+      <div class="win settings">
+        <h2>내 프로필</h2>
+        <p class="note">모든 팀원이 이 내용을 보고 조언합니다. 비서와 팀원들이 대화하면서 새로 알게 된 것은 맨 아래에 자동으로 적힙니다.</p>
+        <p class="note warn" id="profileGaps"></p>
+        <div class="settings" id="profileForm"></div>
+        <p class="note" id="profileNote"></p>
       </div>
     </div>
   </section>

@@ -98,6 +98,7 @@ function renderWorkBadge() {
   b.hidden = !(n || due);
   b.textContent = n ? String(n) : "!";
   b.title = n ? `새 보고 ${n}건` : `보고할 차례 ${due}건`;
+  if (typeof renderToday === "function") renderToday();
 }
 
 function headById(id) {

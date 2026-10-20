@@ -15,11 +15,11 @@ const font = (file, family) =>
 const fonts = [font("Galmuri11.woff2", "Galmuri11"), font("Galmuri11-Bold.woff2", "Galmuri11 Bold"), font("Galmuri7.woff2", "Galmuri7")].join("\n");
 const css = src("app.css").toString();
 const html = src("app.html").toString();
-const js = ["data.js", "art.js", "app.js", "work.js"].map((f) => src(f).toString()).join("\n");
+const js = ["data.js", "art.js", "app.js", "office.js", "talk.js", "work.js"].map((f) => src(f).toString()).join("\n");
 
 const head = `<title>작전 회의실</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="CEO와 AI 팀장들이 픽셀아트 작전 회의실에서 안건을 브리핑하고, 교전하고, 감사 판정을 내리는 회의 시뮬레이터">
+<meta name="description" content="원준 님의 취업을 돕는 AI 팀이 픽셀아트 사무실에서 일하고, 1:1로 대화하고, 소집하면 회의하는 커리어 본부">
 <style>
 /* Galmuri11 and Galmuri7 by Lee Minseo, SIL Open Font License 1.1 (src/fonts/Galmuri-OFL.txt) */
 ${fonts}
