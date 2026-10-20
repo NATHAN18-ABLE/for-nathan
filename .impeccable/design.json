@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T09:20:00Z",
+  "title": "Design System: 작전 회의실",
+  "extensions": {
+    "colorMeta": {
+      "ceo-amber": { "role": "primary", "displayName": "CEO Amber" },
+      "table-teal": { "role": "secondary", "displayName": "Table Teal" },
+      "damage-crimson": { "role": "tertiary", "displayName": "Damage Crimson" },
+      "window-navy": { "role": "neutral", "displayName": "Window Navy" },
+      "night-ink": { "role": "neutral", "displayName": "Night Ink" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "App name and phase banners." },
+      "body": { "displayName": "Dialogue", "purpose": "Spoken lines in the dialogue window." },
+      "scene-label": { "displayName": "Scene label", "purpose": "Canvas nameplates only." }
+    },
+    "shadows": [
+      { "name": "window-frame", "value": "inset 0 0 0 2px #c8d4ff, inset 0 0 0 4px #050816", "purpose": "The GBA window rim on every panel." },
+      { "name": "paper", "value": "0 8px 24px rgba(3, 6, 18, 0.6)", "purpose": "Only under the decision document." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Entrances, presses, HP fill, cut-in slide." },
+      { "name": "ease-in-out", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Phase banner sweep and HP ghost drain." }
+    ],
+    "breakpoints": [
+      { "name": "phone", "value": "640px" },
+      { "name": "rail", "value": "1080px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button", "kind": "button", "refersTo": "button-primary",
+      "description": "Amber beveled action button: 회의 시작, 발언, 도장 찍기.",
+      "html": "<button class=\"ds-btn-primary\">회의 시작</button>",
+      "css": ".ds-btn-primary{background:#ffb547;color:#0a0f1f;border:2px solid #050816;border-radius:3px;padding:9px 18px;min-height:44px;box-shadow:inset 0 -3px 0 #b8741a;font-family:'Galmuri11 Bold','Galmuri11',sans-serif;cursor:pointer;transition:transform 120ms cubic-bezier(0.23,1,0.32,1),filter 120ms ease}.ds-btn-primary:hover{filter:brightness(1.08)}.ds-btn-primary:active{transform:translateY(1px);box-shadow:inset 0 -1px 0 #b8741a}.ds-btn-primary:focus-visible{outline:2px solid #3fd6c4;outline-offset:2px}"
+    },
+    {
+      "name": "Window", "kind": "card", "refersTo": "window",
+      "description": "GBA dialogue frame used for every panel.",
+      "html": "<div class=\"ds-win\"><b>작전판</b><p>안건을 적고 회의를 시작하세요.</p></div>",
+      "css": ".ds-win{background:linear-gradient(180deg,#1c2b66 0%,#111a47 100%);border:2px solid #050816;border-radius:3px;box-shadow:inset 0 0 0 2px #c8d4ff,inset 0 0 0 4px #050816;padding:14px 16px;color:#eef1ff;font-family:'Galmuri11',sans-serif}.ds-win p{color:#a3afdc;margin:6px 0 0}"
+    },
+    {
+      "name": "Input", "kind": "input", "refersTo": "input",
+      "description": "Dark well with a teal focus border.",
+      "html": "<input class=\"ds-input\" placeholder=\"끼어들어 질문하거나 반박하세요\">",
+      "css": ".ds-input{background:#050816;color:#eef1ff;border:2px solid #2a3a7a;border-radius:3px;padding:10px 12px;font:16px 'Galmuri11',sans-serif}.ds-input:focus{outline:none;border-color:#3fd6c4}"
+    },
+    {
+      "name": "Stance Chip", "kind": "chip", "refersTo": "chip",
+      "description": "Outlined stance tag; color carries the stance.",
+      "html": "<span class=\"ds-chip\" style=\"color:#ffb547\">조건부 58</span>",
+      "css": ".ds-chip{display:inline-flex;padding:1px 8px;border:1px solid currentColor;border-radius:3px;font:12px 'Galmuri11',sans-serif}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night-Shift War Room",
+    "overview": "A company meeting staged as a GBA tactics briefing. Disagreement is made visible with stance marks, clash cut-ins and an HP bar for the agenda.",
+    "keyCharacteristics": ["Single dark night scene", "Three fixed-meaning signal colors", "Code-drawn pixel art at 384x216"],
+    "rules": [{ "name": "The Fixed Meaning Rule", "body": "Teal, amber and crimson are states, never decoration.", "section": "colors" }],
+    "dos": ["Do draw scene art in code on the 384x216 grid", "Do keep long text in the DOM"],
+    "donts": ["Don't add a light theme", "Don't use paid tilesets", "Don't animate the scene ambiently"]
+  }
+}

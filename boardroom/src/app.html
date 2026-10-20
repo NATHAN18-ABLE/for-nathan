@@ -1,0 +1,180 @@
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>작전 회의실</h1>
+      <span class="co" id="coName"></span>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="화면">
+      <button class="tab" role="tab" id="tab-room" aria-selected="true" aria-controls="view-room">회의실</button>
+      <button class="tab" role="tab" id="tab-staff" aria-selected="false" aria-controls="view-staff">인사 관리</button>
+      <button class="tab" role="tab" id="tab-minutes" aria-selected="false" aria-controls="view-minutes">회의록</button>
+    </nav>
+    <button class="link-pill" id="linkPill" type="button" data-mode="demo" aria-controls="view-staff">AI <b id="linkLabel">확인 중</b></button>
+  </header>
+
+  <!-- ===== 회의실 ===== -->
+  <section id="view-room" role="tabpanel" aria-labelledby="tab-room">
+    <div class="room">
+      <div class="col">
+        <div class="stage" id="stage">
+          <canvas id="scene" width="384" height="216" aria-label="회의실 장면. 팀장을 누르면 지목할 수 있습니다." role="img"></canvas>
+          <div class="hp win" id="hp" data-tier="hi">
+            <div class="row"><span>안건 생존율</span><b id="hpNum">--</b></div>
+            <div class="bar"><i class="ghost" id="hpGhost"></i><i class="fill" id="hpFill"></i></div>
+          </div>
+          <div class="banner" id="banner" aria-hidden="true"><div class="strip"><span class="k" id="bannerK"></span><span class="t" id="bannerT"></span></div></div>
+          <div class="cutin" id="cutin" hidden aria-hidden="true">
+            <div class="side a"><canvas id="cutA" width="32" height="32"></canvas><div class="nm" id="cutAName"></div><div class="rl">공격</div></div>
+            <div class="side b"><canvas id="cutB" width="32" height="32"></canvas><div class="nm" id="cutBName"></div><div class="rl">방어</div></div>
+            <div class="vs">교전</div>
+          </div>
+          <div class="stamp-layer" id="stampLayer" hidden>
+            <div class="doc" id="doc">
+              <h2>결재 서류</h2>
+              <p id="docAgenda"></p>
+              <div class="sig" id="docSig"></div>
+              <div class="seal" id="seal" data-k="approve"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="win dlg" id="dlg" role="region" aria-label="발언" aria-live="polite">
+          <div class="who" id="who">작전 회의실</div>
+          <canvas id="portrait" width="32" height="32" aria-hidden="true"></canvas>
+          <div class="body">
+            <p class="say" id="say"></p>
+            <div class="skel" id="skel" hidden><i></i><i></i><i></i></div>
+            <div class="meta" id="meta"></div>
+          </div>
+          <i class="next" aria-hidden="true"></i>
+        </div>
+
+        <div class="win console" id="console">
+          <!-- before the meeting -->
+          <div id="preMeeting" class="console">
+            <div>
+              <label for="agenda">오늘의 안건</label>
+              <textarea id="agenda" maxlength="600" placeholder="예: AI로 만든 1분짜리 숏드라마를 매주 3편씩 유튜브 쇼츠에 올려 6개월 안에 구독자 10만을 만든다." enterkeyhint="done"></textarea>
+            </div>
+            <div class="samples" id="samples" aria-label="예시 안건"></div>
+            <div class="row-actions">
+              <button class="btn primary" id="startBtn" type="button">회의 시작</button>
+              <label class="toggle"><input type="checkbox" id="autoplay" checked> 자동 진행</label>
+              <p class="note grow" id="preNote"></p>
+            </div>
+          </div>
+          <!-- during the meeting -->
+          <div id="inMeeting" class="console" hidden>
+            <div>
+              <label for="ceoMsg">CEO 발언 <span class="target" id="targetTag" hidden>지목: <b id="targetName"></b> <button type="button" id="clearTarget" aria-label="지목 해제">해제</button></span></label>
+              <div class="row-actions">
+                <input type="text" id="ceoMsg" class="grow" maxlength="300" placeholder="끼어들어 질문하거나 반박하세요. 팀장을 누르면 지목됩니다." enterkeyhint="send" autocomplete="off">
+                <button class="btn primary" id="ceoSend" type="button">발언</button>
+              </div>
+            </div>
+            <div class="row-actions">
+              <button class="btn small" id="nextBtn" type="button">다음</button>
+              <button class="btn small" id="pauseBtn" type="button" aria-pressed="false">일시정지</button>
+              <label class="toggle"><input type="checkbox" id="autoplay2" checked> 자동 진행</label>
+              <button class="btn small" id="stopBtn" type="button">회의 중단</button>
+              <p class="note grow" id="inNote"></p>
+            </div>
+          </div>
+          <!-- CEO decision -->
+          <div id="decideBox" class="decide" hidden>
+            <h3>CEO 결재</h3>
+            <div class="stamps" role="group" aria-label="결정">
+              <button class="btn teal" type="button" data-k="approve" aria-pressed="false">승인</button>
+              <button class="btn primary" type="button" data-k="hold" aria-pressed="false">보류</button>
+              <button class="btn danger" type="button" data-k="reject" aria-pressed="false">기각</button>
+            </div>
+            <div>
+              <label for="decideMemo">결재 메모 (선택)</label>
+              <input type="text" id="decideMemo" maxlength="200" placeholder="예: 감사팀 조건 3개 수용, 4주 뒤 재보고" autocomplete="off">
+            </div>
+            <div class="row-actions">
+              <button class="btn primary" id="signBtn" type="button" disabled>도장 찍기</button>
+              <p class="note grow">결재하면 회의록에 저장됩니다.</p>
+            </div>
+          </div>
+          <!-- after -->
+          <div id="postMeeting" class="console" hidden>
+            <div class="row-actions">
+              <button class="btn primary" id="newBtn" type="button">새 회의</button>
+              <button class="btn" id="toMinutesBtn" type="button">회의록 보기</button>
+              <p class="note grow" id="postNote"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="rail">
+        <div class="win agenda-card">
+          <h2>작전판</h2>
+          <p id="railAgenda" class="muted">안건을 적고 회의를 시작하세요.</p>
+        </div>
+        <div class="win">
+          <h2>참석 팀장</h2>
+          <ul class="units" id="units"></ul>
+          <div class="legend"><span><span class="chip" data-s="찬성">찬성</span></span><span><span class="chip" data-s="조건부">조건부</span></span><span><span class="chip" data-s="반대">반대</span></span></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===== 인사 관리 ===== -->
+  <section id="view-staff" role="tabpanel" aria-labelledby="tab-staff" hidden>
+    <div class="staff">
+      <div class="list">
+        <div class="win">
+          <h2>팀장 명단</h2>
+          <ul class="units" id="staffList"></ul>
+          <div class="row-actions" style="margin-top:10px">
+            <button class="btn small" id="addHead" type="button">팀장 추가</button>
+            <button class="btn small" id="resetRoster" type="button">기본 구성으로</button>
+          </div>
+          <p class="note" id="staffNote" style="margin-top:8px"></p>
+        </div>
+        <div class="win settings">
+          <h2>회사</h2>
+          <div class="field"><label for="coNameIn">회사 이름</label><input type="text" id="coNameIn" maxlength="40" autocomplete="off"></div>
+          <div class="field"><label for="coDescIn">업종과 상황</label><textarea id="coDescIn" maxlength="300" style="min-height:72px"></textarea></div>
+        </div>
+        <div class="win settings" id="aiSettings">
+          <h2>AI 연결</h2>
+          <p class="note" id="aiExplain"></p>
+          <div class="field"><label for="tierSel">생각 깊이</label>
+            <select id="tierSel">
+              <option value="quick">빠르게 (짧은 답, 즉시 시작)</option>
+              <option value="default" selected>균형</option>
+              <option value="complex">깊게 (느리지만 날카로움)</option>
+            </select>
+          </div>
+          <div id="apiBox" class="settings">
+            <div class="field"><label for="apiKey">Claude API 키 (내 컴퓨터에서 실행할 때)</label><input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-..."></div>
+            <div class="row-actions">
+              <button class="btn small" id="saveKey" type="button">키 저장</button>
+              <button class="btn small" id="clearKey" type="button">키 지우기</button>
+            </div>
+            <p class="note">키는 이 브라우저에만 저장되고, Anthropic API로만 전송됩니다.</p>
+          </div>
+        </div>
+      </div>
+      <div class="win editor" id="editor"></div>
+    </div>
+  </section>
+
+  <!-- ===== 회의록 ===== -->
+  <section id="view-minutes" role="tabpanel" aria-labelledby="tab-minutes" hidden>
+    <div class="minutes">
+      <div class="win">
+        <div class="row-actions" style="justify-content:space-between">
+          <h2>회의록</h2>
+          <span class="note" id="minutesCount"></span>
+        </div>
+        <ul class="mlist" id="mlist" style="margin-top:10px"></ul>
+      </div>
+      <div class="win mdetail" id="mdetail" hidden></div>
+    </div>
+  </section>
+</div>
