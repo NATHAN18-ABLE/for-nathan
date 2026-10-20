@@ -51,7 +51,7 @@ function reportsOf(h, n = 3) {
 }
 function chatLines(h, msgs, n = 14) {
   // long pastes (a cover letter) are kept whole only in the newest message
-  return msgs.slice(-n).map((m) => `${m.role === "ceo" ? "원준" : h.name}: ${m.text.length > 700 ? m.text.slice(0, 700) + " (이하 생략)" : m.text}`).join("\n");
+  return msgs.slice(-n).map((m) => `${m.role === "ceo" ? "원준" : h.name}: ${m.text.length > 700 ? m.text.slice(0, 700) + " (이하 생략)" : m.text}${m.seen ? ` [올린 사진: ${m.seen}]` : ""}`).join("\n");
 }
 function profileGaps() {
   const p = S.profile || {};
@@ -59,11 +59,11 @@ function profileGaps() {
 }
 
 const TALK_JSON = `JSON 객체 하나로만 답하라:
-{"say":"답변. 2~6문장. 단계가 필요하면 줄바꿈과 1. 2. 3.","needsWeb":true 또는 false,"profileNote":"원준 님이 자기 경험, 활동, 생각, 사실을 새로 알려 줬으면 프로필에 남길 한 줄 요약. 아니면 빈 문자열","task":null 또는 {"headId":"맡을 팀원 id","title":"업무 이름, 20자 이내","instruction":"지시 내용","repeat":"once 또는 daily 또는 weekly","weekday":0~6 정수(일요일 0)}}
+{"say":"답변. 2~6문장. 단계가 필요하면 줄바꿈과 1. 2. 3.","needsWeb":true 또는 false,"seen":"사진을 받았으면 사진에 보이는 핵심(누가 올렸는지, 날짜, 글 요지) 한두 문장, 없으면 빈 문자열","profileNote":"원준 님이 자기 경험, 활동, 생각, 사실을 새로 알려 줬으면 프로필에 남길 한 줄 요약. 아니면 빈 문자열","task":null 또는 {"headId":"맡을 팀원 id","title":"업무 이름, 20자 이내","instruction":"지시 내용","repeat":"once 또는 daily 또는 weekly","weekday":0~6 정수(일요일 0)}}
 task는 원준 님이 일을 맡기거나, 네가 제안한 일을 맡기자고 동의했을 때만 채운다. 다른 팀이 더 잘할 일이면 그 팀 id로 채운다.
 needsWeb은 제대로 답하려면 최신 정보(뉴스, 채용 공고, 마감일, 회사 소식, 가격, 새 도구)를 웹에서 확인해야 할 때만 true.`;
 
-function talkPrompt(h, msgs, text) {
+function talkPrompt(h, msgs, text, withImage) {
   const tasks = tasksOf(h), reps = reportsOf(h);
   return `${companyLine()}
 
@@ -71,7 +71,7 @@ function talkPrompt(h, msgs, text) {
 너의 담당: ${h.role}
 너의 관점: ${h.persona}
 말투: ${h.secretary ? "친한 친구처럼 편한 반말. 하지만 정보는 정확하게." : HARSH[h.harsh] || HARSH[4]}
-${tasks ? `\n[너에게 맡겨진 업무]\n${tasks}\n` : ""}${reps ? `\n[네가 최근에 올린 보고]\n${reps}\n` : ""}
+${tasks ? `\n[너에게 맡겨진 업무]\n${tasks}\n` : ""}${reps ? `\n[네가 최근에 올린 보고]\n${reps}\n` : ""}${appsBlock() ? `\n${appsBlock()}\n` : ""}
 [다른 팀원]
 ${teamLines(h.id)}
 
@@ -79,9 +79,10 @@ ${teamLines(h.id)}
 ${chatLines(h, msgs) || "(처음 대화)"}
 
 [원준 님의 새 말]
-${text}
+${text}${withImage ? "\n(원준 님이 사진 1장을 함께 보냈다. 사진 속 내용을 근거로 답한다.)" : ""}
 
 ${talkRules(h)}
+- SNS 게시물(캡처, 링크, 붙여 넣은 글)을 받으면 먼저 "믿을 만함", "확인 필요", "믿기 어려움" 중 하나로 판정하고 이유를 댄다. 기준: 올린 사람이 공식 계정·언론·현업자인지 익명인지, 원래 출처(공식 발표, 공고 원문)가 있는지, 광고나 홍보인지, 날짜가 언제인지, 다른 곳에서도 확인되는지. 링크만 받으면 열어 볼 수 없다고 말하고 캡처나 글을 달라고 한다. 확인이 필요하면 needsWeb을 true로 한다.
 - 너는 지금 인터넷을 볼 수 없다. 최신 정보가 필요한 질문이면 아는 만큼만 말하고, 시점이 불확실하다고 밝힌 뒤 "웹으로 알아봐"를 누르면 웹으로 조사해서 보고하겠다고 말한다. 공고, 날짜, 숫자, 링크를 지어내지 않는다.
 
 ${TALK_JSON}`;
@@ -90,6 +91,7 @@ ${TALK_JSON}`;
 function checkinPrompt(h, msgs) {
   const brief = S.reports.find((r) => r.headId === h.id && !isAskReport(r) && kstDate(new Date(r.at)) === kstDate());
   const gaps = profileGaps();
+  const soon = liveApps().filter((a) => a.deadline && daysLeft(a.deadline) >= 0 && daysLeft(a.deadline) <= 3).map((a) => `${appLabel(a)} ${dLabel(a.deadline)} (${a.stage})`);
   return `${companyLine()}
 
 너는 이 팀의 ${h.title} ${h.name}이다. 원준 님이 오늘 처음 너를 불렀다.
@@ -100,7 +102,7 @@ function checkinPrompt(h, msgs) {
 할 일, 이 순서로 짧게:
 1. 인사 한 마디.
 2. ${brief ? `오늘 브리핑 "${brief.title}"의 핵심을 한두 문장으로 전한다: ${brief.summary}` : "오늘 브리핑은 아직 안 왔다고 말한다(매일 아침 9시쯤 들어온다)."}
-3. 원준 님 프로필에서 비어 있거나 덜 채워진 부분 하나를 골라 질문을 딱 하나 한다. 덜 채워진 부분: ${gaps.join(", ") || "없음. 그러면 요즘 하고 있는 작업을 묻는다"}.
+${soon.length ? `3. 마감이 다가온 지원을 꼭 짚어 준다: ${soon.join(", ")}.\n4.` : "3."} 원준 님 프로필에서 비어 있거나 덜 채워진 부분 하나를 골라 질문을 딱 하나 한다. 덜 채워진 부분: ${gaps.join(", ") || "없음. 그러면 요즘 하고 있는 작업을 묻는다"}.
 
 [지금까지 대화, 오래된 것부터]
 ${chatLines(h, msgs, 8) || "(처음 대화)"}
@@ -116,7 +118,8 @@ function introLine(h) {
 }
 
 async function openTalk(id) {
-  if (S.m) return;
+  if (S.m || S.iv) return;
+  if (S.talkTo !== id) clearAttach();
   const a = Office.get(id);
   if (!a) return;
   S.talkTo = id;
@@ -143,8 +146,9 @@ async function openTalk(id) {
 
 async function talkSend() {
   const id = S.talkTo;
-  const text = $("talkMsg").value.trim();
-  if (!id || !text) return;
+  const image = talkImage;
+  const text = $("talkMsg").value.trim() || (image ? "이 사진 봐 줘." : "");
+  if (!id || !text || talkBusy) return;
   const h = (Office.get(id) || {}).h;
   if (!h) return;
   if (S.mode !== "claude" && S.mode !== "api") {
@@ -153,13 +157,58 @@ async function talkSend() {
     return;
   }
   $("talkMsg").value = "";
-  await Chat.push(id, { role: "ceo", text, at: new Date().toISOString() });
+  clearAttach();
+  await Chat.push(id, { role: "ceo", text, at: new Date().toISOString(), ...(image ? { image: true } : {}) });
   renderTalk();
-  await askHead(h, text);
+  await askHead(h, text, image);
 }
 
+// ----- a picture in the 1:1 chat (an SNS screenshot, a portfolio page)
+let talkImage = null;
+let talkThumbUrl = "";
+function canAttach() {
+  return S.mode === "api" || (S.mode === "claude" && S.canImage);
+}
+function clearAttach() {
+  talkImage = null;
+  if (talkThumbUrl) URL.revokeObjectURL(talkThumbUrl);
+  talkThumbUrl = "";
+  $("talkPhoto").value = "";
+  $("talkThumb").replaceChildren();
+  $("talkAttach").hidden = true;
+}
+$("talkPhoto").addEventListener("change", () => {
+  const f = $("talkPhoto").files && $("talkPhoto").files[0];
+  if (!f) return;
+  const types = S.mode === "api" ? ["image/png", "image/jpeg", "image/webp", "image/gif"] : S.imageTypes;
+  if (types.length && !types.includes(f.type)) {
+    $("talkNote").textContent = "PNG나 JPG 사진만 올릴 수 있습니다.";
+    $("talkNote").className = "note grow err";
+    $("talkPhoto").value = "";
+    return;
+  }
+  if (f.size > 5 * 1024 * 1024) {
+    $("talkNote").textContent = "사진이 너무 큽니다. 5MB 이하 캡처로 올려 주세요.";
+    $("talkNote").className = "note grow err";
+    $("talkPhoto").value = "";
+    return;
+  }
+  clearAttach();
+  talkImage = f;
+  talkThumbUrl = URL.createObjectURL(f);
+  const img = document.createElement("img");
+  img.src = talkThumbUrl;
+  img.alt = "첨부한 사진";
+  $("talkThumb").replaceChildren(img);
+  $("talkAttachName").textContent = "사진 1장을 함께 보냅니다. 무엇을 봐 달라는지 적고 보내기를 누르세요.";
+  $("talkAttach").hidden = false;
+  $("talkNote").textContent = "";
+  $("talkMsg").focus();
+});
+$("talkUnattach").addEventListener("click", clearAttach);
+
 let talkBusy = false;
-async function askHead(h, text) {
+async function askHead(h, text, image) {
   if (talkBusy) return;
   talkBusy = true;
   $("talkSend").disabled = true;
@@ -170,7 +219,12 @@ async function askHead(h, text) {
     const msgs = Chat.cache.get(h.id) || [];
     const meter = newMeter();
     if (S.mcp && !text) await Promise.race([refreshHF(true), sleep(3000)]);
-    const r = await AI.json(text ? talkPrompt(h, msgs.slice(0, -1), text) : checkinPrompt(h, msgs), undefined, meter);
+    const r = await AI.json(text ? talkPrompt(h, msgs.slice(0, -1), text, !!image) : checkinPrompt(h, msgs), undefined, meter, image ? { images: [image] } : {});
+    const seen = image && str(r && r.seen, 300);
+    if (seen) {
+      const mine = [...msgs].reverse().find((m) => m.role === "ceo" && m.image && !m.seen);
+      if (mine) mine.seen = seen;
+    }
     const say = String((r && r.say) || "").trim();
     if (!say) throw { code: "invalid_json" };
     S.thinking.delete(h.id);
@@ -225,7 +279,9 @@ function renderTalk() {
   $("talkWeb").disabled = !h || webBusy;
   $("talkWeb").hidden = !S.db;
   $("talkWeb").classList.toggle("primary", !!(h && S.suggestWeb));
-  $("talkMsg").placeholder = h ? (h.secretary ? "서윤에게 편하게 말해 봐" : `${h.name} ${h.title}에게 질문하거나 일을 맡기세요`) : "먼저 사무실에서 팀원을 누르세요";
+  $("talkPhotoBtn").hidden = !h || !canAttach();
+  $("talkPhoto").accept = (S.mode === "api" ? ["image/png", "image/jpeg", "image/webp", "image/gif"] : S.imageTypes).join(",") || "image/*";
+  $("talkMsg").placeholder = h ? (h.secretary ? "서윤에게 편하게 말해 봐" : h.id === "h-research" ? "질문하거나, SNS 캡처를 올려 믿을 만한지 물어보세요" : `${h.name} ${h.title}에게 질문하거나 일을 맡기세요`) : "먼저 사무실에서 팀원을 누르세요";
   const ol = $("talkLog");
   ol.innerHTML = "";
   const msgs = (id && Chat.cache.get(id)) || [];
@@ -236,7 +292,7 @@ function renderTalk() {
     const who = document.createElement("b");
     who.textContent = m.role === "ceo" ? "나" : h ? h.name : "";
     const p = document.createElement("span");
-    p.textContent = m.text;
+    p.textContent = m.image ? `[사진] ${m.text}` : m.text;
     li.append(who, p);
     ol.append(li);
   }
@@ -314,7 +370,7 @@ $("talkTask").addEventListener("click", () => {
   $("tkHead").value = S.talkTo;
   $("tkTitle").focus();
 });
-$("convene").addEventListener("click", () => { renderConvene(); showConsole("pre"); $("agenda").focus({ preventScroll: true }); });
+$("convene").addEventListener("click", () => { if (S.iv) return; renderConvene(); showConsole("pre"); $("agenda").focus({ preventScroll: true }); });
 $("cancelConvene").addEventListener("click", () => { showConsole("talk"); renderTalk(); });
 $("acceptTask").addEventListener("click", async () => {
   const sg = S.suggestTask;
@@ -356,6 +412,7 @@ function renderToday() {
   const unread = S.reports.filter((r) => !r.read).length;
   const parts = [];
   if (brief) parts.push(`최근 브리핑: ${brief.title} (${fmtDate(brief.at)})`);
+  for (const a of liveApps().filter((x) => x.deadline && daysLeft(x.deadline) >= 0 && daysLeft(x.deadline) <= 7).sort((x, y) => x.deadline.localeCompare(y.deadline)).slice(0, 3)) parts.push(`마감 ${dLabel(a.deadline)}: ${appLabel(a)}`);
   parts.push(unread ? `읽지 않은 보고 ${unread}건` : "새 보고 없음");
   if (due) parts.push(`처리 대기 업무 ${due}건`);
   const txt = parts.join("\n");

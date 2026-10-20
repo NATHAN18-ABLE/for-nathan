@@ -15,7 +15,7 @@ const font = (file, family) =>
 const fonts = [font("Galmuri11.woff2", "Galmuri11"), font("Galmuri11-Bold.woff2", "Galmuri11 Bold"), font("Galmuri7.woff2", "Galmuri7")].join("\n");
 const css = src("app.css").toString();
 const html = src("app.html").toString();
-const js = ["data.js", "art.js", "app.js", "office.js", "talk.js", "work.js"].map((f) => src(f).toString()).join("\n");
+const js = ["data.js", "art.js", "app.js", "office.js", "talk.js", "career.js", "work.js"].map((f) => src(f).toString()).join("\n");
 
 const head = `<title>작전 회의실</title>
 <meta name="claude:viewport-fit-sides" content="cover">

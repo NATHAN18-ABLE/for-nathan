@@ -60,7 +60,7 @@ const Office = {
 
   busy(a) {
     const id = a.h.id;
-    return id === "ceo" || S.talkTo === id || S.thinking.has(id) || [...S.writing].some((tid) => (S.tasks.find((t) => t.id === tid) || {}).headId === id) || (S.m && this.meetSeats.has(id));
+    return id === "ceo" || S.talkTo === id || S.thinking.has(id) || [...S.writing].some((tid) => (S.tasks.find((t) => t.id === tid) || {}).headId === id) || ((S.m || S.iv) && this.meetSeats.has(id));
   },
 
   working(a) {
@@ -128,7 +128,7 @@ const Office = {
         this.goHome(a);
       }
     }
-    if (S.m || reduceMotion.matches) return;
+    if (S.m || S.iv || reduceMotion.matches) return;
     // wander: at most two people up at once
     for (const a of this.agents.values()) {
       if (walking >= 2) break;
@@ -179,6 +179,19 @@ const Office = {
 
   gather(m) {
     this.assignMeetSeats(m);
+    return this.walkSeats();
+  },
+
+  // Mock interview: the interviewer across the table, 원준 facing them.
+  gatherInterview(h) {
+    this.meetSeats.clear();
+    const x = TABLE.x + TABLE.w / 2 - 8;
+    this.meetSeats.set(h.id, { x, y: TABLE.y - 26, row: "top", via: [[112, AISLE], [112, 50], [x, 50], [x, TABLE.y - 29]] });
+    this.meetSeats.set("ceo", { x, y: TABLE.y + 20, row: "bot", via: [[x, AISLE], [x, TABLE.y + 17]] });
+    return this.walkSeats();
+  },
+
+  walkSeats() {
     const moves = [];
     for (const [id, seat] of this.meetSeats) {
       const a = this.agents.get(id);
@@ -226,6 +239,7 @@ const Office = {
     if (!a) return "";
     const id = a.h.id;
     if (S.m && this.meetSeats.has(id)) return "회의 중";
+    if (S.iv && this.meetSeats.has(id)) return id === "ceo" ? "면접 보는 중" : "면접관";
     if (S.talkTo === id) return "원준 님과 대화 중";
     if ([...S.writing].some((tid) => (S.tasks.find((t) => t.id === tid) || {}).headId === id)) return "보고서 쓰는 중";
     if (a.mode === "walk") return "이동 중";

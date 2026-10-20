@@ -48,6 +48,11 @@ const DEFAULT_TASKS = [
     instruction: "원준 님 프로필을 기준으로 희망 직무별로 넘치는 것, 부족한 것, 다음 주에 더 해야 할 활동을 정리해 주세요. 실제 채용 공고에서 요구하는 역량과 비교해 주세요.",
     refs: "",
   },
+  {
+    id: "t-sns", headId: "h-research", title: "SNS 화제 정리 (믿을 만한 것만)", repeat: "weekly", weekday: 3,
+    instruction: "지난 1주일 동안 스레드, X, 인스타그램에서 AI 영상, 광고, 방송 업계 사람들이 많이 이야기한 것 중 믿을 만한 것만 골라 주세요. 공식 계정 발표나 언론 보도로 확인된 것만 넣고, 누가 올렸는지 꼭 밝혀 주세요. 소문과 홍보 글은 빼 주세요.",
+    refs: "",
+  },
 ];
 
 // look: skin 0-4, hair 0-6 (color), style 0-4, suit 0-6, acc 0-3 (none, glasses, headset, tie)

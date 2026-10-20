@@ -7,6 +7,8 @@
     <nav class="tabs" role="tablist" aria-label="화면">
       <button class="tab" role="tab" id="tab-room" aria-selected="true" aria-controls="view-room">사무실</button>
       <button class="tab" role="tab" id="tab-work" aria-selected="false" aria-controls="view-work">업무 <span class="badge" id="workBadge" hidden></span></button>
+      <button class="tab" role="tab" id="tab-apps" aria-selected="false" aria-controls="view-apps">지원 현황 <span class="badge" id="appsBadge" hidden></span></button>
+      <button class="tab" role="tab" id="tab-practice" aria-selected="false" aria-controls="view-practice">연습</button>
       <button class="tab" role="tab" id="tab-profile" aria-selected="false" aria-controls="view-profile">내 프로필</button>
       <button class="tab" role="tab" id="tab-staff" aria-selected="false" aria-controls="view-staff">팀 관리</button>
       <button class="tab" role="tab" id="tab-minutes" aria-selected="false" aria-controls="view-minutes">회의록</button>
@@ -68,11 +70,33 @@
               <textarea id="talkMsg" class="grow" rows="1" maxlength="4000" enterkeyhint="send" autocomplete="off" disabled></textarea>
               <button class="btn primary" id="talkSend" type="button" disabled>보내기</button>
             </div>
+            <div class="attach" id="talkAttach" hidden>
+              <span class="thumb" id="talkThumb"></span>
+              <span class="note grow" id="talkAttachName"></span>
+              <button class="btn small" id="talkUnattach" type="button">빼기</button>
+            </div>
             <div class="row-actions">
               <button class="btn small" id="talkWeb" type="button" disabled hidden>웹으로 알아봐</button>
+              <label class="btn small file-btn" id="talkPhotoBtn" hidden>사진 올리기<input type="file" id="talkPhoto" class="sr"></label>
               <button class="btn small" id="talkTask" type="button" disabled>업무 맡기기</button>
               <button class="btn small" id="convene" type="button">회의 소집</button>
               <p class="note grow" id="talkNote"></p>
+            </div>
+          </div>
+          <!-- mock interview at the meeting table -->
+          <div id="ivBox" class="console" hidden>
+            <div class="talk-head"><h3 id="ivTitle">모의 면접</h3><span class="note" id="ivProgress"></span></div>
+            <ol class="talk-log iv-log" id="ivLog" hidden></ol>
+            <div class="row-actions" id="ivAnswerRow">
+              <label class="sr" for="ivAnswer">답변</label>
+              <textarea id="ivAnswer" class="grow" rows="2" maxlength="2000" enterkeyhint="send" autocomplete="off" placeholder="면접관에게 말하듯 답을 적으세요"></textarea>
+              <button class="btn primary" id="ivSend" type="button">답하기</button>
+            </div>
+            <div class="row-actions">
+              <button class="btn small" id="ivEnd" type="button">면접 끝내기</button>
+              <button class="btn small" id="ivResult" type="button" hidden>결과 자세히 보기</button>
+              <button class="btn small" id="ivLeave" type="button" hidden>사무실로 돌아가기</button>
+              <p class="note grow" id="ivNote"></p>
             </div>
           </div>
           <!-- calling a meeting -->
@@ -131,6 +155,14 @@
           </div>
           <!-- after -->
           <div id="postMeeting" class="console" hidden>
+            <div class="suggest acts-box" id="actBox" hidden>
+              <span>회의에서 나온 할 일. 고른 일은 담당 팀원의 업무가 되고 바로 조사를 시작합니다.</span>
+              <ul class="acts" id="actList"></ul>
+              <div class="row-actions">
+                <button class="btn small primary" id="actSave" type="button">고른 일을 업무로 등록</button>
+                <p class="note grow" id="actNote"></p>
+              </div>
+            </div>
             <div class="row-actions">
               <button class="btn primary" id="newBtn" type="button">새 회의</button>
               <button class="btn" id="toMinutesBtn" type="button">회의록 보기</button>
@@ -190,6 +222,127 @@
           <p class="note" id="reporterNote"></p>
         </div>
         <div class="win mdetail w-detail" id="reportDetail" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 지원 현황 ===== -->
+  <section id="view-apps" role="tabpanel" aria-labelledby="tab-apps" hidden>
+    <div class="work apps">
+      <div class="col">
+        <div class="win a-list">
+          <div class="row-actions spread"><h2>지원 현황</h2><span class="note" id="appsCount"></span></div>
+          <div class="seg" role="tablist" aria-label="보기" id="appsFilter">
+            <button type="button" role="tab" aria-selected="true" data-f="live">진행 중</button>
+            <button type="button" role="tab" aria-selected="false" data-f="pick">서치팀 추천 <span class="badge" id="pickBadge" hidden></span></button>
+            <button type="button" role="tab" aria-selected="false" data-f="done">끝난 것</button>
+          </div>
+          <ul class="apps-list" id="appsList"></ul>
+          <p class="note" id="appsNote"></p>
+        </div>
+      </div>
+      <div class="col">
+        <div class="win settings a-form" id="appForm">
+          <h2 id="appFormTitle">공고 추가</h2>
+          <div class="grid2">
+            <div class="field"><label for="apCompany">회사</label><input type="text" id="apCompany" maxlength="40" autocomplete="off" placeholder="예: KBS"></div>
+            <div class="field"><label for="apRole">직무</label><input type="text" id="apRole" maxlength="60" autocomplete="off" placeholder="예: 예능 PD 신입"></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label for="apDeadline">마감일</label><input type="date" id="apDeadline"></div>
+            <div class="field"><label for="apStage">진행 단계</label><select id="apStage"></select></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label for="apSource">어디서 봤나</label><select id="apSource"></select></div>
+            <div class="field"><label for="apKind">구분</label><select id="apKind"></select></div>
+          </div>
+          <div class="field"><label for="apUrl">공고 링크</label><input type="url" id="apUrl" maxlength="400" autocomplete="off" placeholder="https://"></div>
+          <div class="field"><label for="apMemo">메모</label><textarea id="apMemo" maxlength="1000" placeholder="자소서 문항, 준비할 것, 결과"></textarea></div>
+          <p class="fit" id="apFit" hidden></p>
+          <div class="row-actions">
+            <button class="btn primary" id="apSave" type="button">추가</button>
+            <button class="btn small" id="apCancel" type="button" hidden>새 공고</button>
+            <button class="btn small" id="apDel" type="button" hidden>삭제</button>
+            <p class="note grow" id="apMsg"></p>
+          </div>
+          <div class="row-actions" id="apJump" hidden>
+            <button class="btn small" id="apReview" type="button">이 공고로 첨삭</button>
+            <button class="btn small" id="apInterview" type="button">이 공고로 모의 면접</button>
+          </div>
+        </div>
+        <div class="win settings a-hunt">
+          <h2>서치팀 공고 찾기</h2>
+          <p class="note" id="huntInfo"></p>
+          <div class="row-actions">
+            <button class="btn small" id="huntToggle" type="button">매주 찾기 켜기</button>
+            <button class="btn small primary" id="huntNow" type="button">지금 찾기</button>
+            <p class="note grow" id="huntNote"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 연습: 첨삭과 모의 면접 ===== -->
+  <section id="view-practice" role="tabpanel" aria-labelledby="tab-practice" hidden>
+    <div class="practice">
+      <div class="seg wide" role="tablist" aria-label="연습 종류" id="practiceSeg">
+        <button type="button" role="tab" aria-selected="true" data-p="review" aria-controls="p-review">자소서·포트폴리오 첨삭</button>
+        <button type="button" role="tab" aria-selected="false" data-p="interview" aria-controls="p-interview">모의 면접</button>
+      </div>
+      <div class="work" id="p-review" role="tabpanel">
+        <div class="col">
+          <div class="win settings" id="rvForm">
+            <h2>첨삭 받기</h2>
+            <p class="note" id="rvWho"></p>
+            <div class="grid2">
+              <div class="field"><label for="rvKind">문서 종류</label><select id="rvKind"></select></div>
+              <div class="field"><label for="rvApp">지원하는 곳</label><select id="rvApp"></select></div>
+            </div>
+            <div class="field" id="rvTargetWrap" hidden><label for="rvTarget">회사와 직무</label><input type="text" id="rvTarget" maxlength="80" autocomplete="off" placeholder="예: SBS 예능 PD"></div>
+            <div class="field"><label for="rvQuestion">문항 (선택)</label><input type="text" id="rvQuestion" maxlength="300" autocomplete="off" placeholder="예: 지원 동기와 입사 후 포부를 쓰시오 (1,000자)"></div>
+            <div class="field"><label for="rvText">본문</label><textarea id="rvText" class="rv-text" maxlength="6000" placeholder="첨삭받을 글을 붙여 넣으세요."></textarea><span class="note count" id="rvCount"></span></div>
+            <div class="row-actions">
+              <button class="btn primary" id="rvGo" type="button">첨삭 받기</button>
+              <p class="note grow" id="rvNote"></p>
+            </div>
+          </div>
+          <div class="win">
+            <h2>첨삭 기록</h2>
+            <ul class="mlist" id="rvHistory"></ul>
+          </div>
+        </div>
+        <div class="col">
+          <div class="win mdetail" id="rvDetail"></div>
+        </div>
+      </div>
+      <div class="work" id="p-interview" role="tabpanel" hidden>
+        <div class="col">
+          <div class="win settings" id="ivForm">
+            <h2>모의 면접 준비</h2>
+            <p class="note">면접관이 회의 테이블에 앉고, 원준 님이 맞은편에 앉습니다. 질문마다 답하면 바로 피드백이 나오고, 끝나면 점수표가 남습니다.</p>
+            <div class="grid2">
+              <div class="field"><label for="ivTarget">면접 볼 곳</label><select id="ivTarget"></select></div>
+              <div class="field"><label for="ivWho">면접관</label><select id="ivWho"></select></div>
+            </div>
+            <div class="field" id="ivCustomWrap" hidden><label for="ivCustom">회사와 직무</label><input type="text" id="ivCustom" maxlength="80" autocomplete="off" placeholder="예: 광고 대행사 영상 PD 인턴"></div>
+            <div class="grid2">
+              <div class="field"><label for="ivCount">질문 수</label><select id="ivCount"><option value="5">5개 (15분쯤)</option><option value="8">8개 (25분쯤)</option></select></div>
+              <div class="field"><label for="ivMode">강도</label><select id="ivMode"><option value="real">실전처럼</option><option value="hard">압박 면접</option></select></div>
+            </div>
+            <div class="row-actions">
+              <button class="btn primary" id="ivStart" type="button">면접 시작</button>
+              <p class="note grow" id="ivStartNote"></p>
+            </div>
+          </div>
+          <div class="win">
+            <h2>면접 기록</h2>
+            <ul class="mlist" id="ivHistory"></ul>
+          </div>
+        </div>
+        <div class="col">
+          <div class="win mdetail" id="ivDetail"></div>
+        </div>
       </div>
     </div>
   </section>

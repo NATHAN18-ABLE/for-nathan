@@ -16,6 +16,12 @@ const S = {
   talkTo: null,
   suggestTask: null,
   suggestWeb: false,
+  apps: [],
+  reviews: [],
+  interviews: [],
+  iv: null, // a mock interview in progress
+  canImage: false, // claude.ai lets this page send pictures to Claude
+  imageTypes: [],
   mcp: null,
   tasks: [],
   reports: [],
@@ -157,9 +163,11 @@ function meterLine(mt) {
 }
 
 const AI = {
-  async json(prompt, signal, meter) {
+  // opts.images: Blobs for Claude to look at (a screenshot from the 1:1 chat).
+  async json(prompt, signal, meter, opts = {}) {
+    const images = opts.images && opts.images.length ? opts.images : null;
     if (S.mode === "claude" && S.sample) {
-      const r = await S.sample.json(prompt, { signal, modelTier: S.tier, cache: false });
+      const r = await S.sample.json(prompt, { signal, modelTier: opts.tier || S.tier, cache: false, ...(images ? { images } : {}) });
       if (meter) meter.calls++;
       return r;
     }
@@ -177,10 +185,10 @@ const AI = {
           },
           // Thinking shares max_tokens with the answer, so leave plenty of room or long answers get cut off.
           body: JSON.stringify({
-            model: TIER_MODEL[S.tier] || TIER_MODEL.default,
+            model: TIER_MODEL[opts.tier || S.tier] || TIER_MODEL.default,
             max_tokens: 16000,
-            output_config: { effort: TIER_EFFORT[S.tier] || "medium" },
-            messages: [{ role: "user", content: prompt }],
+            output_config: { effort: TIER_EFFORT[opts.tier || S.tier] || "medium" },
+            messages: [{ role: "user", content: images ? [...(await Promise.all(images.map(imageBlock))), { type: "text", text: prompt }] : prompt }],
           }),
         });
       } catch (e) {
@@ -205,13 +213,25 @@ const AI = {
   },
 };
 
+async function imageBlock(blob) {
+  const data = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(",")[1] || "");
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+  return { type: "image", source: { type: "base64", media_type: blob.type || "image/png", data } };
+}
+
 function errCopy(e) {
   switch (e && e.code) {
     case "not_granted": return "Claude 사용이 허용되지 않았습니다. 데모 대본으로 보거나, 내 컴퓨터에서 API 키로 실행하세요.";
     case "sampling_disabled": return "이 계정에서는 Claude를 쓸 수 없습니다. 데모 대본으로 보거나 API 키로 실행하세요.";
     case "rate_limited": return "Claude 사용량 한도에 걸렸습니다. 잠시 뒤에 다시 시작하세요.";
     case "session_expired": return "claude.ai 로그인이 만료되었습니다. 다시 로그인한 뒤 시작하세요.";
-    case "bad_key": return "API 키가 올바르지 않습니다. 인사 관리의 AI 연결에서 키를 확인하세요.";
+    case "bad_key": return "API 키가 올바르지 않습니다. 팀 관리의 AI 연결에서 키를 확인하세요.";
+    case "images_unavailable":
+    case "image_rejected": return "이 사진은 보낼 수 없습니다. PNG나 JPG 캡처로 다시 올려 주세요.";
     case "bad_model": return "선택한 모델을 쓸 수 없습니다. 생각 깊이를 바꿔 보세요.";
     case "network": return "Anthropic API에 연결하지 못했습니다. 인터넷 연결을 확인하세요.";
     case "invalid_json": return "답변 형식이 깨져서 이 발언은 건너뜁니다.";
@@ -462,7 +482,7 @@ function stanceOf(id) {
 function drawScreen() {
   const phaseLabel = S.m
     ? { brief: "1R 브리핑", clash: "2R 교전", audit: "감사 판정", decide: "CEO 결재", done: "결재 완료", idle: "회의" }[S.m.phase]
-    : "근무 중";
+    : S.iv ? "모의 면접" : "근무 중";
   g.save();
   g.beginPath();
   g.rect(138, 8, 108, 42);
@@ -474,11 +494,12 @@ function drawScreen() {
   g.fillText(phaseLabel, 143, 11);
   const sp = S.speaker && (seatFor(S.speaker) || {}).h;
   const today = new Date();
-  const line2 = sp ? `${sp.title} ${sp.name}` : S.m ? S.m.agenda : `${today.getMonth() + 1}월 ${today.getDate()}일 (${WEEKDAYS[today.getDay()]})`;
+  const line2 = S.iv ? S.iv.target : sp ? `${sp.title} ${sp.name}` : S.m ? S.m.agenda : `${today.getMonth() + 1}월 ${today.getDate()}일 (${WEEKDAYS[today.getDay()]})`;
   g.fillStyle = "#a3e9df";
   g.fillText(fit(line2, 100), 143, 25);
-  const hpTxt = S.m && S.m.hp != null ? `생존율 ${S.m.hp}%` : clock();
-  g.fillStyle = "#6fb5ad";
+  const due = !S.m && !S.iv && typeof nextDeadline === "function" ? nextDeadline() : null;
+  const hpTxt = S.m && S.m.hp != null ? `생존율 ${S.m.hp}%` : S.iv ? `질문 ${Math.min(S.iv.turns.length, S.iv.count)}/${S.iv.count}` : due ? `${dLabel(due.deadline)} ${due.company}` : clock();
+  g.fillStyle = due && daysLeft(due.deadline) <= 3 ? "#ff8a98" : "#6fb5ad";
   g.fillText(hpTxt, 143, 37);
   g.fillStyle = "rgba(0,0,0,0.18)";
   for (let y = 9; y < 50; y += 2) g.fillRect(138, y, 108, 1);
@@ -585,7 +606,7 @@ scene.addEventListener("click", (e) => {
   const lx = ((e.clientX - r.left) / r.width) * W;
   const ly = ((e.clientY - r.top) / r.height) * H;
   const hit = hitAgent(lx, ly);
-  if (!hit) { Dialogue.advance(); return; }
+  if (!hit || S.iv) { Dialogue.advance(); return; }
   if (S.m) { pick(hit.h.id === S.picked ? null : hit.h.id); return; }
   const mail = S.reports.find((r) => !r.read && r.headId === hit.h.id);
   if (mail) { showView("work"); openReport(mail.id); return; }
@@ -1118,6 +1139,7 @@ function stopWithError(m, e) {
 
 function showConsole(which) {
   $("talkBox").hidden = which !== "talk";
+  $("ivBox").hidden = which !== "iv";
   $("preMeeting").hidden = which !== "pre";
   $("inMeeting").hidden = which !== "in";
   $("decideBox").hidden = which !== "decide";
@@ -1125,7 +1147,7 @@ function showConsole(which) {
 }
 
 function startMeeting() {
-  if (S.m) return;
+  if (S.m || S.iv) return;
   let agenda = $("agenda").value.trim();
   const demo = S.mode !== "claude" && S.mode !== "api";
   if (demo) {
@@ -1200,6 +1222,7 @@ async function sign() {
   $("postNote").textContent = (ok ? "회의록에 저장했습니다." : "회의록을 저장하지 못했습니다. 이 화면을 닫기 전에 회의록 탭에서 내려받으세요.") + (cost ? " " + cost : "");
   $("postNote").className = ok ? "note grow" : "note grow err";
   showConsole("post");
+  proposeActions(m);
 }
 
 function toRecord(m) {
@@ -1719,7 +1742,7 @@ async function saveFile(name, text) {
 // Tabs, console wiring, AI settings
 // ---------------------------------------------------------------------------
 function showView(v) {
-  for (const k of ["room", "work", "profile", "staff", "minutes"]) {
+  for (const k of ["room", "work", "apps", "practice", "profile", "staff", "minutes"]) {
     $("view-" + k).hidden = k !== v;
     $("tab-" + k).setAttribute("aria-selected", String(k === v));
   }
@@ -1727,6 +1750,8 @@ function showView(v) {
   if (v === "work") renderWork();
   if (v === "profile") renderProfile();
   if (v === "minutes") renderMinutes();
+  if (v === "apps") renderApps();
+  if (v === "practice") renderPractice();
   if (v === "room") fitCanvas();
 }
 $("tab-room").addEventListener("click", () => showView("room"));
@@ -1734,6 +1759,8 @@ $("tab-staff").addEventListener("click", () => showView("staff"));
 $("tab-work").addEventListener("click", () => showView("work"));
 $("tab-profile").addEventListener("click", () => showView("profile"));
 $("tab-minutes").addEventListener("click", () => showView("minutes"));
+$("tab-apps").addEventListener("click", () => showView("apps"));
+$("tab-practice").addEventListener("click", () => showView("practice"));
 $("linkPill").addEventListener("click", () => { showView("staff"); $("aiSettings").scrollIntoView({ block: "start", behavior: reduceMotion.matches ? "auto" : "smooth" }); });
 
 $("startBtn").addEventListener("click", startMeeting);
@@ -1912,6 +1939,7 @@ async function boot() {
     renderUnits();
     setMode(S.apiKey ? "api" : "demo");
     await loadWork();
+    await loadCareer();
     if (!S.m) greet();
     return;
   }
@@ -1919,6 +1947,10 @@ async function boot() {
   S.sample = sample;
   S.downloads = downloads;
   S.mcp = mcp;
+  if (sample && sample.limits) {
+    const caps = await sample.limits().catch(() => null);
+    if (caps && caps.images) { S.canImage = true; S.imageTypes = caps.images.mediaTypes || []; }
+  }
   if (db && user) {
     try {
       const uid = await user.id();
@@ -1934,6 +1966,7 @@ async function boot() {
   if (!S.m) { relayout(); renderUnits(); }
   setMode(sample ? "claude" : "demo");
   await loadWork();
+  await loadCareer();
   if (!S.m) greet();
 }
 

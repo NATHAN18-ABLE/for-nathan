@@ -12,40 +12,40 @@ Single self-contained HTML file (inline CSS/JS, canvas-drawn pixel art, no build
 
 ## Users
 
-One person: the owner, playing the CEO of an imagined large company (first example: an AI video production company). They bring an idea to a meeting, watch their department-head agents argue about it, interject, and make the final call. Korean-speaking; all UI and agent speech in Korean.
+One person: 원준, a fourth-year student (graduating 2027) hunting for a first job as an AI video/visual creator, ad video maker, AI PM or broadcast PD in Seoul, Gyeonggi or Incheon. He plays the CEO of his own "career headquarters": a pixel-art office of AI team members who plan, check, critique and research for his job hunt. Korean-speaking; all UI and agent speech in Korean. He uses it on desktop and on his phone.
 
 ## Product Purpose
 
-A pixel-art meeting room where AI department heads hold a real meeting about the CEO's agenda, rendered as a living game scene rather than a chat log. Success: the CEO leaves each meeting with a decision they could defend, because the room told them the uncomfortable parts.
+A career team that works for him every day and tells him the uncomfortable parts: team members he talks to one-on-one, a secretary who briefs him each morning, standing research tasks, an applications board with deadlines, cover-letter review with scores, mock interviews, and meetings he convenes when a decision needs argument. Success: he applies to the right postings on time with materials that survive a real screener.
 
 ## Positioning
 
-Existing agent-office simulators (Claw-Empire, The Office, Pixel Agents) visualize agents doing work. This one stages the meeting itself: presentations, cross-examination, an audit verdict, and the CEO's sign-off, with heads designed to disagree and to price risk with numbers.
+Existing agent-office simulators visualize agents doing work. This one is a job-hunt team with real stakes: real postings and deadlines from job sites, real web research with sources, and critics who score his writing and answers the way a screener would.
 
 ## Operating Context
 
-- Meeting flow (confirmed): each head presents in turn → rebuttal round where heads attack each other's weak points → audit head summarizes risk → CEO approves, holds, or rejects. Minutes are kept.
-- Default roster for the AI video company: 기획팀장, 리서치팀장, 판단팀장, 제작팀장, 홍보팀장, 감사팀장. The CEO is the human user.
-- The roster is fully user-editable: add, remove, rename heads, rewrite their role and personality.
+- Office scene: members sit, wander, visit each other; clicking one opens a 1:1 talk. Meetings only when convened (brief, clash, audit, CEO sign-off), and a meeting's outcome becomes tasks.
+- A cloud reporter (scheduled Claude Code task with web search) writes reports, morning briefings and job recommendations into the artifact database; the page starts it on demand.
+- Tabs: 사무실, 업무 (tasks and reports), 지원 현황 (applications board), 연습 (첨삭, 모의 면접), 내 프로필, 팀 관리, 회의록.
 
 ## Capabilities and Constraints
 
-- Heads must judge objectively and harshly. Every judgment carries a reason and, where possible, a number (cost, probability, timeline). No flattery.
-- Answers stay short and specific; no generic filler.
-- Pixel-art art must be original (drawn in code). Paid tilesets used by referenced repos (LimeZu, itch.io office packs) are not redistributable and are not used.
-- Ideas borrowed from open-source projects: Claw-Empire (Apache-2.0) CEO-desk directives and meeting minutes; The Office (ISC) per-role markdown prompts and boardroom review; AI Town (MIT) character movement and speech bubbles. Patterns only, no copied code or assets.
-- Local mode stores the API key only in the user's own browser storage.
+- Members judge objectively and harshly, with a reason and a number. No flattery, no invented facts, postings or links.
+- Plain Korean a middle-school student understands.
+- Only 원준 does the work: no hiring, outsourcing or big budgets; costs in Higgsfield credits from his real usage.
+- SNS sites cannot be read directly; SNS information comes from verified secondary sources or screenshots he uploads.
+- Pixel art drawn in code; no paid tilesets.
 
 ## Evidence on Hand
 
-None. No real company data, customers, or metrics exist; any figures agents produce are their own estimates and must read as such.
+His profile (school, experience, content, tools, goals) entered with him; his real Higgsfield balance and per-model spend; web sources cited in each report.
 
 ## Product Principles
 
-1. Disagreement is the feature. A meeting where everyone agrees has failed.
-2. Show, don't log: the meeting is watched as a scene first and read as text second.
-3. The CEO decides. Agents advise, argue, and price risk; they never make the final call.
-4. Every claim earns its reason. A verdict without a basis is not allowed to stand.
+1. Disagreement is the feature.
+2. Show, don't log: the office and the interview table are scenes first.
+3. 원준 decides. Members advise, argue, score and research.
+4. Every claim earns its reason and its source.
 
 ## Anti-goals (user-stated)
 
