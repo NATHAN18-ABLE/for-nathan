@@ -24,6 +24,11 @@ function periodFor(t, now = new Date()) {
 }
 // requestedAt: 원준 pressed 웹으로 받기, so the cloud reporter should do it now
 // whatever the schedule says.
+// A request stamp that is always later than the last report, even if the
+// cloud reporter's clock ran a little ahead of this browser's.
+function stampAfter(prev) {
+  return new Date(Math.max(Date.now(), (Date.parse(prev || "") || 0) + 1000)).toISOString();
+}
 function isRequested(t) {
   return !!t.requestedAt && (!t.lastReportAt || t.requestedAt > t.lastReportAt);
 }
@@ -317,7 +322,7 @@ async function requestWeb(t) {
   if (!h) return;
   const note = $("workNote");
   if (!isRequested(t) && !(t.kind === "ask" && isDue(t))) {
-    t.requestedAt = new Date().toISOString();
+    t.requestedAt = stampAfter(t.lastReportAt);
     if (!(await WorkStore.put("tasks", t))) {
       delete t.requestedAt;
       note.textContent = "업무를 저장하지 못했습니다. 잠시 뒤에 다시 눌러 주세요.";

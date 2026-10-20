@@ -334,7 +334,7 @@ $("huntNow").addEventListener("click", async () => {
     $("huntNote").className = "note grow err";
     return;
   }
-  t.requestedAt = new Date().toISOString();
+  t.requestedAt = stampAfter(t.lastReportAt);
   await WorkStore.put("tasks", t);
   const code = await kickReporter();
   $("huntNow").disabled = false;
