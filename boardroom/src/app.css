@@ -664,6 +664,7 @@ input[type="range"] { width: 100%; accent-color: var(--amber); }
 .talk-log b { font: 13px/1.6 var(--font-bold); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .talk-log li.me b { color: var(--amber); }
 .talk-log span { white-space: pre-wrap; overflow-wrap: anywhere; }
+#talkMsg { min-height: 44px; max-height: 160px; resize: none; }
 .suggest {
   display: grid; gap: 8px;
   padding: 10px 12px;

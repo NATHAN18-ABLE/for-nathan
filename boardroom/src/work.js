@@ -12,14 +12,24 @@ function kstDate(d = new Date()) {
 function kstWeekday(d = new Date()) {
   return new Date(d.getTime() + 9 * 3600e3).getUTCDay();
 }
+// A report day starts at 07:00 KST, so opening the app at 1 a.m. doesn't make
+// the morning briefing "due" before there is any morning news.
+const DAY_START_H = 7;
 function periodFor(t, now = new Date()) {
   if (t.repeat === "once") return "once";
-  if (t.repeat === "daily") return kstDate(now);
-  const back = (kstWeekday(now) - (t.weekday | 0) + 7) % 7;
-  return kstDate(new Date(now.getTime() - back * 864e5));
+  const day = new Date(now.getTime() - DAY_START_H * 3600e3);
+  if (t.repeat === "daily") return kstDate(day);
+  const back = (kstWeekday(day) - (t.weekday | 0) + 7) % 7;
+  return kstDate(new Date(day.getTime() - back * 864e5));
+}
+// requestedAt: 원준 pressed 웹으로 받기, so the cloud reporter should do it now
+// whatever the schedule says.
+function isRequested(t) {
+  return !!t.requestedAt && (!t.lastReportAt || t.requestedAt > t.lastReportAt);
 }
 function isDue(t, now = new Date()) {
   if (t.active === false) return false;
+  if (isRequested(t)) return true;
   const p = periodFor(t, now);
   if (t.lastPeriod === p) return false;
   if (p === "once") return true;
@@ -35,6 +45,7 @@ function repeatLabel(t) {
   return `매주 ${WEEKDAYS[t.weekday | 0]}요일`;
 }
 function nextLabel(t) {
+  if (isRequested(t) || (t.kind === "ask" && isDue(t))) return "웹으로 조사 중";
   if (isDue(t)) return "보고할 차례";
   if (t.repeat === "once") return t.lastPeriod ? "보고 완료" : "보고할 차례";
   if (t.repeat === "daily") return "다음 보고: 내일 아침";
@@ -82,10 +93,124 @@ async function loadWork() {
   S.tasks = (tasks || []).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
   S.reports = (await WorkStore.list("reports")).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   $("reporterNote").textContent = S.db
-    ? "정기 보고는 클라우드 비서가 매일 아침 7시 47분(한국 시간)에 보고할 차례인 업무를 웹으로 조사해서 여기에 넣습니다. 이 화면을 열어 두지 않아도 됩니다."
+    ? "정기 보고는 클라우드 조사원이 매일 아침 8시 52분(한국 시간)에 보고할 차례인 업무를 웹으로 조사해서 여기에 넣습니다. 이 화면을 열어 두지 않아도 됩니다. 한 번만 하는 업무와 대화 중 웹으로 알아봐는 바로 시작합니다."
     : "내 컴퓨터에서 실행 중이라 정기 보고가 자동으로 들어오지 않습니다. 업무 옆의 지금 받기를 누르세요.";
   renderWorkBadge();
   if (!$("view-work").hidden) renderWork();
+  deliverAnswers();
+  watchWork();
+}
+
+// Reports and task updates written by the cloud reporter show up while the
+// page is open. Subscribed once; later loadWork() calls only re-read.
+let workWatched = false;
+function watchWork() {
+  if (!S.db || workWatched) return;
+  workWatched = true;
+  WorkStore.col("reports").onSnapshot((snap) => {
+    const fresh = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+    const had = new Set(S.reports.map((r) => r.id));
+    const keep = new Map(S.reports.map((r) => [r.id, r]));
+    // keep a local read mark that hasn't round-tripped yet
+    S.reports = fresh.map((r) => (keep.get(r.id)?.read && !r.read ? { ...r, read: true } : r)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    if (S.openReport && !S.reports.some((r) => r.id === S.openReport)) S.openReport = null;
+    renderWorkBadge();
+    if (!$("view-work").hidden) { renderReports(); renderReportDetail(); }
+    if (fresh.some((r) => !had.has(r.id))) deliverAnswers();
+  }, () => { workWatched = false; });
+  WorkStore.col("tasks").onSnapshot((snap) => {
+    S.tasks = snap.docs.map((d) => ({ ...d.data(), id: d.id })).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    renderWorkBadge();
+    if (!$("view-work").hidden) renderTasks();
+    deliverAnswers();
+  }, () => {});
+}
+
+// ----- web questions. The page itself can't browse, so a question from a 1:1
+// talk becomes a one-off task, and the cloud reporter (a Claude Code
+// scheduled task with web search) is started right away through the
+// Claude Code Remote connector. Its answer comes back as a report, and a
+// short version is dropped into that member's chat.
+const REPORTER_TRIGGER = "trig_011jdky5Vph2QbSjmDYTzDBh";
+
+async function kickReporter() {
+  if (!S.mcp) return "no_mcp";
+  try {
+    await S.mcp.callTool("Claude Code Remote", "fire_trigger", { trigger_id: REPORTER_TRIGGER }, { cache: false });
+    return "ok";
+  } catch (e) {
+    return (e && e.code) || "upstream_error";
+  }
+}
+
+function kickCopy(code, who) {
+  const later = "그대로 두면 내일 아침 정기 보고 때 처리됩니다.";
+  switch (code) {
+    case "ok": return `${who} 웹으로 조사를 시작했습니다. 보통 5~10분 뒤 보고함에 들어오고, 이 대화에도 답이 남습니다.`;
+    case "no_mcp": return `업무로 등록했습니다. 이 화면에서는 클라우드 조사를 바로 시작할 수 없어서 ${later}`;
+    case "server_not_connected":
+    case "needs_reauth": return `업무로 등록했습니다. 바로 시작하려면 claude.ai 설정 → 커넥터에서 Claude Code Remote를 연결해 주세요. ${later}`;
+    case "approval_required":
+    case "not_in_manifest":
+    case "consent_required": return `업무로 등록했습니다. 바로 시작하려면 Claude Code Remote 사용을 허용해야 합니다. 웹으로 알아봐를 다시 누르면 다시 묻습니다. ${later}`;
+    case "server_unavailable":
+    case "upstream_error": return "업무로 등록했습니다. 조사가 시작됐는지 확실하지 않습니다. 10분 뒤에도 보고가 없으면 웹으로 알아봐를 다시 눌러 주세요.";
+    default: return `업무로 등록했습니다. 클라우드 조사를 시작하지 못했습니다 (${code}). ${later}`;
+  }
+}
+
+function isAskReport(r) {
+  return String(r.taskId || "").startsWith("w-") || (S.tasks.find((t) => t.id === r.taskId) || {}).kind === "ask";
+}
+
+function pendingAsks(headId) {
+  return S.tasks.filter((t) => t.kind === "ask" && isDue(t) && (!headId || t.headId === headId));
+}
+
+async function askWeb(h, question, context) {
+  const t = {
+    id: "w-" + Date.now().toString(36),
+    kind: "ask",
+    headId: h.id,
+    title: "웹 조사: " + str(question.replace(/\s+/g, " "), 18),
+    instruction: question,
+    refs: context,
+    repeat: "once",
+    weekday: 0,
+    createdAt: new Date().toISOString(),
+    lastPeriod: null,
+    active: true,
+  };
+  if (!(await WorkStore.put("tasks", t))) return "save_failed";
+  if (!S.tasks.some((x) => x.id === t.id)) S.tasks.push(t);
+  renderWorkBadge();
+  return kickReporter();
+}
+
+// Drop each finished web answer into the asker's chat, once.
+let delivering = false;
+async function deliverAnswers() {
+  if (delivering) return;
+  delivering = true;
+  try {
+    for (const t of S.tasks.filter((x) => x.kind === "ask" && x.lastPeriod && !x.answered)) {
+      const r = S.reports.find((x) => x.taskId === t.id);
+      const h = headById(t.headId);
+      if (!r || !h) continue;
+      t.answered = true;
+      await WorkStore.put("tasks", t);
+      await Chat.load(h.id);
+      const tail = h.secretary ? `자세한 건 보고함 "${r.title}"에 올려 놨어.` : `자세한 내용은 보고함 "${r.title}"에 올렸습니다.`;
+      const text = `${r.summary || r.title}\n${tail}`;
+      await Chat.push(h.id, { role: "head", text, at: new Date().toISOString(), reportId: r.id });
+      if (S.talkTo === h.id) {
+        renderTalk();
+        if (!talkBusy && !S.m) talkShow(h, text, [{ chip: "찬성", label: "웹 조사 결과" }]);
+      }
+    }
+  } finally {
+    delivering = false;
+  }
 }
 
 function unreadFor(headId) {
@@ -109,7 +234,7 @@ function headById(id) {
 function reportPrompt(t, h) {
   return `${companyLine()}
 
-너는 이 회사의 ${h.title} ${h.name}이다. CEO가 맡긴 업무의 보고서를 쓴다.
+너는 이 팀의 ${h.title} ${h.name}이다. 원준 님이 맡긴 업무의 보고서를 쓴다.
 너의 담당: ${h.role}
 너의 관점: ${h.persona}
 말투: ${HARSH[h.harsh] || HARSH[4]}
@@ -117,7 +242,7 @@ function reportPrompt(t, h) {
 [업무]
 ${t.title}
 ${t.instruction}
-${t.refs ? `\n[CEO가 준 참고 자료]\n${t.refs}\n` : ""}
+${t.refs ? `\n[원준 님이 준 참고 자료]\n${t.refs}\n` : ""}
 [오늘 날짜] ${kstDate()}
 
 [정보의 한계: 반드시 지킨다]
@@ -128,7 +253,7 @@ ${t.refs ? `\n[CEO가 준 참고 자료]\n${t.refs}\n` : ""}
 ${RULES}
 
 JSON 객체 하나로만 답하라:
-{"title":"보고서 제목, 30자 이내","summary":"한 줄 요약, 80자 이내","points":[{"title":"핵심 내용 제목, 25자 이내","body":"2~3문장"}],"forUs":"우리 스튜디오에게 무슨 뜻인지 2~3문장","actions":[{"what":"이번 주에 해 볼 일","cost":"예상 크레딧과 시간"}],"caveats":"확인이 필요한 것 1~2문장","sources":[{"title":"","url":""}]}
+{"title":"보고서 제목, 30자 이내","summary":"한 줄 요약, 80자 이내","points":[{"title":"핵심 내용 제목, 25자 이내","body":"2~3문장"}],"forUs":"원준 님 취업 준비에 무슨 뜻인지 2~3문장","actions":[{"what":"이번 주에 해 볼 일","cost":"예상 크레딧과 시간"}],"caveats":"확인이 필요한 것 1~2문장","sources":[{"title":"","url":""}]}
 points는 3~5개, actions는 1~3개.`;
 }
 
@@ -187,6 +312,26 @@ async function writeReportNow(t) {
   }
 }
 
+async function requestWeb(t) {
+  const h = headById(t.headId);
+  if (!h) return;
+  const note = $("workNote");
+  if (!isRequested(t) && !(t.kind === "ask" && isDue(t))) {
+    t.requestedAt = new Date().toISOString();
+    if (!(await WorkStore.put("tasks", t))) {
+      delete t.requestedAt;
+      note.textContent = "업무를 저장하지 못했습니다. 잠시 뒤에 다시 눌러 주세요.";
+      note.className = "note err";
+      return;
+    }
+    renderTasks();
+    renderWorkBadge();
+  }
+  const code = await kickReporter();
+  note.textContent = kickCopy(code, josa(h.secretary ? h.name : `${h.name} ${h.title}`, "이", "가")).replace("업무로 등록했습니다. ", "요청을 남겼습니다. ").replace("이 대화에도 답이 남습니다", "새 보고가 오면 머리 위에 봉투가 뜹니다");
+  note.className = code === "ok" ? "note" : "note err";
+}
+
 // ----- rendering
 function renderWork() {
   renderTasks();
@@ -198,12 +343,13 @@ function renderWork() {
 function renderTasks() {
   const ul = $("taskList");
   ul.innerHTML = "";
-  $("workCount").textContent = S.tasks.length ? `${S.tasks.length}건` : "";
-  if (!S.tasks.length) {
+  const tasks = S.tasks.filter((t) => !(t.kind === "ask" && t.lastPeriod));
+  $("workCount").textContent = tasks.length ? `${tasks.length}건` : "";
+  if (!tasks.length) {
     ul.innerHTML = '<li class="empty"><b>맡긴 업무가 없습니다</b>아래에서 팀장을 고르고 업무를 지시하세요. 매주 정해진 요일에 보고가 들어옵니다.</li>';
     return;
   }
-  for (const t of S.tasks) {
+  for (const t of tasks) {
     const h = headById(t.headId);
     const li = document.createElement("li");
     li.className = "task";
@@ -229,9 +375,18 @@ function renderTasks() {
     now.type = "button";
     now.className = "btn small" + (due ? " primary" : "");
     const busy = S.writing.has(t.id);
-    now.textContent = busy ? "작성 중" : "지금 받기";
-    now.disabled = busy || !h;
-    now.addEventListener("click", () => writeReportNow(t));
+    if (S.db) {
+      // on claude.ai the cloud reporter can search the web, so ask it instead
+      // of writing a no-web report here
+      const asked = isRequested(t) || (t.kind === "ask" && due);
+      now.textContent = asked ? "조사 중" : "웹으로 받기";
+      now.disabled = busy || !h;
+      now.addEventListener("click", () => requestWeb(t));
+    } else {
+      now.textContent = busy ? "작성 중" : "지금 받기";
+      now.disabled = busy || !h;
+      now.addEventListener("click", () => writeReportNow(t));
+    }
     const ed = document.createElement("button");
     ed.type = "button";
     ed.className = "btn small";
@@ -261,7 +416,7 @@ function renderReports() {
   const ul = $("reportList");
   ul.innerHTML = "";
   if (!S.reports.length) {
-    ul.innerHTML = '<li class="empty"><b>아직 들어온 보고가 없습니다</b>정해진 요일이 되면 클라우드 비서가 웹을 조사해서 여기에 넣습니다. 지금 바로 보려면 업무 옆의 지금 받기를 누르세요.</li>';
+    ul.innerHTML = '<li class="empty"><b>아직 들어온 보고가 없습니다</b>정해진 날이 되면 클라우드 조사원이 웹을 조사해서 여기에 넣습니다. 지금 바로 보려면 업무 옆의 버튼을 누르세요.</li>';
     return;
   }
   for (const r of S.reports) {
@@ -468,10 +623,16 @@ $("tkSave").addEventListener("click", async () => {
   const ok = await WorkStore.put("tasks", t);
   S.tasks = prev ? S.tasks.map((x) => (x.id === t.id ? t : x)) : S.tasks.concat(t);
   S.editTask = null;
-  $("tkNote").textContent = ok ? (prev ? "수정했습니다." : `${headById(t.headId)?.name || ""} 팀장에게 지시했습니다.`) : "저장하지 못했습니다.";
+  const who = headById(t.headId);
+  $("tkNote").textContent = ok ? (prev ? "수정했습니다." : `${who?.name || ""} ${who?.title || ""}에게 지시했습니다.`) : "저장하지 못했습니다.";
   $("tkNote").className = ok ? "note grow" : "note grow err";
   renderWork();
   renderWorkBadge();
+  if (ok && !prev && t.repeat === "once" && S.db) {
+    const code = await kickReporter();
+    $("tkNote").textContent = kickCopy(code, who ? josa(who.secretary ? who.name : `${who.name} ${who.title}`, "이", "가") : "팀원이").replace("업무로 등록했습니다. ", "지시했습니다. ");
+    $("tkNote").className = code === "ok" ? "note grow" : "note grow err";
+  }
 });
 $("reportRefresh").addEventListener("click", () => loadWork());
 

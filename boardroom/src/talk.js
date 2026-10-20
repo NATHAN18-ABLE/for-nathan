@@ -50,7 +50,8 @@ function reportsOf(h, n = 3) {
   return S.reports.filter((r) => r.headId === h.id).slice(0, n).map((r) => `- ${fmtDate(r.at)} "${r.title}": ${r.summary}`).join("\n");
 }
 function chatLines(h, msgs, n = 14) {
-  return msgs.slice(-n).map((m) => `${m.role === "ceo" ? "원준" : h.name}: ${m.text}`).join("\n");
+  // long pastes (a cover letter) are kept whole only in the newest message
+  return msgs.slice(-n).map((m) => `${m.role === "ceo" ? "원준" : h.name}: ${m.text.length > 700 ? m.text.slice(0, 700) + " (이하 생략)" : m.text}`).join("\n");
 }
 function profileGaps() {
   const p = S.profile || {};
@@ -58,8 +59,9 @@ function profileGaps() {
 }
 
 const TALK_JSON = `JSON 객체 하나로만 답하라:
-{"say":"답변. 2~6문장. 단계가 필요하면 줄바꿈과 1. 2. 3.","profileNote":"원준 님이 자기 경험, 활동, 생각, 사실을 새로 알려 줬으면 프로필에 남길 한 줄 요약. 아니면 빈 문자열","task":null 또는 {"headId":"맡을 팀원 id","title":"업무 이름, 20자 이내","instruction":"지시 내용","repeat":"once 또는 daily 또는 weekly","weekday":0~6 정수(일요일 0)}}
-task는 원준 님이 일을 맡기거나, 네가 제안한 일을 맡기자고 동의했을 때만 채운다. 다른 팀이 더 잘할 일이면 그 팀 id로 채운다.`;
+{"say":"답변. 2~6문장. 단계가 필요하면 줄바꿈과 1. 2. 3.","needsWeb":true 또는 false,"profileNote":"원준 님이 자기 경험, 활동, 생각, 사실을 새로 알려 줬으면 프로필에 남길 한 줄 요약. 아니면 빈 문자열","task":null 또는 {"headId":"맡을 팀원 id","title":"업무 이름, 20자 이내","instruction":"지시 내용","repeat":"once 또는 daily 또는 weekly","weekday":0~6 정수(일요일 0)}}
+task는 원준 님이 일을 맡기거나, 네가 제안한 일을 맡기자고 동의했을 때만 채운다. 다른 팀이 더 잘할 일이면 그 팀 id로 채운다.
+needsWeb은 제대로 답하려면 최신 정보(뉴스, 채용 공고, 마감일, 회사 소식, 가격, 새 도구)를 웹에서 확인해야 할 때만 true.`;
 
 function talkPrompt(h, msgs, text) {
   const tasks = tasksOf(h), reps = reportsOf(h);
@@ -80,13 +82,13 @@ ${chatLines(h, msgs) || "(처음 대화)"}
 ${text}
 
 ${talkRules(h)}
-- 실시간 인터넷은 볼 수 없다. 최신 소식이 필요하면 서치팀이나 비서의 정기 보고로 넘기자고 말한다.
+- 너는 지금 인터넷을 볼 수 없다. 최신 정보가 필요한 질문이면 아는 만큼만 말하고, 시점이 불확실하다고 밝힌 뒤 "웹으로 알아봐"를 누르면 웹으로 조사해서 보고하겠다고 말한다. 공고, 날짜, 숫자, 링크를 지어내지 않는다.
 
 ${TALK_JSON}`;
 }
 
 function checkinPrompt(h, msgs) {
-  const brief = S.reports.find((r) => r.headId === h.id && kstDate(new Date(r.at)) === kstDate());
+  const brief = S.reports.find((r) => r.headId === h.id && !isAskReport(r) && kstDate(new Date(r.at)) === kstDate());
   const gaps = profileGaps();
   return `${companyLine()}
 
@@ -119,6 +121,7 @@ async function openTalk(id) {
   if (!a) return;
   S.talkTo = id;
   S.suggestTask = null;
+  S.suggestWeb = false;
   if (a.mode === "stand" || (a.mode === "walk" && a.onArrive && !a.until)) { a.until = 0; Office.goHome(a); }
   showView("room");
   showConsole("talk");
@@ -162,7 +165,7 @@ async function askHead(h, text) {
   $("talkSend").disabled = true;
   $("talkNote").textContent = "";
   S.thinking.add(h.id);
-  Dialogue.thinking(h, h.secretary ? `${h.name}가 생각하는 중이야.` : `${h.name} ${h.title}이 생각하는 중입니다.`);
+  Dialogue.thinking(h, h.secretary ? `${josa(h.name, "이", "가")} 생각하는 중이야.` : `${josa(`${h.name} ${h.title}`, "이", "가")} 생각하는 중입니다.`);
   try {
     const msgs = Chat.cache.get(h.id) || [];
     const meter = newMeter();
@@ -175,6 +178,7 @@ async function askHead(h, text) {
     const meta = [];
     const note = String((r && r.profileNote) || "").trim();
     if (note) { appendProfileNote(note); meta.push({ chip: "찬성", label: "프로필에 기록함" }); }
+    S.suggestWeb = !!(text && r && r.needsWeb === true && S.db);
     const t = r && r.task && typeof r.task === "object" && r.task.title ? r.task : null;
     if (t) S.suggestTask = { headId: findHead(S.heads, t.headId)?.id || h.id, title: str(t.title, 40), instruction: str(t.instruction, 800), repeat: ["once", "daily", "weekly"].includes(t.repeat) ? t.repeat : "once", weekday: clamp(Number(t.weekday) || 1, 0, 6) };
     renderTalk();
@@ -218,6 +222,9 @@ function renderTalk() {
   $("talkMsg").disabled = !h;
   $("talkSend").disabled = !h || talkBusy;
   $("talkTask").disabled = !h;
+  $("talkWeb").disabled = !h || webBusy;
+  $("talkWeb").hidden = !S.db;
+  $("talkWeb").classList.toggle("primary", !!(h && S.suggestWeb));
   $("talkMsg").placeholder = h ? (h.secretary ? "서윤에게 편하게 말해 봐" : `${h.name} ${h.title}에게 질문하거나 일을 맡기세요`) : "먼저 사무실에서 팀원을 누르세요";
   const ol = $("talkLog");
   ol.innerHTML = "";
@@ -242,8 +249,63 @@ function renderTalk() {
   }
 }
 
+// "웹으로 알아봐": the typed message, or else the last thing 원준 said, goes to
+// the cloud reporter as a one-off web research task for this member.
+let webBusy = false;
+async function talkWeb() {
+  const id = S.talkTo;
+  const h = id && (Office.get(id) || {}).h;
+  if (!h || webBusy || talkBusy) return;
+  const msgs = await Chat.load(id);
+  const typed = $("talkMsg").value.trim();
+  const last = [...msgs].reverse().find((m) => m.role === "ceo");
+  const question = typed || (last && last.text) || "";
+  const note = $("talkNote");
+  const pending = pendingAsks(id);
+  if (!typed && pending.some((t) => t.instruction === question)) {
+    // already asked: just try starting the reporter again
+    webBusy = true; renderTalk();
+    const code = await kickReporter();
+    webBusy = false;
+    note.textContent = code === "ok" ? "조사를 다시 시작했습니다. 보고가 오면 이 대화에도 남습니다." : kickCopy(code, "").replace("업무로 등록했습니다. ", "");
+    note.className = code === "ok" ? "note grow" : "note grow err";
+    renderTalk();
+    return;
+  }
+  if (!question) {
+    note.textContent = "웹으로 알아볼 내용을 입력창에 먼저 적어 주세요.";
+    note.className = "note grow err";
+    return;
+  }
+  webBusy = true;
+  S.suggestWeb = false;
+  renderTalk();
+  if (typed) {
+    $("talkMsg").value = "";
+    await Chat.push(id, { role: "ceo", text: typed, at: new Date().toISOString() });
+  }
+  const context = chatLines(h, (Chat.cache.get(id) || []).slice(-7, -1), 6);
+  const code = await askWeb(h, question, context);
+  webBusy = false;
+  if (code === "save_failed") {
+    note.textContent = "업무를 저장하지 못했습니다. 잠시 뒤에 다시 눌러 주세요.";
+    note.className = "note grow err";
+    renderTalk();
+    return;
+  }
+  const reply = h.secretary
+    ? (code === "ok" ? "좋아, 웹으로 찾아보고 올게. 몇 분만 기다려 줘." : "알겠어, 웹으로 찾아볼 일로 적어 뒀어.")
+    : (code === "ok" ? "알겠습니다. 웹으로 확인하고 출처와 함께 보고드리겠습니다." : "알겠습니다. 웹 조사 업무로 적어 두었습니다.");
+  await Chat.push(id, { role: "head", text: reply, at: new Date().toISOString() });
+  note.textContent = kickCopy(code, josa(h.secretary ? h.name : `${h.name} ${h.title}`, "이", "가"));
+  note.className = code === "ok" ? "note grow" : "note grow err";
+  renderTalk();
+  if (S.talkTo === id) talkShow(h, reply, []);
+}
+
 $("talkSend").addEventListener("click", talkSend);
-$("talkMsg").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); talkSend(); } });
+$("talkWeb").addEventListener("click", talkWeb);
+$("talkMsg").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); talkSend(); } });
 $("talkTask").addEventListener("click", () => {
   if (!S.talkTo) return;
   showView("work");
@@ -259,12 +321,18 @@ $("acceptTask").addEventListener("click", async () => {
   if (!sg) return;
   const t = { id: "t-" + Date.now().toString(36), createdAt: new Date().toISOString(), lastPeriod: null, active: true, refs: "", ...sg };
   const ok = await WorkStore.put("tasks", t);
-  if (ok) S.tasks.push(t);
+  if (ok && !S.tasks.some((x) => x.id === t.id)) S.tasks.push(t);
   S.suggestTask = null;
-  $("talkNote").textContent = ok ? `업무로 등록했습니다. ${t.repeat === "once" ? "다음 날 아침 정기 보고 때 처리되고, 업무 탭에서 지금 받기도 할 수 있습니다." : repeatLabel(t) + " 보고가 들어옵니다."}` : "업무를 저장하지 못했습니다.";
+  $("talkNote").textContent = ok ? `업무로 등록했습니다. ${t.repeat === "once" ? "업무 탭에서 지금 받기도 할 수 있습니다." : repeatLabel(t) + " 보고가 들어옵니다."}` : "업무를 저장하지 못했습니다.";
   $("talkNote").className = ok ? "note grow" : "note grow err";
   renderTalk();
   renderWorkBadge();
+  if (ok && t.repeat === "once" && S.db) {
+    const who = headById(t.headId);
+    const code = await kickReporter();
+    $("talkNote").textContent = kickCopy(code, who ? josa(who.secretary ? who.name : `${who.name} ${who.title}`, "이", "가") : "팀원이");
+    $("talkNote").className = code === "ok" ? "note grow" : "note grow err";
+  }
 });
 $("dismissTask").addEventListener("click", () => { S.suggestTask = null; renderTalk(); });
 
@@ -283,7 +351,7 @@ function refreshStatuses() {
 function renderToday() {
   const box = $("todayInfo");
   if (!box) return;
-  const brief = S.reports.find((r) => (S.heads.find((h) => h.id === r.headId) || {}).secretary);
+  const brief = S.reports.find((r) => !isAskReport(r) && (S.heads.find((h) => h.id === r.headId) || {}).secretary);
   const due = S.tasks.filter((t) => isDue(t)).length;
   const unread = S.reports.filter((r) => !r.read).length;
   const parts = [];
@@ -310,7 +378,7 @@ function renderConvene() {
     box.append(l);
   }
   const aud = S.heads.find((x) => x.auditor);
-  $("partNote").textContent = aud ? `${aud.title} ${aud.name}은 항상 참석해서 마지막에 감사 판정을 냅니다.` : "";
+  $("partNote").textContent = aud ? `${josa(`${aud.title} ${aud.name}`, "은", "는")} 항상 참석해서 마지막에 감사 판정을 냅니다.` : "";
 }
 
 // ----- profile tab

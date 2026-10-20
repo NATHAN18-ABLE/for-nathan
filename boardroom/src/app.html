@@ -65,10 +65,11 @@
             </div>
             <div class="row-actions">
               <label class="sr" for="talkMsg">메시지</label>
-              <input type="text" id="talkMsg" class="grow" maxlength="600" enterkeyhint="send" autocomplete="off" disabled>
+              <textarea id="talkMsg" class="grow" rows="1" maxlength="4000" enterkeyhint="send" autocomplete="off" disabled></textarea>
               <button class="btn primary" id="talkSend" type="button" disabled>보내기</button>
             </div>
             <div class="row-actions">
+              <button class="btn small" id="talkWeb" type="button" disabled hidden>웹으로 알아봐</button>
               <button class="btn small" id="talkTask" type="button" disabled>업무 맡기기</button>
               <button class="btn small" id="convene" type="button">회의 소집</button>
               <p class="note grow" id="talkNote"></p>

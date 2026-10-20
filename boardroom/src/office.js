@@ -230,6 +230,7 @@ const Office = {
     if ([...S.writing].some((tid) => (S.tasks.find((t) => t.id === tid) || {}).headId === id)) return "보고서 쓰는 중";
     if (a.mode === "walk") return "이동 중";
     if (a.mode === "stand") return a.where ? `${a.where}에 잠깐` : "잠깐 자리 비움";
+    if (S.tasks.some((t) => t.kind === "ask" && t.headId === id && isDue(t))) return "웹으로 조사 중";
     if (this.working(a)) return "업무 중";
     return "자리에 있음";
   },

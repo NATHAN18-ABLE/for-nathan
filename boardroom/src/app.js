@@ -15,6 +15,7 @@ const S = {
   profile: clone(DEFAULT_PROFILE),
   talkTo: null,
   suggestTask: null,
+  suggestWeb: false,
   mcp: null,
   tasks: [],
   reports: [],
@@ -932,7 +933,7 @@ async function runMeeting(m) {
       S.thinking.add(h.id);
       S.speaker = h.id;
       renderUnits();
-      Dialogue.thinking(h, `${h.name} ${h.title}이 판단을 정리하고 있습니다.`);
+      Dialogue.thinking(h, `${josa(`${h.name} ${h.title}`, "이", "가")} 판단을 정리하고 있습니다.`);
       let r = null;
       try {
         r = await guard(jobs[i]);
@@ -1022,7 +1023,7 @@ async function runMeeting(m) {
     } else {
       S.thinking.add(a.id);
       S.speaker = a.id;
-      Dialogue.thinking(a, `${a.name} ${a.title}이 회의 전체를 검토하고 있습니다.`);
+      Dialogue.thinking(a, `${josa(`${a.name} ${a.title}`, "이", "가")} 회의 전체를 검토하고 있습니다.`);
       try {
         audit = cleanAudit(await guard(AI.json(auditPrompt(m, a), m.ctl.signal, m.meter)));
       } catch (e) {
@@ -1082,7 +1083,7 @@ async function drainCEO(m) {
     const waitOn = msg.target || null;
     if (waitOn) S.thinking.add(waitOn.id); else pool.forEach((h) => S.thinking.add(h.id));
     S.speaker = null;
-    Dialogue.thinking(waitOn || m.auditor, waitOn ? `${waitOn.name} ${waitOn.title}이 답을 준비하고 있습니다.` : "누가 답할지 정하고 있습니다.");
+    Dialogue.thinking(waitOn || m.auditor, waitOn ? `${josa(`${waitOn.name} ${waitOn.title}`, "이", "가")} 답을 준비하고 있습니다.` : "누가 답할지 정하고 있습니다.");
     let r = null;
     try {
       r = await guard(AI.json(replyPrompt(m, msg.text, msg.target), m.ctl.signal, m.meter));
@@ -1557,6 +1558,12 @@ $("coDescIn").addEventListener("input", () => { S.company.desc = $("coDescIn").v
 // ---------------------------------------------------------------------------
 // Minutes
 // ---------------------------------------------------------------------------
+// Korean particle after a name: 이/가, 은/는, 을/를 depending on the last syllable.
+function josa(word, withFinal, without) {
+  const c = String(word).trim().slice(-1).charCodeAt(0);
+  const final = c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 !== 0 : /[0-9lmnLMN]$/.test(word);
+  return word + (final ? withFinal : without);
+}
 function fmtDate(iso) {
   const d = new Date(iso);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
