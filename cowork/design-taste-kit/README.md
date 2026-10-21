@@ -1,21 +1,34 @@
 # design-taste-kit
 
-Claude Cowork plugin that bundles every design skill installed in this repository's
-`.claude/skills/` (the same copies Claude Code uses). This folder only holds the plugin
-manifest; build the installable file with `scripts/build-cowork-plugin.sh`.
+Claude Cowork plugin that bundles every skill installed in this repository's `.claude/skills/`
+(the same copies Claude Code uses) plus the MCP servers in `.mcp.json`. This folder only holds the
+manifest and the MCP config; build the installable file with `scripts/build-cowork-plugin.sh`.
 
-Start with the `build-site` skill: it runs the whole pipeline in order. Its `pipeline.md` is
-generated from the "사이트 제작 파이프라인" section of `CLAUDE.md` at build time.
+Entry points:
+- Websites and UI: `build-site` runs the whole design pipeline. Its `pipeline.md` is generated from
+  `CLAUDE.md` at build time, since Cowork has no project CLAUDE.md.
+- Video and motion graphics: `hyperframes` picks the right workflow.
+- Planning: `brainstorming`.
 
-| Stage | Skills | Upstream |
+## Skills
+
+| Area | Skills | Upstream |
 |---|---|---|
 | Pipeline | `build-site` | this repository |
-| Context, critique, audit | `impeccable` | [pbakaus/impeccable](https://github.com/pbakaus/impeccable) |
-| Direction, anti-slop | `design-taste-frontend` | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) |
-| Brand references | `design-md-library` | [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) |
-| Style / palette / font data | `ui-ux-pro-max` (needs Python 3) | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) |
-| Anti-slop audit | `hallmark` | [Nutlope/hallmark](https://github.com/Nutlope/hallmark) |
-| Craft, motion, mobile | `emil-design-eng`, `apple-design`, `pick-ui-library`, `prototype`, `ask-sonner`, `mobile-native`, `find-animation-opportunities`, `animate`, `animate-expo`, `animation-vocabulary`, `review-animations`, `improve-animations`, `write-swift` | [emilkowalski/skills](https://github.com/emilkowalski/skills) |
+| Design direction and audit | `impeccable`, `design-taste-frontend`, `design-md-library`, `ui-ux-pro-max` (needs Python 3), `hallmark` | pbakaus/impeccable, Leonxlnx/taste-skill, VoltAgent/awesome-design-md, nextlevelbuilder/ui-ux-pro-max-skill, Nutlope/hallmark |
+| Craft, motion, mobile | `emil-design-eng`, `apple-design`, `pick-ui-library`, `prototype`, `ask-sonner`, `mobile-native`, `find-animation-opportunities`, `animate`, `animate-expo`, `animation-vocabulary`, `review-animations`, `improve-animations`, `write-swift` | emilkowalski/skills |
+| Video | `hyperframes`, `hyperframes-*`, `motion-graphics`, `general-video`, `product-launch-video`, `faceless-explainer`, `music-to-video`, `talking-head-recut`, `embedded-captions`, `pr-to-video`, `slideshow`, `media-use`, `figma`, `remotion-to-hyperframes` (needs Node 22+, Chrome, FFmpeg) | heygen-com/hyperframes |
+| Animation | `gsap-core`, `gsap-timeline`, `gsap-scrolltrigger`, `gsap-plugins`, `gsap-react`, `gsap-frameworks`, `gsap-performance`, `gsap-utils` | greensock/gsap-skills |
+| Audio | `text-to-speech`, `speech-to-text`, `music`, `sound-effects`, `dubbing`, `voice-changer`, `voice-isolator`, `onboarding`, `setup-api-key` | elevenlabs/skills |
+| PPT and planning | `theme-factory`, `brainstorming` | anthropics/skills, obra/superpowers |
+
+## MCP servers
+
+| Server | Sign-in |
+|---|---|
+| `playwright` (browser checks) | none; runs `npx @playwright/mcp` locally |
+| `elevenlabs` (voice, music, sound effects) | ElevenLabs account, OAuth on first use |
+| `gamma` (presentations) | Gamma account, OAuth on first use |
 
 ## Install in Cowork
 

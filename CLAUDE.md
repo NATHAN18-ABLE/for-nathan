@@ -25,6 +25,17 @@ Skill 도구로 호출할 수 없으므로 해당 `SKILL.md`를 직접 Read 해�
 여러 시안을 비교해야 하면 4단계 전에 `prototype` (Read)으로 변형안을 만든다.
 Swift 코드가 있으면 `write-swift`를 적용한다. 동작 이름을 모르면 `animation-vocabulary`를 참고한다.
 
+## 영상·모션그래픽·PPT·기획 파이프라인
+
+| 작업 | 순서 |
+|---|---|
+| 기획 | 브리프가 모호하면 `brainstorming`으로 의도·대상·범위를 먼저 확정한다. 브리프가 이미 구체적이면 짧게 확인만 하고 넘어간다 |
+| 영상·모션그래픽 | `hyperframes`(진입점)가 용도별 워크플로(`motion-graphics`, `product-launch-video`, `faceless-explainer`, `music-to-video`, `talking-head-recut`, `embedded-captions` 등)를 고른다. 움직임은 `hyperframes-animation` + GSAP 공식 스킬(`gsap-*`), 디자인 방향은 `hyperframes-creative`와 `design-md-library` |
+| 소리 | 내레이션·음악·효과음은 ElevenLabs MCP(`elevenlabs`)를 우선 쓰고, 코드로 처리해야 하면 `text-to-speech`·`music`·`sound-effects`·`speech-to-text` 스킬. 믹싱은 `hyperframes-audio` |
+| PPT | 편집 가능한 .pptx가 필요하면 Anthropic `pptx` 스킬 + `theme-factory`, 비주얼 중심 덱은 Gamma MCP(`gamma`), 인터랙티브 HTML 덱은 `slideshow` |
+
+이 작업들에도 아래 우선순위와 완료 보고 규칙을 그대로 적용한다.
+
 ### 스킬 간 충돌 시 우선순위
 
 1. 사용자 브리프 (명시된 폰트·색·스타일·시대감이 항상 우선)
