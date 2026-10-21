@@ -11,13 +11,16 @@ Skill 도구로 호출할 수 없으므로 해당 `SKILL.md`를 직접 Read 해�
 
 | 단계 | 스킬 | 할 일 |
 |---|---|---|
-| 1. 맥락 | `impeccable` | `.claude/skills/impeccable/scripts/impeccable context` 실행 → PRODUCT.md 없으면 `init`, 이어서 `shape`/new-work로 모드(Persuade/Operate/Read/Experience)와 비주얼 월드 결정 |
-| 2. 방향 | `design-taste-frontend` | 한 줄 "Design Read" 출력, 세 다이얼 값 결정, 템플릿 같은 AI 디자인 금지 규칙 적용 |
+| 1. 맥락 | `impeccable` (+ `design-md-library`) | `.claude/skills/impeccable/scripts/impeccable context` 실행 → PRODUCT.md 없으면 `init`, 이어서 `shape`/new-work로 모드(Persuade/Operate/Read/Experience)와 비주얼 월드 결정. 사용자가 "Stripe처럼"처럼 브랜드를 레퍼런스로 들면 `design-md-library`에서 해당 DESIGN.md를 읽어 비주얼 월드의 근거로 쓴다 |
+| 2. 방향 | `design-taste-frontend` (+ `ui-ux-pro-max`) | 한 줄 "Design Read" 출력, 세 다이얼 값 결정, 템플릿 같은 AI 디자인 금지 규칙 적용. 팔레트·폰트 조합 후보가 필요하면 `ui-ux-pro-max`의 `--design-system` 검색에 같은 다이얼 값을 넣어 근거 데이터로 참고 |
 | 3. 라이브러리 | `pick-ui-library` (Read) | 필요한 UI 라이브러리 선정. 토스트가 필요하면 `ask-sonner` |
 | 4. 구현 | `impeccable` craft-floor + `emil-design-eng` + `apple-design` | UI 편집 전 `impeccable/reference/craft-floor.md`를 읽고, 컴포넌트 완성도·타이포·재질·제스처 원칙을 지키며 구현 |
 | 5. 모바일 | `mobile-native` | 100vh, 입력 확대, 탭 하이라이트, 노치 safe-area 등 모바일 네이티브 감각 처리 |
 | 6. 모션 | `find-animation-opportunities` → `animate` | 애니메이션이 필요한 곳을 고르고(불필요한 곳은 배제) 구현. React Native/Expo면 `animate-expo` |
-| 7. 검수 | `impeccable` `audit` → `polish`, `review-animations` (Read), `improve-animations` | 접근성·성능·반응형 점검, 모션 리뷰, 최종 폴리시. 데스크톱·모바일 스크린샷을 한 번에 확인하고 수정은 한 번에 묶어서 최대 1회 재확인 |
+| 7. 검수 | `impeccable` `audit` + `hallmark audit` → `polish`, `review-animations` (Read), `improve-animations` | 접근성·성능·반응형 점검, AI 슬롭 패턴 점검(`hallmark audit`은 수정 없이 목록만), 모션 리뷰, 최종 폴리시. 데스크톱·모바일 스크린샷을 한 번에 확인하고 수정은 한 번에 묶어서 최대 1회 재확인 |
+
+`hallmark`는 이 파이프라인 안에서는 `audit`(필요하면 `study`)만 쓴다. 기본 디자인 플로우는 테마를 따로 골라
+`impeccable`/`design-taste-frontend`의 결정과 충돌하므로, 사용자가 Hallmark를 이름으로 부를 때만 실행한다.
 
 여러 시안을 비교해야 하면 4단계 전에 `prototype` (Read)으로 변형안을 만든다.
 Swift 코드가 있으면 `write-swift`를 적용한다. 동작 이름을 모르면 `animation-vocabulary`를 참고한다.
