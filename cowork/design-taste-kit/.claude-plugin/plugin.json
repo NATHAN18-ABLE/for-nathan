@@ -1,10 +1,17 @@
 {
   "name": "design-taste-kit",
-  "version": "0.1.0",
-  "description": "Design references and anti-slop checks: 84 brand DESIGN.md systems, the UI/UX Pro Max style/palette/font database, and the Hallmark anti-AI-slop design skill.",
+  "version": "0.2.0",
+  "description": "Full frontend design pipeline: impeccable, taste, Emil Kowalski's craft and motion skills, 84 brand DESIGN.md systems, the UI/UX Pro Max style/palette/font database, and the Hallmark anti-slop audit. Start with build-site.",
   "author": {
     "name": "nathan18-able"
   },
   "license": "MIT",
-  "keywords": ["design", "ui", "design-md", "typography", "color-palette", "anti-slop"]
+  "keywords": [
+    "design",
+    "ui",
+    "design-md",
+    "typography",
+    "color-palette",
+    "anti-slop"
+  ]
 }
