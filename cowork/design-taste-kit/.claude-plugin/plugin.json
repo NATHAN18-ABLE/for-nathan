@@ -1,0 +1,18 @@
+{
+  "name": "design-taste-kit",
+  "version": "0.4.2",
+  "description": "Every skill installed in nathan18-able/for-nathan: frontend design pipeline (build-site), HyperFrames and Remotion video, GSAP, ElevenLabs audio, PPT, planning (brainstorming, grilling, to-spec), superpowers and Karpathy coding discipline, text-to-CAD, plus Playwright, ElevenLabs and Gamma MCP servers.",
+  "author": {
+    "name": "nathan18-able"
+  },
+  "license": "MIT",
+  "keywords": [
+    "design",
+    "ui",
+    "video",
+    "motion-graphics",
+    "presentation",
+    "audio",
+    "anti-slop"
+  ]
+}

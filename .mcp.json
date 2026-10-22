@@ -3,8 +3,18 @@
     "playwright": {
       "type": "stdio",
       "command": "node",
-      "args": [".claude/mcp/playwright.mjs"],
+      "args": [
+        ".claude/mcp/playwright.mjs"
+      ],
       "env": {}
+    },
+    "elevenlabs": {
+      "type": "http",
+      "url": "https://api.elevenlabs.io/v1/mcp"
+    },
+    "gamma": {
+      "type": "http",
+      "url": "https://mcp.gamma.app/mcp"
     }
   }
 }
