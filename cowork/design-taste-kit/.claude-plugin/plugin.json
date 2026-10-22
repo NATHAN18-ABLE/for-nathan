@@ -1,7 +1,7 @@
 {
   "name": "design-taste-kit",
-  "version": "0.3.0",
-  "description": "Design, video, motion graphics, PPT and planning kit: the full frontend design pipeline (start with build-site), HyperFrames video skills (start with hyperframes), official GSAP and ElevenLabs skills, theme-factory, brainstorming, plus Playwright, ElevenLabs and Gamma MCP servers.",
+  "version": "0.4.0",
+  "description": "Every skill installed in nathan18-able/for-nathan: frontend design pipeline (build-site), HyperFrames and Remotion video, GSAP, ElevenLabs audio, PPT, planning (brainstorming, grilling, to-spec), superpowers and Karpathy coding discipline, text-to-CAD, plus Playwright, ElevenLabs and Gamma MCP servers.",
   "author": {
     "name": "nathan18-able"
   },

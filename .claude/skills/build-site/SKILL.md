@@ -22,7 +22,7 @@ Claude Code에서는 `.claude/skills/`, Cowork 플러그인에서는 플러그�
 4. **구현** — `<skills>/impeccable/reference/craft-floor.md` Read 후, `emil-design-eng`·`apple-design` 로드하고 구현.
 5. **모바일** — `mobile-native` 로드, 체크리스트 적용.
 6. **모션** — `find-animation-opportunities`로 후보 선정 → `animate`로 구현 (Expo면 `animate-expo`).
-7. **검수** — `impeccable` audit과 `hallmark audit`(수정 없이 슬롭 목록만) → polish, `<skills>/review-animations/SKILL.md` Read 후 모션 리뷰,
+7. **검수** — `impeccable` audit, `hallmark audit`(수정 없이 슬롭 목록만), `web-design-guidelines` → polish, `<skills>/review-animations/SKILL.md` Read 후 모션 리뷰,
    `improve-animations`로 남은 개선점 확인. 스크린샷 검증은 한 번에 묶어서, 재확인은 최대 1회.
 
 충돌 시 우선순위: 사용자 브리프 > impeccable > design-taste-frontend > emil-design-eng/apple-design > 나머지.

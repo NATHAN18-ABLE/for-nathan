@@ -8,7 +8,8 @@ Entry points:
 - Websites and UI: `build-site` runs the whole design pipeline. Its `pipeline.md` is generated from
   `CLAUDE.md` at build time, since Cowork has no project CLAUDE.md.
 - Video and motion graphics: `hyperframes` picks the right workflow.
-- Planning: `brainstorming`.
+- Planning: `brainstorming`, `/grill-me`, `/to-spec`.
+- CAD: `cad`.
 
 ## Skills
 
@@ -20,7 +21,11 @@ Entry points:
 | Video | `hyperframes`, `hyperframes-*`, `motion-graphics`, `general-video`, `product-launch-video`, `faceless-explainer`, `music-to-video`, `talking-head-recut`, `embedded-captions`, `pr-to-video`, `slideshow`, `media-use`, `figma`, `remotion-to-hyperframes` (needs Node 22+, Chrome, FFmpeg) | heygen-com/hyperframes |
 | Animation | `gsap-core`, `gsap-timeline`, `gsap-scrolltrigger`, `gsap-plugins`, `gsap-react`, `gsap-frameworks`, `gsap-performance`, `gsap-utils` | greensock/gsap-skills |
 | Audio | `text-to-speech`, `speech-to-text`, `music`, `sound-effects`, `dubbing`, `voice-changer`, `voice-isolator`, `onboarding`, `setup-api-key` | elevenlabs/skills |
-| PPT and planning | `theme-factory`, `brainstorming` | anthropics/skills, obra/superpowers |
+| Video (Remotion) | `remotion-best-practices`, `remotion-*` | remotion-dev/skills |
+| PPT and planning | `theme-factory`, `grill-me`, `grilling`, `to-spec`, `setup-matt-pocock-skills` | anthropics/skills, mattpocock/skills |
+| Design review | `web-design-guidelines` (fetches Vercel's latest rules) | vercel-labs/agent-skills |
+| Development discipline | `brainstorming`, `writing-plans`, `executing-plans`, `test-driven-development`, `systematic-debugging`, `verification-before-completion` and the other superpowers skills; `karpathy-guidelines` | obra/superpowers, forrestchang/andrej-karpathy-skills |
+| CAD and fabrication | `cad`, `dxf`, `engineering-drawing`, `dfm`, `dfam-check`, `gcode`, `bambu-labs`, `step-parts`, `sendcutsend`, `urdf`, `srdf`, `sdf` | earthtojake/text-to-cad |
 
 ## MCP servers
 

@@ -17,7 +17,7 @@ Skill 도구로 호출할 수 없으므로 해당 `SKILL.md`를 직접 Read 해�
 | 4. 구현 | `impeccable` craft-floor + `emil-design-eng` + `apple-design` | UI 편집 전 `impeccable/reference/craft-floor.md`를 읽고, 컴포넌트 완성도·타이포·재질·제스처 원칙을 지키며 구현 |
 | 5. 모바일 | `mobile-native` | 100vh, 입력 확대, 탭 하이라이트, 노치 safe-area 등 모바일 네이티브 감각 처리 |
 | 6. 모션 | `find-animation-opportunities` → `animate` | 애니메이션이 필요한 곳을 고르고(불필요한 곳은 배제) 구현. React Native/Expo면 `animate-expo` |
-| 7. 검수 | `impeccable` `audit` + `hallmark audit` → `polish`, `review-animations` (Read), `improve-animations` | 접근성·성능·반응형 점검, AI 슬롭 패턴 점검(`hallmark audit`은 수정 없이 목록만), 모션 리뷰, 최종 폴리시. 데스크톱·모바일 스크린샷을 한 번에 확인하고 수정은 한 번에 묶어서 최대 1회 재확인 |
+| 7. 검수 | `impeccable` `audit` + `hallmark audit` + `web-design-guidelines` → `polish`, `review-animations` (Read), `improve-animations` | 접근성·성능·반응형 점검, AI 슬롭 패턴 점검(`hallmark audit`은 수정 없이 목록만), 모션 리뷰, 최종 폴리시. 데스크톱·모바일 스크린샷을 한 번에 확인하고 수정은 한 번에 묶어서 최대 1회 재확인 |
 
 `hallmark`는 이 파이프라인 안에서는 `audit`(필요하면 `study`)만 쓴다. 기본 디자인 플로우는 테마를 따로 골라
 `impeccable`/`design-taste-frontend`의 결정과 충돌하므로, 사용자가 Hallmark를 이름으로 부를 때만 실행한다.
@@ -29,8 +29,10 @@ Swift 코드가 있으면 `write-swift`를 적용한다. 동작 이름을 모르
 
 | 작업 | 순서 |
 |---|---|
-| 기획 | 브리프가 모호하면 `brainstorming`으로 의도·대상·범위를 먼저 확정한다. 브리프가 이미 구체적이면 짧게 확인만 하고 넘어간다 |
-| 영상·모션그래픽 | `hyperframes`(진입점)가 용도별 워크플로(`motion-graphics`, `product-launch-video`, `faceless-explainer`, `music-to-video`, `talking-head-recut`, `embedded-captions` 등)를 고른다. 움직임은 `hyperframes-animation` + GSAP 공식 스킬(`gsap-*`), 디자인 방향은 `hyperframes-creative`와 `design-md-library` |
+| 기획 | 브리프가 모호하면 `brainstorming`으로 의도·대상·범위를 먼저 확정한다. 브리프가 이미 구체적이면 짧게 확인만 하고 넘어간다. 사용자가 계획을 검증받고 싶어 하면 `grilling`(사용자 명령은 `/grill-me`), 대화를 기획서로 정리할 때는 `/to-spec`(처음 한 번 `/setup-matt-pocock-skills`로 이슈 트래커 설정) |
+| 개발 | 코드를 쓰거나 고칠 때는 `karpathy-guidelines`를 지킨다. 여러 단계짜리 개발은 superpowers 흐름(`writing-plans` → `test-driven-development` → `verification-before-completion`)을 따르고, 버그는 `systematic-debugging` |
+| 영상·모션그래픽 | `hyperframes`(진입점)가 용도별 워크플로(`motion-graphics`, `product-launch-video`, `faceless-explainer`, `music-to-video`, `talking-head-recut`, `embedded-captions` 등)를 고른다. 움직임은 `hyperframes-animation` + GSAP 공식 스킬(`gsap-*`), 디자인 방향은 `hyperframes-creative`와 `design-md-library`. 사용자가 Remotion(React)을 지정하거나 기존 Remotion 프로젝트면 `remotion-best-practices`(진입점)와 `remotion-*` |
+| 3D·CAD·제작 | 부품 모델링은 `cad`, 2D 도면은 `dxf`·`engineering-drawing`, 제조성 검토는 `dfm`·`dfam-check`, 3D 프린팅은 `gcode` → `bambu-labs`, 기성 부품은 `step-parts`, 로봇 기술 파일은 `urdf`·`srdf`·`sdf`, 레이저 커팅 주문 점검은 `sendcutsend` |
 | 소리 | 내레이션·음악·효과음은 ElevenLabs MCP(`elevenlabs`)를 우선 쓰고, 코드로 처리해야 하면 `text-to-speech`·`music`·`sound-effects`·`speech-to-text` 스킬. 믹싱은 `hyperframes-audio` |
 | PPT | 편집 가능한 .pptx가 필요하면 Anthropic `pptx` 스킬 + `theme-factory`, 비주얼 중심 덱은 Gamma MCP(`gamma`), 인터랙티브 HTML 덱은 `slideshow` |
 

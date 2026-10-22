@@ -70,25 +70,14 @@ is the static baseline.
 ## `<Video>` and `<OffthreadVideo>`
 
 ```tsx
-<Video src={staticFile("intro.mp4")} playsInline />
-<OffthreadVideo src={staticFile("intro.mp4")} />
+<Video src={staticFile("intro.mp4")} muted playsInline />
+<OffthreadVideo src={staticFile("intro.mp4")} muted />
 ```
 
 ```html
-<!-- intro.mp4 has an audio stream -->
 <video
-  playsinline
-  data-has-audio="true"
-  data-start="0"
-  data-duration="5"
-  data-track-index="0"
-  src="assets/intro.mp4"
-></video>
-
-<!-- intro.mp4 is silent (or the Remotion element is muted) -->
-<video
-  playsinline
   muted
+  playsinline
   data-start="0"
   data-duration="5"
   data-track-index="0"
@@ -100,14 +89,8 @@ is the static baseline.
 rendering. HF runs in headless Chrome already, so the off-thread variant
 collapses to a regular `<video>`.
 
-`playsinline` is required for the runtime to autoplay (browser policy); always
-emit it. Check the source file for an audio stream first:
-`ffprobe -v error -select_streams a -show_entries stream=codec_type -of csv=p=0 <file>`
-(non-empty output means it has audio). Remotion `<Video>` maps to
-`<video playsinline>` + `data-has-audio="true"` only when the file has an audio
-stream and the Remotion source does not set `muted` or `volume={0}`; otherwise
-emit `muted`. Silent b-roll with `data-has-audio="true"` aborts the render
-(`ASSET_MEDIA_TYPE_MISMATCH`).
+`muted` and `playsinline` are required for the runtime to autoplay
+(browser policy). Always emit them.
 
 ## `<Img>`
 
