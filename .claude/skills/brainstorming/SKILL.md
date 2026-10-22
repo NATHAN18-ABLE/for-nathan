@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, modifying behavior, or planning anything new, in software or out of it (a talk, a business, a renovation)."
+description: "Use before building something new — a website, app, feature, video, deck or other deliverable — when what to make is still open. Explores intent, requirements and design before any building starts. Not for questions, research, explanations, installs, configuration or small edits."
 ---
 
 # Brainstorming

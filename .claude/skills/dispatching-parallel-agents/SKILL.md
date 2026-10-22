@@ -1,6 +1,6 @@
 ---
 name: dispatching-parallel-agents
-description: Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies
+description: "Use when building something and facing 2+ independent implementation tasks that can be worked on without shared state or sequential dependencies. Only while building or changing something (code, a site, an app, a video, a deck, a document); not for questions, research, explanations, installs or configuration."
 ---
 
 # Dispatching Parallel Agents

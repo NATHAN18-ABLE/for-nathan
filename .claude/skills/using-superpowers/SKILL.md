@@ -1,6 +1,7 @@
 ---
 name: using-superpowers
-description: Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions
+description: "Use when the user explicitly invokes /using-superpowers - establishes how to find and use the superpowers skills for a build task."
+disable-model-invocation: true
 ---
 
 <SUBAGENT-STOP>

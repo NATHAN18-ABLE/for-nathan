@@ -1,6 +1,6 @@
 ---
 name: requesting-code-review
-description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
+description: "Use when completing implementation work you built, implementing major features, or before merging to verify the work meets requirements. Only while building or changing something (code, a site, an app, a video, a deck, a document); not for questions, research, explanations, installs or configuration."
 ---
 
 # Requesting Code Review
