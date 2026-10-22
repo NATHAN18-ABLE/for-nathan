@@ -15,7 +15,10 @@
 - **미감이 최우선 합격 기준** (spec 1-1). 금지어 목록은 `tests/unit/copy.test.js`가 검사한다.
 - 컬러: 바탕 `#080808` / 본문 `#f2ede5` / 보조 텍스트 `#b0a99f` 이상 밝기 / 포인트 금색 `#c8a96e`. 금색은 면적 5% 이하. 금색 그라데이션·광택·네온·보라/파랑 AI 그라데이션 금지.
 - 폰트: 본문 Pretendard, 제목은 Noto Serif KR 600~900. 본문 최소 16px, 웨이트 400 이상.
-- 정렬: 히어로·섹션 헤더·핵심 메시지·Contact는 중앙 정렬.
+- 정렬: **최대한 전부 중앙 정렬** (사용자 결정). 본문 폭 약 30em, `word-break: keep-all`, `text-wrap: balance`. 좌측 정렬 금지.
+- 제목 글꼴: Noto Serif KR + Noto Serif Display (확정). 금색은 낙관(人 도장)에만.
+- 트릭 공개는 영화 크레딧 형식: `credits: [{ role, by: "human"|"ai", who, detail }]`. human 줄에만 낙관.
+- 확정 견본: `portfolio/docs/specimen.html` (v2). 구현은 이 견본의 타이포·색·간격을 기준으로 한다.
 - 글씨 위에 이펙트를 겹치지 않는다.
 - **차분함**: 한 화면에 움직이는 것은 하나만. 강제 스크롤 스냅 금지, 고정(pin) 구간은 히어로 하나뿐. 연출은 2초 안에 끝나고 반복 없음. 작품·연락처·이력서는 클릭 두 번 이내. 모든 체크포인트에서 "채용 담당자가 피곤하지 않은가"를 확인한다.
 - 사용자가 고치는 파일은 `js/content.js` 하나. 모든 문구는 `{ ko, en }` 형태.
@@ -105,7 +108,7 @@ docs/PRODUCT.md, docs/DESIGN.md, docs/copy-review.md
 **Interfaces:**
 - Produces:
   - `content.js`: spec 5장 구조를 따르는 `window.CONTENT`. 최상위 키는 `SHOW_PLACEHOLDERS: boolean`, `SITE_URL: string`, `meta`, `nav`, `hero`, `about`, `works`, `gallery`, `record`, `toolkit`, `whyMe`, `philosophy`, `finale`, `contact`. 문구는 `{ko, en}`, 비어 있음은 `""` 또는 `null`.
-  - `works[]` 항목: `{ id, title, method, status: "done"|"wip"|"planned", featured: boolean, oneLiner, meta:{role, period, tools:string[], length}, video:{provider:"youtube"|"vimeo"|null, id}, thumb, problems:[{problem, decision}], process:[{step:"plan"|"board"|"frame"|"generate"|"edit", by:"human"|"ai"|"both", image, note}], scene:{prompt, generated, final} }`
+  - `works[]` 항목: `{ id, title, method, status: "done"|"wip"|"planned", featured: boolean, oneLiner, meta:{role, period, tools:string[], length}, video:{provider:"youtube"|"vimeo"|null, id}, thumb, problems:[{problem, decision}], credits:[{role, by:"human"|"ai", who, detail}], process:[{step, image, caption}], scene:{prompt, generated, final} }`
   - `i18n.js`: `t(field, lang) -> string`, `getLang(storage) -> "ko"|"en"`, `setLang(lang, storage) -> void`, `applyLang(doc, lang) -> void` (`<html lang>` 변경 + `langchange` 이벤트 발생)
   - `render.js`: `isMissing(value) -> boolean`, `visibility(value, showPlaceholders) -> "show"|"placeholder"|"hide"`, `featuredWork(works) -> work` (`featured:true` 첫 항목, 없으면 `works[0]`)
 
@@ -128,7 +131,7 @@ test("featuredWork: featured 우선, 없으면 첫 번째", ...);
 // tests/unit/content-schema.test.js
 test("works id는 고유하고 [a-z0-9-]만", ...);
 test("featured:true는 최대 1개", ...);
-test("process.by는 human|ai|both 중 하나", ...);
+test("credits.by는 human|ai 중 하나, human 줄은 who가 이름 placeholder", ...);
 test("nav 5개, 각 id가 섹션 id 목록에 존재", ...);
 ```
 
@@ -265,7 +268,7 @@ test("히어로 아래 '60초 쇼릴' 버튼: url 비면 placeholder, 있으면 
 test("대표작은 featured:true 작품, 카드는 나머지", ...);
 test("카드에 방식 태그와 상태 배지(제작 중) 표시", ...);
 test("카드 클릭 → works/<id>.html, 제목·메타·영상 임베드 표시", ...);
-test("process 단계마다 '감독'/'AI' 배지가 by 값대로", ...);
+test("크레딧: human 줄에만 낙관(.seal), ai 줄은 도구 이름, 가운데 정렬", ...);
 test("이전/다음 작품 이동", ...);
 test("work.html?id=xyz → 안내 문구 + 작품 목록 링크", ...);
 test("works/toxic.html의 og:title, og:image가 절대 URL", ...);
