@@ -2,6 +2,7 @@
 
 - `leadership-plan.pptx`: 발표 파일 (16장, 발표자 노트 포함)
 - `leadership-plan.pdf`: 백업용 PDF (폰트가 깨지면 이걸로 발표)
+- `leadership-plan-v2.pptx` / `.pdf`: 디자인 강화 버전 (19장, 섹션 구분 장 · 색 블록 · 리더 행동 도식 추가)
 - `fonts/`: Pretendard Regular · Bold (SIL OFL, 무료)
 
 ## 강의실 PC에서 폰트가 그대로 보이게 하는 법
@@ -20,5 +21,6 @@
 
 ```sh
 npm install
-./build.sh   # deck.js → leadership-plan.pptx, review/ 에 PDF·PNG 렌더
+./build.sh      # deck.js → leadership-plan.pptx
+./build-v2.sh   # deck-v2.js → leadership-plan-v2.pptx
 ```
