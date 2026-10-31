@@ -1,0 +1,175 @@
+/* ==========================================================================
+   base.css : 사이트 전체에 공통으로 적용되는 기본 모양
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  background: var(--ink);
+  color: var(--ivory);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-color: #3a352c var(--ink);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: -0.005em;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  font-feature-settings: "tnum" 0;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  background: var(--ink);
+}
+
+img, video, canvas, svg { display: block; max-width: 100%; }
+
+h1, h2, h3, p { margin: 0; }
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+a { color: inherit; text-underline-offset: 0.22em; text-decoration-thickness: 1px; }
+
+::selection { background: var(--gold); color: var(--ink); }
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: #3a352c; border-radius: 10px; border: 2px solid var(--ink); }
+
+input, textarea, select { font: inherit; font-size: 16px; caret-color: var(--gold); }
+
+section[id] { scroll-margin-top: var(--nav-h); }
+
+/* 접근성: 키보드 사용자를 위한 건너뛰기 링크 */
+.skip-link {
+  position: fixed;
+  left: var(--s-4);
+  top: var(--s-4);
+  z-index: var(--z-modal);
+  padding: var(--s-2) var(--s-4);
+  background: var(--ivory);
+  color: var(--ink);
+  border-radius: var(--r-pill);
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+
+.noscript { padding: var(--s-8) var(--gutter); text-align: center; }
+
+/* ---------- 강조 표기 (content.js 의 ==금색==, _기울임_) ---------- */
+.gold { color: var(--gold); }
+
+/* 한글 세리프는 기울임 글꼴이 없어서, 기울기를 직접 정합니다 (약 9도) */
+.slant {
+  display: inline-block;
+  font-style: normal;
+  transform: skewX(-9deg);
+  padding-inline: 0.02em 0.1em;
+}
+
+/* ---------- 버튼: 알약 모양 ---------- */
+.btn {
+  --btn-bg: transparent;
+  --btn-fg: var(--ivory);
+  --btn-line: var(--gold-line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 48px;
+  padding: 0 var(--s-5);
+  border: 1px solid var(--btn-line);
+  border-radius: var(--r-pill);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font: 600 var(--t-small) / 1 var(--font-sans);
+  letter-spacing: 0;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background-color var(--dur-ui) ease,
+    border-color var(--dur-ui) ease,
+    color var(--dur-ui) ease;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn--solid {
+  --btn-bg: var(--ivory);
+  --btn-fg: var(--ink);
+  --btn-line: var(--ivory);
+}
+
+.btn[aria-disabled="true"] {
+  --btn-fg: var(--sub);
+  --btn-line: var(--hair);
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { --btn-line: var(--gold); }
+  .btn--solid:hover { --btn-bg: #fffaf2; --btn-line: #fffaf2; }
+}
+
+/* ---------- 아직 없는 자료 자리 (placeholder) ---------- */
+.ph-text {
+  color: var(--gold);
+  border-bottom: 1px dashed var(--gold-line);
+  padding-bottom: 0.05em;
+}
+
+.ph {
+  display: grid;
+  place-content: center;
+  gap: var(--s-1);
+  padding: var(--s-5);
+  border: 1px dashed var(--gold-line);
+  border-radius: var(--r-media);
+  background: var(--gold-faint);
+  color: var(--ivory);
+  font-size: var(--t-small);
+  line-height: 1.5;
+  text-align: center;
+}
+.ph strong { color: var(--gold); font-weight: 600; }
+.ph small { font-size: 0.9375rem; color: var(--sub); }
+
+/* ---------- 레이아웃 도우미 ---------- */
+.wrap { width: min(100% - 2 * var(--gutter), var(--max)); margin-inline: auto; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- 움직임 줄이기 사용자 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

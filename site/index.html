@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="theme-color" content="#080808" />
+  <meta name="color-scheme" content="dark" />
+  <title>Portfolio</title>
+  <meta name="description" content="" />
+
+  <!-- 폰트: 본문 Pretendard(사이트 안에 포함), 제목 Noto Serif KR(Google Fonts) -->
+  <link rel="stylesheet" href="assets/fonts/pretendard/pretendardvariable-dynamic-subset.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&display=swap" />
+
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/sections.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+  <header id="site-nav"></header>
+  <main id="main"></main>
+
+  <noscript>
+    <p class="noscript">이 사이트는 자바스크립트가 켜져 있어야 보입니다.</p>
+  </noscript>
+
+  <!-- 순서가 중요합니다: 내용 → 라이브러리 → 기능 → 시작 -->
+  <script src="content.js"></script>
+  <script src="vendor/gsap.min.js"></script>
+  <script src="vendor/ScrollTrigger.min.js"></script>
+
+  <script src="js/core/env.js"></script>
+  <script src="js/core/text.js"></script>
+
+  <script src="js/render/nav.js"></script>
+  <script src="js/render/hero.js"></script>
+  <script src="js/render/upcoming.js"></script>
+
+  <script src="js/fx/ink-smoke.js"></script>
+  <script src="js/fx/hero-sequence.js"></script>
+  <script src="js/fx/hero-scroll.js"></script>
+  <script src="js/fx/nav-behavior.js"></script>
+  <script src="js/fx/cursor.js"></script>
+  <script src="js/fx/modal.js"></script>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

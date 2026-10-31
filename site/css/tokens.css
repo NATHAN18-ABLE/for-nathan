@@ -1,0 +1,64 @@
+/* ==========================================================================
+   tokens.css : 색, 글꼴, 크기, 간격, 움직임의 기준값
+   색을 바꾸고 싶으면 여기 한 곳만 고치면 사이트 전체가 바뀝니다.
+   ========================================================================== */
+
+:root {
+  /* 색: 먹 / 아이보리 / 금 (브리프 확정값) */
+  --ink: #080808;          /* 바탕 */
+  --ink-2: #0e0d0b;        /* 연한 먹 (섹션 농담) */
+  --ink-3: #17150f;        /* 한 단계 떠 있는 면 */
+  --ivory: #f2ede5;        /* 본문 */
+  --sub: #b6afa4;          /* 보조 텍스트 (#b0a99f 보다 밝게) */
+  --gold: #c8a96e;         /* 포인트: 섹션당 핵심 한 곳에만 */
+  --gold-line: rgba(200, 169, 110, 0.45);
+  --gold-faint: rgba(200, 169, 110, 0.12);
+  --hair: rgba(242, 237, 229, 0.12);
+  --ivory-wash: rgba(242, 237, 229, 0.035);
+
+  /* 글꼴 */
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-serif: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif;
+
+  /* 글자 크기 (본문 최소 16px) */
+  --t-body: 1.0625rem;                                   /* 17px */
+  --t-small: 1rem;                                       /* 16px */
+  --t-lead: clamp(1.25rem, 1.05rem + 0.8vw, 1.625rem);
+  --t-h2: clamp(2rem, 1.2rem + 3.2vw, 3.75rem);
+  --t-display: clamp(2.6rem, 1.2rem + 5.6vw, 5.75rem);
+
+  /* 간격 (8 기반) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --s-10: 160px;
+  --gutter: clamp(16px, 4vw, 48px);
+  --max: 1240px;
+
+  /* 모양: 버튼은 알약, 이미지 틀은 14px */
+  --r-pill: 999px;
+  --r-media: 14px;
+
+  /* 움직임 (animate 스킬 기준 곡선) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --dur-press: 140ms;
+  --dur-ui: 220ms;
+
+  /* 고정 요소 */
+  --nav-h: 64px;
+
+  /* 겹침 순서 (이 값 외에는 z-index 를 쓰지 않습니다) */
+  --z-content: 1;
+  --z-nav: 50;
+  --z-menu: 45;   /* 메뉴는 네비 아래: 닫기 버튼이 보이도록 */
+  --z-modal: 70;
+  --z-cursor: 80;
+}
