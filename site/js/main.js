@@ -8,7 +8,11 @@
   if (desc) desc.setAttribute("content", t.plain(C.site.description));
 
   document.getElementById("site-nav").innerHTML = SITE.render.nav(C);
-  document.getElementById("main").innerHTML = SITE.render.hero(C) + SITE.render.upcoming(C);
+  document.getElementById("main").innerHTML =
+    SITE.render.hero(C) +
+    SITE.render.opening(C) +
+    SITE.render.about(C) +
+    SITE.render.upcoming(C);
 
   if (typeof gsap !== "undefined" && typeof ScrollTrigger !== "undefined") {
     gsap.registerPlugin(ScrollTrigger);
@@ -18,7 +22,9 @@
   SITE.fx.heroScroll(C);
   SITE.fx.navBehavior(C);
   SITE.fx.cursor();
-  SITE.fx.modal(C);
+  SITE.fx.modal();
+  SITE.fx.mediaPlay();
+  SITE.fx.reveal();
 
   /* 폰트가 늦게 도착하면 위치를 다시 계산 */
   if (document.fonts && document.fonts.ready && typeof ScrollTrigger !== "undefined") {

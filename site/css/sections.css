@@ -283,6 +283,175 @@
   .hero__caption { opacity: 1; }
 }
 
+
+/* ===================== 공통: 영상·이미지 빈자리, 칩, 버튼 메모 ===================== */
+.media-ph { width: 100%; height: 100%; border-radius: inherit; }
+.btn__note { color: var(--sub); font-size: 0.9375rem; font-weight: 500; }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.chips li {
+  padding: 6px 14px;
+  border: 1px solid var(--hair);
+  border-radius: var(--r-pill);
+  font-size: var(--t-small);
+  line-height: 1.5;
+}
+
+/* ===================== [1-2] OPENING (대표작) ===================== */
+.opening {
+  padding-block: var(--s-8) var(--s-10);
+  background: var(--ink);
+}
+.opening__frame {
+  width: min(100% - 2 * var(--gutter), 1400px);
+  margin-inline: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r-media);
+  overflow: hidden;
+  background: var(--ink-3);
+  clip-path: inset(0% 0% round 14px);
+}
+.opening__frame > video,
+.opening__frame > img { width: 100%; height: 100%; object-fit: cover; }
+
+.opening__info {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-7);
+  text-align: center;
+}
+.opening__title {
+  font-size: var(--t-h2);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.opening__meta { color: var(--sub); font-size: var(--t-small); }
+.opening__summary {
+  max-width: 32ch;
+  margin-top: var(--s-2);
+  font-size: var(--t-lead);
+  line-height: 1.55;
+}
+.opening__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+
+/* ===================== [2] ABOUT ===================== */
+.about {
+  padding-block: var(--s-10);
+  background:
+    radial-gradient(70% 50% at 18% 28%, var(--ivory-wash), transparent 70%),
+    var(--ink-2);
+}
+.about__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: start;
+}
+/* 사진은 글을 읽는 동안 화면에 머묾 */
+.about__photo {
+  position: sticky;
+  top: calc(var(--nav-h) + var(--s-6));
+  margin: 0;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--r-media);
+  overflow: hidden;
+  background: var(--ink-3);
+}
+.about__photo img { width: 100%; height: 100%; object-fit: cover; }
+
+.about__text { max-width: 640px; }
+
+.about__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-4);
+}
+.about__name-ko {
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.about__name-en { color: var(--sub); font-size: 1.125rem; }
+.about__roles { margin-top: var(--s-2); color: var(--sub); font-size: var(--t-small); font-weight: 500; }
+
+.about__lead {
+  margin-top: var(--s-8);
+  font-size: var(--t-h2);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.about__body {
+  display: grid;
+  gap: var(--s-4);
+  max-width: 36em;
+  margin-top: var(--s-5);
+}
+
+.about__seeking {
+  margin-top: var(--s-7);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--hair);
+}
+.about__seeking-text {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.about__employment { margin-top: var(--s-3); color: var(--sub); }
+
+.timeline {
+  display: grid;
+  gap: var(--s-5);
+  margin: var(--s-8) 0 0;
+  padding: 0 0 0 var(--s-5);
+  list-style: none;
+  border-left: 1px solid var(--hair);
+}
+.timeline__item {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: var(--s-1) var(--s-5);
+  align-items: baseline;
+}
+.timeline__period {
+  color: var(--sub);
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.timeline__item[data-current] .timeline__period { color: var(--gold); font-weight: 600; }
+
+.about__resume { margin-top: var(--s-7); }
+
+@media (max-width: 860px) {
+  .about { padding-block: var(--s-9); }
+  .about__grid { grid-template-columns: 1fr; }
+  .about__photo { position: relative; top: auto; width: min(100%, 420px); }
+  .about__lead { margin-top: var(--s-7); }
+}
+@media (max-width: 520px) {
+  .timeline__item { grid-template-columns: 1fr; gap: 2px; }
+  .opening { padding-block: var(--s-6) var(--s-9); }
+}
+
 /* ===================== 준비 중 섹션 ===================== */
 .upcoming {
   padding-block: var(--s-9);

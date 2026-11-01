@@ -124,6 +124,7 @@ section[id] { scroll-margin-top: var(--nav-h); }
 }
 
 .btn[aria-disabled="true"] {
+  --btn-bg: transparent;   /* 준비 중 버튼은 채움 없이: 회색 글씨가 묻히지 않게 */
   --btn-fg: var(--sub);
   --btn-line: var(--hair);
   cursor: not-allowed;

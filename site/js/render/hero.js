@@ -11,7 +11,7 @@ SITE.render.hero = function (content) {
   const title = (h.title || []).map((line) => `<span class="line">${t.rich(line)}</span>`).join("");
 
   const showreelBtn = h.showreel && h.showreel.show
-    ? `<button class="btn" type="button" data-open-showreel>${t.escape(h.buttons.showreel)}</button>`
+    ? SITE.render.playButton(h.showreel.url, h.buttons.showreel, "")
     : "";
 
   const caption = h.caption && h.caption.show

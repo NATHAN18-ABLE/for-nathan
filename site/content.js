@@ -80,9 +80,55 @@ const CONTENT = {
     caption: { show: true, text: "이 영상은 제가 【사용 툴】로 만들었습니다." }
   },
 
+  /* [1-2] 오프닝 트릭: 히어로 바로 다음, 대표작 한 편을 화면 가득
+     쇼릴이 생기면 쇼릴로 바꿔도 됩니다. */
+  opening: {
+    show: true,
+    title: "TOXIC",
+    summary: "감정 없던 AI 암살자 Adrian Voss가 Nadia를 만나 '글리치'를 겪는 이야기.",
+    meta: "네오누아르 AI 숏필름 · 약 25초",
+    media: {
+      poster: "",     // 예: "assets/works/toxic/poster.webp"  (16:9, 1920×1080)
+      loop: "",       // 예: "assets/works/toxic/loop.mp4"     (소리 없는 미리보기, 3MB 이하 권장)
+      fullUrl: ""     // 전체 영상: 유튜브/비메오 주소 또는 mp4 경로
+    },
+    buttons: { play: "전체 영상 보기", allWorks: "작품 모두 보기" }
+  },
+
+  /* [2] ABOUT ------------------------------------------------------------- */
+  about: {
+    photo: { src: "", alt: "【이름】의 사진" },   // 예: "assets/images/about/portrait.webp" (4:5, 1200×1500)
+    roles: "Media Director · AI Visual Artist · Content Strategist",
+
+    lead: "콘텐츠에는 온도가 있어야 합니다.",
+    body: [
+      "저는 AI 시대에 미디어를 설계하는 감독입니다. 첨단 도구를 능숙하게 다루되, 그 중심에는 언제나 사람의 이야기를 놓습니다.",
+      "경영을 배운 크리에이터로서, 예쁜 영상이 아니라 팔리는 영상을 고민합니다.",
+      "철학적으로 사고하고, 직관적으로 실행하며, 신뢰를 바탕으로 함께 움직이는 사람입니다."
+    ],
+
+    /* 지원 분야 (문구 후보 2: "AI 영상 제작 · 영상 제작 · 콘텐츠 크리에이터 포지션을 찾고 있습니다.") */
+    seeking: {
+      show: true,
+      text: "찍고, 만들고, 퍼뜨립니다. 영상 제작부터 AI 영상, 콘텐츠 기획까지 함께할 자리를 찾고 있습니다.",
+      roles: ["AI 영상 제작", "영상 제작·편집", "콘텐츠 크리에이터", "AI 활용 업무"],
+      employment: { show: false, text: "【신입 / 인턴 등 근무 형태】" }
+    },
+
+    timeline: [
+      { period: "현재",         text: "AI 영상 제작 — TOXIC, Just Leave, 단편 「17분 뒤」 제작 중" },
+      { period: "2026.02–10",   text: "제10회 전국 대학생 가치투자대회(하나증권 후원) 홍보팀장" },
+      { period: "2025.01–09",   text: "경제 콘텐츠 인스타그램 mofy 기획·운영 (게시물 272개)" },
+      { period: "동아리",       text: "야구 동아리 KGB 마케팅팀 / 주식 동아리 I.LAB 홍보팀" },
+      { period: "2027.02",      text: "경영학과 졸업 예정" },
+      { period: "자격",         text: "토익스피킹 IH, 드론 자격증, 운전면허" }
+    ],
+
+    resume: { show: true, label: "이력서 PDF" }   // 파일 주소는 위 links.resume 에 적습니다
+  },
+
   /* 아직 만들지 않은 섹션들 (다음 단계에서 하나씩 채웁니다) */
   upcoming: [
-    { id: "about",      title: "About" },
     { id: "video",      title: "AI 영상 제작" },
     { id: "image",      title: "AI 이미지 제작" },
     { id: "marketing",  title: "Marketing" },
