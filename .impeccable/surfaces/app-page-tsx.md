@@ -23,7 +23,7 @@ FIRST VIEWPORT: full-bleed carved Hanyang block (four inner mountains, city wall
 
 FORM: Woodblock atlas, position 7 of 7 on the grounded list, seed key 8ed26da8 (degraded roll, no challengers).
 
-SIGNATURE INTERACTION: "Pull the print": an ink roller passes over the block (Higgsfield clip, code fallback), the hanji sheet lifts to reveal the personal map; route ticks draw in sequence.
+SIGNATURE INTERACTION: "Pull the print": an ink roller passes over the block (code motion), the hanji sheet lifts to reveal the personal map; route ticks draw in sequence.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 

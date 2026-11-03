@@ -26,7 +26,7 @@ delegated: Next.js (App Router) + TypeScript + Tailwind v4. Motion(`motion/react
 
 - 서울관광재단(공기업)을 선정 기관으로 한 개선 제안 프로젝트. 발표용 고완성 프로토타입.
 - 사용 장면: 여행 전 데스크톱/노트북에서 탐색, 여행 중 모바일에서 코스 확인.
-- 영상: 핵심 1~3컷은 Higgsfield AI 영상(크레딧 소모), 나머지 전환·코스 소개는 코드 기반 모션(HyperFrames/GSAP).
+- 영상·이미지: Higgsfield 크레딧은 쓰지 않는다. 전환·모션·영상은 코드(GSAP, 셰이더, HyperFrames, 실시간 3D)로 만들고, 코드로 대신할 수 없는 첫 화면 시안과 일부 질감 이미지는 사용자가 GPT 이미지로, 장소 사진은 공공누리 공개 사진으로 직접 준비한다(docs/ASSETS.md).
 
 ## Capabilities and Constraints
 
@@ -40,7 +40,7 @@ delegated: Next.js (App Router) + TypeScript + Tailwind v4. Motion(`motion/react
 ## Brand Commitments
 
 - 대상은 외국인, 디자인 기반은 "한국의 멋과 한국 전통 디자인"(사용자 브리프에서 고정).
-- 이미지, 코드 기반 영상, Higgsfield 기반 영상을 활용한 인터랙티브 홈페이지(사용자 브리프에서 고정).
+- 이미지와 코드 기반 영상을 활용한 인터랙티브 홈페이지(사용자 브리프에서 고정. Higgsfield 영상은 사용자 결정으로 제외).
 - 서울관광재단의 공식 로고·브랜딩을 사칭하지 않는다. 제안용 콘셉트임을 명시한다.
 
 ## Evidence on Hand
