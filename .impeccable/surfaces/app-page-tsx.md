@@ -9,7 +9,7 @@ related_targets: ["app/test","app/type","app/gu"]
 
 Visitor mode: Experience (the carved map is the work; the type test is the way in). Persuade duty inside it: within one viewport a first-time foreign visitor knows this matches them to a Seoul district through a short test and can start.
 
-Audience: foreign independent travellers who want lived-in Seoul rather than famous sights; pre-trip on desktop, on-trip on phone. Job: answer about 12 quick questions, get a travel type and a matched district with reasons, follow that district's day course, optionally meet same-district travellers in the metaverse.
+Audience: foreign independent travellers who want lived-in Seoul rather than famous sights; pre-trip on desktop, on-trip on phone. Job: answer 10 quick questions, get a travel type and a matched district with reasons, follow that district's day course, optionally meet same-district travellers in the metaverse.
 
 ## Direction contract
 
@@ -28,5 +28,5 @@ SIGNATURE INTERACTION: "Pull the print": on the result, an ink roller passes ove
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Unresolved
-- Final five metaverse districts (proposed: Jongno, Dongdaemun, Mapo, Seongdong, Yongsan).
+- Metaverse rooms: Jongno, Dongdaemun, Mapo, Seongdong, Yongsan (confirmed; more may be added).
 - Share format: URL-encoded type and district vs localStorage.
