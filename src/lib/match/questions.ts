@@ -1,0 +1,83 @@
+import type { Question } from "./match.ts";
+
+// Weights: choosing B adds, choosing A subtracts.
+// time: H(-) Heritage / T(+) Trend, stage: A(-) Alley / O(+) Open,
+// mood: C(-) Calm / B(+) Buzz, pace: L(-) Linger / F(+) Flow.
+export const QUESTIONS: Question[] = [
+  {
+    id: "first-morning",
+    prompt: "Your first morning in Seoul?",
+    a: "A quiet alley with an old tea house",
+    b: "A riverside run at sunrise",
+    weights: { stage: 1 },
+  },
+  {
+    id: "lunch",
+    prompt: "Lunch is...",
+    a: "Pointing at whatever the market grandma is cooking",
+    b: "The new place everyone has been posting about",
+    weights: { time: 1, mood: 0.5 },
+    conditions: { food: { a: "adventurous", b: "easy" } },
+  },
+  {
+    id: "workshop",
+    prompt: "You find a workshop where someone is making things by hand.",
+    a: "Stay and watch for an hour",
+    b: "Take a photo and head to the next spot",
+    weights: { pace: 1 },
+    tiebreak: "pace",
+  },
+  {
+    id: "saturday-night",
+    prompt: "Pick a Saturday night.",
+    a: "A packed alley bar with plastic stools and strangers' toasts",
+    b: "A quiet rooftop or a long walk by the river",
+    weights: { mood: -1, stage: 0.5 },
+    tiebreak: "mood",
+  },
+  {
+    id: "camera-roll",
+    prompt: "At the end of the day, your camera roll is mostly...",
+    a: "Old signs, wooden doors and handwritten menus",
+    b: "Design shops, murals and new buildings",
+    weights: { time: 1 },
+    tiebreak: "time",
+  },
+  {
+    id: "getting-around",
+    prompt: "Getting around, you would rather...",
+    a: "Walk everywhere, even if it takes longer",
+    b: "Hop on the subway and cover more ground",
+    weights: { pace: 1 },
+    conditions: { move: { a: "walk", b: "metro" } },
+  },
+  {
+    id: "free-afternoon",
+    prompt: "A free afternoon. Where do you end up?",
+    a: "On a mountain trail above the city",
+    b: "Lost inside a covered market",
+    weights: { stage: -1 },
+    tiebreak: "stage",
+  },
+  {
+    id: "crowds",
+    prompt: "Crowds make you feel...",
+    a: "Alive. The more the better",
+    b: "Tired. You would rather find the quiet corner",
+    weights: { mood: -1 },
+  },
+  {
+    id: "souvenir",
+    prompt: "Which souvenir comes home with you?",
+    a: "A brass spoon from a shop that has been open for 60 years",
+    b: "A limited print from a young local designer",
+    weights: { time: 1 },
+  },
+  {
+    id: "planning",
+    prompt: "How do you like your day planned?",
+    a: "Two or three places, no rush",
+    b: "As many as you can fit. You can sleep on the plane",
+    weights: { pace: 1, mood: 0.5 },
+  },
+];
