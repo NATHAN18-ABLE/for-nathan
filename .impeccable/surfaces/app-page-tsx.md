@@ -9,7 +9,7 @@ related_targets: ["app/test","app/type","app/gu"]
 
 Visitor mode: Experience (the carved map is the work; the type test is the way in). Persuade duty inside it: within one viewport a first-time foreign visitor knows this matches them to a Seoul district through a short test and can start.
 
-Audience: foreign independent travellers who want lived-in Seoul rather than famous sights; pre-trip on desktop, on-trip on phone. Job: answer 10 quick questions, get a travel type and a matched district with reasons, follow that district's day course, optionally meet same-district travellers in the metaverse.
+Audience: foreign independent travellers who want lived-in Seoul rather than famous sights; pre-trip on desktop, on-trip on phone. Job: answer 12 quick questions, get a travel type and a matched district with reasons, follow that district's day course, optionally meet same-district travellers in the metaverse.
 
 ## Direction contract
 

@@ -29,8 +29,8 @@ test("every axis is scored by at least two questions in the bank", () => {
   }
 });
 
-test("the bank has ten questions", () => {
-  assert.equal(QUESTIONS.length, 10);
+test("the bank has twelve questions", () => {
+  assert.equal(QUESTIONS.length, 12);
 });
 
 test("all-B answers score +2 and all-A answers score -2 on the asked axis", () => {

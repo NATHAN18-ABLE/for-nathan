@@ -80,4 +80,18 @@ export const QUESTIONS: Question[] = [
     b: "As many as you can fit. You can sleep on the plane",
     weights: { pace: 1, mood: 0.5 },
   },
+  {
+    id: "cafe-window",
+    prompt: "The view from your café window?",
+    a: "A narrow alley with potted plants and laundry lines",
+    b: "A wide river or a mountain ridge",
+    weights: { stage: 1 },
+  },
+  {
+    id: "rainy-day",
+    prompt: "It rains on your trip day. You...",
+    a: "Find one old tea house and stay all afternoon",
+    b: "Dash between a few new indoor spots",
+    weights: { pace: 1, time: 0.5 },
+  },
 ];
