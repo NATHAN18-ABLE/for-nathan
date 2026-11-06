@@ -2,32 +2,31 @@
 version: 1
 slug: "app-page-tsx"
 primary_target: "app/page.tsx"
-related_targets: ["app/atlas"]
+related_targets: ["app/test","app/type","app/gu"]
 ---
 
-# Surface: Home + taste flow + my atlas (app/page.tsx, app/atlas)
+# Surface: Home + type test + district day (app/page.tsx, app/test, app/type, app/gu)
 
-Visitor mode: Experience (the map is the work; the taste flow is the way in). Persuade duty inside it: within one viewport a first-time foreign visitor knows this builds a Seoul plan from their tastes and can start.
+Visitor mode: Experience (the carved map is the work; the type test is the way in). Persuade duty inside it: within one viewport a first-time foreign visitor knows this matches them to a Seoul district through a short test and can start.
 
-Audience: foreign independent travellers, pre-trip on desktop and on-trip on phone. Job: pick tastes and conditions, get places with reasons, get a walkable day course, keep it.
+Audience: foreign independent travellers who want lived-in Seoul rather than famous sights; pre-trip on desktop, on-trip on phone. Job: answer about 12 quick questions, get a travel type and a matched district with reasons, follow that district's day course, optionally meet same-district travellers in the metaverse.
 
 ## Direction contract
 
-THESIS: Seoul as Kim Jeong-ho's woodblock atlas (Suseonjeondo, Daedongyeojido), re-cut for one traveller. Refuses the tourism-portal default: photo hero, sky blue, card grid of "Top 10 attractions".
+THESIS: Seoul as Kim Jeong-ho's woodblock atlas, re-cut as twelve district blocks; the test chooses which block gets inked and printed for you. Refuses the tourism-portal default: photo hero, sky blue, "Top 10 attractions" card grid, and the personality-quiz default of pastel cards and emoji.
 
-OWN-WORLD: ink-soaked carved block ground, cool hanji white print surface (not cream), one accent of natural indigo (jjok). Seal red never used as accent. Components speak atlas grammar: legend table (jidopyo) symbols as taste chips, road lines with a tick every 10 ri as walking-minute markers, accordion-fold atlas pages for results, carved-relief borders instead of cards.
+OWN-WORLD: ink-soaked carved block ground, cool hanji white print surface (not cream), one accent of natural indigo (jjok). Seal red never used as accent. Components speak atlas grammar: districts as separate carved block pieces, answer options as printed slips, route lines with a tick every 10 ri as walking-minute markers, accordion-fold atlas pages for district folios, carved-relief borders instead of cards.
 
-STORY: visitor sees Seoul carved as a block, chooses legend symbols (tastes, pace, days, companions), pulls a print, receives a map showing only their places, each with a line on why it matches, then a ticked route for each day they can save or share.
+STORY: visitor sees Seoul carved as twelve fitted blocks, answers short either-or questions while ink gathers on the closest blocks, receives a four-letter travel type and a district whose block lifts and prints, then follows a morning-to-night route of lived-in places and food with tips, and can step into that district's metaverse room.
 
-FIRST VIEWPORT: full-bleed carved Hanyang block (four inner mountains, city wall, Cheonggyecheon) as plate, headline "Seoul, printed for you." at left third in large display, a legend table strip along the bottom holding 5 to 7 taste symbols as the primary control, a single "Print my Seoul" action at its end. Nav one line, under 72px.
+FIRST VIEWPORT: full-bleed carved Seoul with twelve district blocks carved deep and the rest shallow, Han River as a carved channel; headline "Find the Seoul that feels like you." in the left third in large display; the first question previewed as two printed option slips plus a single "Find my Seoul" action as the primary control. Nav one line, under 72px.
 
-FORM: Woodblock atlas, position 7 of 7 on the grounded list, seed key 8ed26da8 (degraded roll, no challengers).
+FORM: Woodblock atlas, position 7 of 7 on the grounded list, seed key 8ed26da8 (degraded roll, no challengers). Re-scoped on 2026-11-06 from interest legend to district-matching test; world unchanged.
 
-SIGNATURE INTERACTION: "Pull the print": an ink roller passes over the block (code motion), the hanji sheet lifts to reveal the personal map; route ticks draw in sequence.
+SIGNATURE INTERACTION: "Pull the print": on the result, an ink roller passes over the matched district block (code motion), the block lifts and its hanji print reveals the day route, whose ticks draw stop by stop.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Unresolved
-- Map rendering: real coordinates in SVG over plate texture (preferred) vs MapLibre with custom style.
-- Save/share: URL-encoded state vs localStorage.
-- Place photography source per place.
+- Final five metaverse districts (proposed: Jongno, Dongdaemun, Mapo, Seongdong, Yongsan).
+- Share format: URL-encoded type and district vs localStorage.
