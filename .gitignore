@@ -1,1 +1,4 @@
 .playwright-mcp/
+
+# Generated videos are large; originals stay on Higgsfield (job ids in docs/ASSETS.md)
+assets/incoming/video/
