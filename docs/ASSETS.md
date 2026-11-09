@@ -231,3 +231,31 @@ Photographic and realistic, like a long-exposure night photo taken with a longer
 - 사용자가 B를 "쓸 수 없을 정도로 인위적"이라고 판단해 **A로 확정**. A의 마지막 장면을 `assets/incoming/frames/frame-a-last.png`(1916x1080)로 저장했다
 - 영상 2: 시작 `frame-a-last.png` → 끝 `frame-3-tower.png`(남산타워 밤 확대, 사용자가 GPT로 제작). 타워로 다가가는 동안 하늘이 밤으로 깊어지고 불빛이 더 켜진다
 - `frame-3-tower.png` 프롬프트는 위 F-3를 대체한다: A 마지막 장면을 첨부하고, 시간대를 블루 아워가 아닌 밤(짙은 남색, 새까맣지 않게)으로 바꾼 버전. 전문은 2026-11-09 대화 기록과 같다
+
+## 첫 화면 스크롤 연출 확정안 (2026-11-09)
+
+| 스크롤 | 화면 | 방법 |
+|---|---|---|
+| 0% | 시안 B: 해 질 녘 서울, 흰 패널과 "Find your Seoul." | 영상 A 첫 장면 + 코드 UI |
+| 0~10% | 패널과 구 목록 띠가 위로 사라짐 | 코드 |
+| 10~45% | 카메라가 내려가며 해가 지고 한옥 골목 불이 켜짐 | 영상 A (121프레임) |
+| 45~80% | 남산타워로 다가가며 밤이 되고 도시 불빛이 모두 켜짐 | 영상 2 (121프레임) |
+| 80~90% | 마지막 장면을 1.15배까지 살짝 확대, 타워 전망대 불빛이 하얗게 번지며 백자 흰 화면으로 | 코드 |
+| 90~100% | 흰 바탕에 코발트 선으로 12개 구가 그려지고 1번 문항 카드가 올라옴 | 코드 |
+
+- 이음: 영상 2의 시작 장면 = 영상 A의 마지막 장면(`frame-a-last.png`). 두 영상을 242장 연속 이미지로 붙여 캔버스에 스크롤 위치대로 그린다(`scripts/video-to-frames.sh`)
+- 줌인: 영상 2는 실제로 다가가는 돌리 인(앞쪽 처마가 먼저 빠지는 입체감), 마무리 확대와 빛 번짐은 코드. 영상 안의 속도는 일정하게 두고, 출발·멈춤의 부드러움은 코드 이징으로 준다
+- 모바일: 같은 프레임을 남산타워(가로 57%) 중심 세로로 잘라 720px로. 데스크톱은 1280px. 4장마다 1장을 먼저 불러온 뒤 나머지를 채운다
+- 움직임 줄이기 설정: 영상 없이 첫 장면, 밤 장면, 흰 화면이 차례로 부드럽게 바뀐다
+
+### 영상 2 프롬프트 (Kling 3.0 pro, 5초, 16:9, 소리 없음, 시작 `frame-a-last.png`, 끝 `frame-3-tower.png`)
+
+```
+One continuous cinematic dolly-in from the first frame to the last frame. The camera travels straight forward toward N Seoul Tower on top of Namsan at one constant, steady speed from the first frame to the last, with no acceleration and no slowing down, ending exactly on the framing of the last frame.
+
+Because the camera physically moves forward, nearby things pass faster than distant ones: the hanok roof eave on the right and the hanok rooftops in the foreground slide cleanly out of the right and bottom edges of the frame early in the move, keeping their shape as they leave; then the city rooftops pass underneath, while Namsan and the tower grow steadily larger.
+
+At the same time, dusk turns into night evenly across the whole clip: the sky deepens from soft blue with violet and peach clouds to a deep cobalt navy, the clouds thin out and disappear, and lights switch on gradually across the city. N Seoul Tower brightens steadily until it is fully lit, its shaft glowing white and its observation deck bright, with the path lights glowing along the slope of Namsan.
+
+N Seoul Tower, its two side antennas and the outline of Namsan keep the same shape and proportions throughout; nothing morphs, melts, bends or appears from nowhere. Smooth motion-control camera: no shake, no sideways drift, no rotation, no zoom pumping. Photographic and realistic. No people, no birds, no text, no lens flare, no fireworks, no moon.
+```
