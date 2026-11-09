@@ -178,19 +178,29 @@ Keep everything exactly the same, but turn on more lights: light up at least thr
 
 ### F-3 남산타워 밤 확대 (`frame-3-tower.png`)
 
-ChatGPT에 **F-2를 첨부해서** 만든다. 타워 아래 산 중턱과 기단 건물의 불빛도 F-2처럼 켜져 있어야 영상이 자연스럽다.
+ChatGPT에 **F-2(밤 이미지)를 첨부해서** 새 이미지로 만든다. 2026-11-09 밤 이미지의 조명 표현에 맞춰 다시 썼다.
 
 ```
-Use the attached night photo as the reference for lighting, color and viewing angle. Create the view you would see if the camera moved straight forward toward N Seoul Tower, about four times closer, keeping the same direction, the same slightly upward viewing angle and the same blue-hour lighting. 16:9 landscape, the highest resolution available.
+Use the attached night photo as the reference for lighting, colors, weather and viewing direction. Create the view you would see if the camera flew straight forward toward N Seoul Tower and stopped about four times closer, keeping exactly the same direction, the same slightly upward viewing angle and the same blue-hour moment. 16:9 landscape, the highest resolution available.
 
-Composition:
-- N Seoul Tower centered horizontally at the same left-right position it had in the reference, standing on the dark green ridge of Namsan, occupying about 60% of the image height, its lights glowing white and soft blue.
-- The lit trees and the base buildings of the tower on the mountain top visible below it.
-- The same deep cobalt-to-violet blue-hour sky behind, with the last warm glow near the bottom edge.
-- The hanok roof is no longer in the frame.
+COMPOSITION
+- N Seoul Tower centered horizontally, at the same left-right position it had in the reference, standing on the ridge of Namsan. The tower occupies about 60% of the image height, with clear sky above its antenna.
+- The tower is fully illuminated: the slender shaft glowing white, the observation deck ring bright with warm white windows and soft blue accent lights, small red aviation lights on the antenna.
+- Below the tower, the top of Namsan: dark green trees softly lit from within by small warm path lights, the low buildings at the tower's base with glowing windows, and a delicate line of lights tracing the walking path up the slope.
+- In the lower part of the frame, the nearest edge of the city at the foot of the mountain: rooftops and building tops with lit windows in warm yellow and soft white, matching the reference, slightly out of focus.
+- The hanok roof from the reference is no longer in the frame.
 
-Photographic, realistic, sharp focus on the tower, calm and clean, no lens flare. No text, no people, no fireworks, no moon, no interface.
+SKY AND ATMOSPHERE
+- The same deep luminous cobalt blue sky as the reference at the top, fading to soft violet lower down, with the last faint warm glow near the bottom edge. Not pitch black.
+- A faint warm haze of city light rising behind the mountain. Every light source has a very soft natural glow, no harsh starburst flares.
+
+STYLE
+Photographic and realistic, like a long-exposure night photo taken with a longer lens: crisp focus on the tower, gentle contrast, rich but natural colors, low noise. Same color grading as the reference so the two images look like one continuous camera move. No text, no readable signs, no people, no fireworks, no moon, no interface.
 ```
+
+- 타워가 좌우로 벗어나면 `Move N Seoul Tower to the same left-right position as in the reference`를 붙여 다시
+- 하늘 색이 다르면 `Match the sky color and brightness of the reference exactly`를 붙여 다시
+- (선택) 확대가 어색하면 `about four times closer`를 `about two times closer`로 바꾼 중간 단계 이미지(`frame-3a-tower-mid.png`)를 한 장 더 만든다
 
 ### 영상으로 만들기 (Claude가 Higgsfield에서 진행, 사용자 확인 후)
 
