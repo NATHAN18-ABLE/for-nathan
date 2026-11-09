@@ -1,11 +1,11 @@
 # 직접 준비할 이미지 목록과 GPT 프롬프트 (백자와 서울의 빛)
 
-원칙: Higgsfield 크레딧은 쓰지 않는다. 코드로 그릴 수 있는 것은 전부 코드로 만들고, 아래 목록만 사용자가 직접 준비한다.
+원칙: 코드로 그릴 수 있는 것은 전부 코드로 만들고, 아래 목록만 사용자가 직접 준비한다. Higgsfield는 첫 화면 스크롤 영상 2개에만 쓴다(2026-11-09 사용자 결정).
 
 | 언제 | 이미지 | 장수 | 비고 |
 |---|---|---|---|
 | **지금** | 첫 화면 시안 A, B, C | 3 | 필수 |
-| 시안을 고른 뒤 | 고른 시안의 사진·정물 부분(플레이트) | 1~2 | 글자 없이 고해상도로. 생성 이미지임을 사이트에 표기 |
+| **지금** (시안 B 승인됨) | 스크롤 영상용 키프레임: 낮 마스터, 같은 구도의 밤, 남산타워 확대 | 3 | 생성 이미지임을 사이트에 표기 |
 | 데이터 조사 뒤 | 장소 사진 | 36~48 | 공공누리 공개 사진 (GPT 아님). 구마다 대표 사진 포함 |
 
 방향 이력: 목판 지도첩 시안 탈락(2026-11-06, `.impeccable/mocks/decision/rejected-woodblock-*.png`), 민화 보류(만화처럼 보일 우려), 백자와 서울의 빛 확정(2026-11-09).
@@ -119,9 +119,66 @@ Black or dark backgrounds, gold or brass, beige or cream, red, dancheong pattern
 
 ---
 
-## 2단계: 시안을 고른 뒤
+## 2단계: 스크롤 영상용 키프레임 3장 (시안 B 승인 후, 2026-11-09)
 
-- **플레이트**: 고른 시안의 사진·정물 부분을 글자 없이 고해상도로 다시 만든 이미지(예: A는 달항아리 정물, B는 한옥 처마와 서울 노을 사진, C는 청화 달항아리). 고른 시안을 ChatGPT에 첨부해서 만든다. 프롬프트는 시안을 측정한 뒤 드린다. 사이트에는 생성 이미지임을 표기한다
+흐름: GPT로 키프레임 3장(낮 마스터 → 같은 구도의 밤 → 남산타워 확대)을 만들고, Higgsfield에서 첫 장면과 끝 장면을 지정하는 영상 2개(낮→밤, 밤→남산 확대)를 만든다. 사이트에서는 스크롤을 내리면 영상이 앞으로, 올리면 뒤로 재생된다.
+
+### F-1 낮 마스터 (`frame-1-day.png`)
+
+ChatGPT에 승인 시안 `comp-b.png`를 첨부한 뒤 새 이미지로 생성한다.
+
+```
+Use the attached website screenshot only as the composition reference. Recreate the photograph behind the interface as a clean, full-frame cinematic photo, 16:9 landscape, the highest resolution available. Remove every interface element: no navigation bar, no text, no white panel, no buttons, no chips. Where the panel and the chip strip were, continue the scene naturally.
+
+Keep the composition exactly the same as the reference:
+- On the right third, in sharp focus, the graceful upturned eave of a traditional hanok roof seen from below and to the side: dark grey clay roof tiles with round end tiles, wooden rafters and brackets in warm natural wood, the roof line sweeping up toward the upper right.
+- In the center, slightly right of the middle, Namsan mountain with N Seoul Tower standing on top, small and clear against the sky. Keep the tower in the same position as in the reference.
+- Below and around it, a softly focused view of Seoul: low neighborhoods and hanok roofs in the foreground, mid-rise and modern glass towers in the middle distance, green trees between them.
+- Sky: clear late-afternoon golden hour, pale blue above fading to soft peach near the horizon, a few small light clouds on the left.
+
+Photographic style: shot on a full-frame camera with a 35mm lens, natural light, warm sun from the left, gentle haze over the city, shallow depth of field on the roof eave, realistic colors, bright and clean, high dynamic range, no lens flare, no vignette.
+
+No text, no logos, no people, no birds, no interface, no frame or border.
+```
+
+### F-2 같은 장면의 밤 (`frame-2-night.png`)
+
+ChatGPT에 **F-1을 첨부하고 "이 이미지를 편집"하는 방식**으로 만든다. 새로 생성하면 구도가 어긋난다.
+
+```
+Edit the attached photo. Keep the image identical in every way: same camera position, same lens, same framing, the hanok roof eave in exactly the same place and shape, N Seoul Tower and Namsan in exactly the same position, every building in the same place. Do not move, add or remove any object.
+
+Change only the time of day to blue hour just after sunset:
+- Sky: deep luminous cobalt blue at the top fading to a soft violet and a last thin line of warm glow at the horizon. Not pitch black. Two or three faint stars at most.
+- N Seoul Tower lit up with its white and soft blue lights, clearly glowing.
+- The city lights turned on: warm yellow windows in the neighborhoods, white and blue lights on the modern towers, a few glowing streets.
+- The hanok roof eave in the foreground softly lit from below by a warm lantern glow, the wood warm and the tiles catching a little blue light from the sky.
+
+Keep it photographic, realistic and calm, with clean colors and gentle contrast. No text, no people, no fireworks, no moon, no interface.
+```
+
+### F-3 남산타워 밤 확대 (`frame-3-tower.png`)
+
+ChatGPT에 **F-2를 첨부해서** 만든다.
+
+```
+Use the attached night photo as the reference for lighting, color and viewing angle. Create the view you would see if the camera moved straight forward toward N Seoul Tower, about four times closer, keeping the same direction, the same slightly upward viewing angle and the same blue-hour lighting. 16:9 landscape, the highest resolution available.
+
+Composition:
+- N Seoul Tower centered horizontally at the same left-right position it had in the reference, standing on the dark green ridge of Namsan, occupying about 60% of the image height, its lights glowing white and soft blue.
+- The lit trees and the base buildings of the tower on the mountain top visible below it.
+- The same deep cobalt-to-violet blue-hour sky behind, with the last warm glow near the bottom edge.
+- The hanok roof is no longer in the frame.
+
+Photographic, realistic, sharp focus on the tower, calm and clean, no lens flare. No text, no people, no fireworks, no moon, no interface.
+```
+
+### 영상으로 만들기 (Claude가 Higgsfield에서 진행, 사용자 확인 후)
+
+- 영상 1: 첫 장면 F-1 → 끝 장면 F-2, 카메라가 아주 천천히 아래로 내려가며 해가 지고 불이 켜짐
+- 영상 2: 첫 장면 F-2 → 끝 장면 F-3, 남산타워를 향해 빠르게 다가감
+- 생성 전에 크레딧 견적을 보여주고 승인받는다(2026-11-03 기준 Kling 3.0 5초 1개 약 8.75 크레딧)
+- 사이트에서는 스크롤로 앞뒤를 매끄럽게 움직이기 위해 영상을 프레임 이미지 묶음으로 바꿔 캔버스에 그린다. 모바일은 가볍게 줄인 버전을 쓴다
 
 ## 3단계: 장소 사진 (공개 사진, GPT 아님)
 
