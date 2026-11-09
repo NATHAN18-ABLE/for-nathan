@@ -143,23 +143,42 @@ No text, no logos, no people, no birds, no interface, no frame or border.
 
 ### F-2 같은 장면의 밤 (`frame-2-night.png`)
 
-ChatGPT에 **F-1을 첨부하고 "이 이미지를 편집"하는 방식**으로 만든다. 새로 생성하면 구도가 어긋난다.
+ChatGPT에 **F-1(낮 마스터, `assets/incoming/frames/frame-1-day.png`)을 첨부하고 "이 이미지를 편집"하는 방식**으로 만든다. 새로 생성하면 구도가 어긋난다. 2026-11-09 사용자 요청으로 건물 조명을 주인공으로 다시 썼다.
 
 ```
-Edit the attached photo. Keep the image identical in every way: same camera position, same lens, same framing, the hanok roof eave in exactly the same place and shape, N Seoul Tower and Namsan in exactly the same position, every building in the same place. Do not move, add or remove any object.
+Edit the attached photo. Keep the image identical in every way: same camera position, same lens, same framing, the hanok roof eave in exactly the same place and shape, N Seoul Tower and Namsan in exactly the same position, every building in exactly the same place and size. Do not move, add or remove any object.
 
-Change only the time of day to blue hour just after sunset:
-- Sky: deep luminous cobalt blue at the top fading to a soft violet and a last thin line of warm glow at the horizon. Not pitch black. Two or three faint stars at most.
-- N Seoul Tower lit up with its white and soft blue lights, clearly glowing.
-- The city lights turned on: warm yellow windows in the neighborhoods, white and blue lights on the modern towers, a few glowing streets.
-- The hanok roof eave in the foreground softly lit from below by a warm lantern glow, the wood warm and the tiles catching a little blue light from the sky.
+Change the time to blue hour about 20 minutes after sunset, and make the city lights the main subject of the image. The lights must be the brightest, most eye-catching elements in the frame.
 
-Keep it photographic, realistic and calm, with clean colors and gentle contrast. No text, no people, no fireworks, no moon, no interface.
+CITY LIGHTS, ZONE BY ZONE
+- Hanok houses in the foreground and lower half: every house glows from inside. Warm amber light shines through the paper-covered lattice windows and doors, so the window grids are clearly visible as glowing patterns. Small warm lanterns hang under some eaves. Gentle pools of warm light fall on the courtyards and alleys between the roofs.
+- Mid-rise apartment and office buildings in the middle distance: most windows are lit, about three out of four, arranged in clear regular grids floor by floor. Mix warm yellow and soft white window light, with a few dark windows scattered for realism. Every building facade reads as a lit grid, not a dark silhouette.
+- Taller glass towers further back: lit floor by floor as bright horizontal bands, a few with softly glowing rooftop signs without readable text, and small blinking red aviation lights on the highest rooftops.
+- Streets between the buildings: thin glowing lines of orange and white streetlights tracing the roads, with a few soft streaks of car headlights and taillights.
+- N Seoul Tower: fully illuminated, its shaft and observation deck glowing white with soft blue accents, clearly the brightest point on Namsan. The path lights up the mountain slope to the tower are visible as a delicate line of small lights.
+
+SKY AND ATMOSPHERE
+- Sky: deep luminous cobalt blue at the top, fading to soft violet and a last thin band of warm orange glow at the horizon on the left. Not pitch black, so the building shapes stay readable.
+- A faint warm haze of city light rising above the skyline. Each light source has a very soft natural glow, no harsh starburst flares.
+
+FOREGROUND ROOF
+- The hanok roof eave on the right is softly lit from below by a warm lantern glow: the wooden rafters and brackets glow honey-colored, and the grey roof tiles catch a cool blue reflection from the sky.
+
+STYLE
+Photographic and realistic, like a long-exposure night photo on a tripod: clean, crisp, rich but natural colors, gentle contrast, low noise. No text, no readable signs, no people, no fireworks, no moon, no interface.
 ```
+
+불빛이 약하면 같은 대화에서 결과를 그대로 두고 한 번 더 편집한다:
+
+```
+Keep everything exactly the same, but turn on more lights: light up at least three quarters of all windows in every building, make the hanok paper windows glow brighter amber, and make the streetlights and N Seoul Tower brighter. Do not change the composition.
+```
+
+구도가 어긋났으면 낮 마스터를 다시 첨부해 처음부터 편집한다.
 
 ### F-3 남산타워 밤 확대 (`frame-3-tower.png`)
 
-ChatGPT에 **F-2를 첨부해서** 만든다.
+ChatGPT에 **F-2를 첨부해서** 만든다. 타워 아래 산 중턱과 기단 건물의 불빛도 F-2처럼 켜져 있어야 영상이 자연스럽다.
 
 ```
 Use the attached night photo as the reference for lighting, color and viewing angle. Create the view you would see if the camera moved straight forward toward N Seoul Tower, about four times closer, keeping the same direction, the same slightly upward viewing angle and the same blue-hour lighting. 16:9 landscape, the highest resolution available.
