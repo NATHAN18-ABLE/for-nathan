@@ -225,3 +225,9 @@ Photographic and realistic, like a long-exposure night photo taken with a longer
 | B: 낮 + 밤 지정(카메라 고정) | `8eab1e13-6c52-4b93-8735-48c93a43a1f2` | 끝 장면이 밤 키프레임과 거의 같음(평균 차이 4.4/255). 전환이 매끄럽고 튀는 프레임 없음(평균 0.7). 카메라 하강은 코드로 넣어야 하며 입체감은 없음 |
 
 영상 파일은 용량이 커서 저장소에 넣지 않는다(`.gitignore`). 원본은 위 job id로 Higgsfield에서 다시 받을 수 있다.
+
+## 영상 A 확정과 영상 2 계획 (2026-11-09)
+
+- 사용자가 B를 "쓸 수 없을 정도로 인위적"이라고 판단해 **A로 확정**. A의 마지막 장면을 `assets/incoming/frames/frame-a-last.png`(1916x1080)로 저장했다
+- 영상 2: 시작 `frame-a-last.png` → 끝 `frame-3-tower.png`(남산타워 밤 확대, 사용자가 GPT로 제작). 타워로 다가가는 동안 하늘이 밤으로 깊어지고 불빛이 더 켜진다
+- `frame-3-tower.png` 프롬프트는 위 F-3를 대체한다: A 마지막 장면을 첨부하고, 시간대를 블루 아워가 아닌 밤(짙은 남색, 새까맣지 않게)으로 바꾼 버전. 전문은 2026-11-09 대화 기록과 같다
