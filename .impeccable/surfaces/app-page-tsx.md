@@ -7,32 +7,33 @@ related_targets: ["app/test","app/type","app/gu"]
 
 # Surface: Home + type test + district day (app/page.tsx, app/test, app/type, app/gu)
 
-Visitor mode: Experience (the folk-painting world and its characters are the work; the type test is the way in). Persuade duty inside it: within one viewport a first-time foreign visitor knows this matches them to a Seoul district and a travel animal through a short, fun test, and can start.
+Visitor mode: Experience with a Persuade duty: within one viewport a first-time foreign visitor senses a refined, contemporary Seoul, understands that a short test matches them to a district, and can start.
 
-Audience: foreign independent travellers who want lived-in Seoul rather than famous sights; pre-trip on desktop, on-trip on phone. Job: answer 12 quick questions, get a travel type with its folk-painting animal and a matched district with reasons, follow that district's day course, optionally meet same-district travellers in the metaverse as their animal.
+Audience: foreign independent travellers who want lived-in Seoul rather than famous sights; pre-trip on desktop, on-trip on phone. Job: answer 12 quick questions, get a travel type and a matched district with reasons, follow that district's day course, optionally meet same-district travellers in the metaverse.
 
 ## Direction history
 
-- 2026-11-03 woodblock atlas (seed 8ed26da8, degraded roll). 2026-11-06 user rejected all three comps: too dark and heavy, no fun or life, angular buttons and type. Comps kept at .impeccable/mocks/decision/rejected-woodblock-*.png as anti-reference.
-- 2026-11-06 user pinned Minhwa (Joseon folk painting) from a four-way choice. User pin beats the roll.
+- 2026-11-03 woodblock atlas (seed 8ed26da8, degraded roll). 2026-11-06 all three comps rejected: too dark and heavy, no life, angular buttons and type. Kept at .impeccable/mocks/decision/rejected-woodblock-*.png as anti-reference.
+- 2026-11-06 minhwa chosen, then set aside on 2026-11-09 before any comp: user worried it reads as cartoon and asked for Seoul's sophistication and a luxurious feel.
+- 2026-11-09 user pinned "Porcelain Seoul" (Joseon white porcelain and Seoul's light). User pin beats the roll.
 
 ## Direction contract
 
-THESIS: Seoul told through Joseon folk painting (minhwa), redrawn bright, warm and funny; every travel type is a minhwa animal and every district a small folk-painted scene. Refuses the tourism-portal default (photo hero, sky blue, top-10 card grid), the personality-quiz default (pastel cards, emoji), and the heavy museum-heritage look of the rejected woodblock comps.
+THESIS: quiet luxury from Joseon white porcelain, the moon jar's white space and soft curve, set against contemporary Seoul in golden light; the test is a concierge ritual, like a fine fragrance finder, that hands you one district as a curated collection. Refuses the tourism-portal default (sky blue, top-10 card grid), the quiz default (pastel cards, emoji), the luxury default (black and gold, beige and brass) and the rejected heavy woodblock look.
 
-OWN-WORLD: bright clean hanji white ground (#F6F5F1, never yellowed or beige), hand-drawn ink outlines (#26262B) with flat gouache fills in a full minhwa palette: peony red #D9475C, pine green #2F7A62, pollen yellow #EDB43F, indigo #2C4F8F. Rounded, friendly shapes: pill buttons, 20px card radius, soft minhwa cloud shapes as containers. Characters: sixteen minhwa animals (tiger, magpie, rabbit, turtle, crane and others) with big round eyes and gentle humor, never scary, never realistic.
+OWN-WORLD: porcelain white ground #F6F6F3 with porcelain-shadow grey #E4E6E2, ink text #1E2126, one accent of cobalt underglaze blue #22418F (cheonghwa), celadon #9CC3B3 only as a quiet surface tint. Restrained color strategy. Shapes follow the moon jar: pill buttons, generously rounded panels (28px), no sharp corners, no heavy rules. Type: an elegant contemporary sans with open spacing for display and body; no classical high-contrast serif. Imagery: cinematic, sunlit photography of real Seoul neighborhoods; porcelain objects as still-life anchors; cobalt line drawings in the cheonghwa manner for maps and routes.
 
-STORY: visitor meets a grinning folk-painting tiger in a Seoul alley, answers playful either-or questions, receives a four-letter type with its animal and a district scene, then follows a morning-to-night route of lived-in places and food with tips, and can walk into that district's metaverse room as their animal.
+STORY: visitor meets a moon jar in late-afternoon light with Seoul beyond the window, begins the test, moves through twelve unhurried questions with photo-backed choices, receives a type and a district presented like a gallery collection, then follows a morning-to-night route drawn as a cobalt line, and can step into that district's metaverse room.
 
-FIRST VIEWPORT: decided by the comp round (three minhwa compositions: tiger-and-magpie hero, chaekgeori shelf of twelve district scenes, folk panorama map with characters). Constant across all three: headline "Which Seoul are you?", one primary pill action "Take the test", characters visible above the fold, one-line nav under 80px.
+FIRST VIEWPORT: decided by the comp round (three compositions: moon-jar still life with the city beyond, full-bleed dusk photograph with a porcelain panel, concierge test preview beside a cobalt-painted jar). Constant across all three: headline "Find your Seoul.", one primary pill action "Take the test", real Seoul visible above the fold, one-line nav under 80px.
 
-FORM: Minhwa folk painting, user-pinned 2026-11-06 (replaces woodblock atlas, seed 8ed26da8).
+FORM: Porcelain Seoul, user-pinned 2026-11-09 (replaces woodblock atlas seed 8ed26da8 and the unbuilt minhwa direction).
 
-SIGNATURE INTERACTION: the reveal: on the result, the type's animal steps out of a folk-painting frame (code motion over a raster character plate), then the district scene unrolls like a painted scroll with the day route drawn stop by stop.
+SIGNATURE INTERACTION: the glaze: on the result, a cobalt line draws the district's outline and day route across a porcelain surface as if painted with a brush, stop by stop, while the district photograph resolves behind it (code motion over SVG).
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Unresolved
-- Wordmark: "Which Seoul" is a working name.
-- Sixteen character plates: user produces with GPT after the comp is approved, from one approved style sheet.
+- Wordmark: "Seoul, Curated" is a working name.
+- Metaverse keeps the cozy diorama but takes this palette (porcelain white, celadon, cobalt).
 - Share format: URL-encoded type and district vs localStorage.

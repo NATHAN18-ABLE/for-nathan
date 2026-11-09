@@ -1,148 +1,132 @@
-# 직접 준비할 이미지 목록과 GPT 프롬프트 (민화 방향)
+# 직접 준비할 이미지 목록과 GPT 프롬프트 (백자와 서울의 빛)
 
 원칙: Higgsfield 크레딧은 쓰지 않는다. 코드로 그릴 수 있는 것은 전부 코드로 만들고, 아래 목록만 사용자가 직접 준비한다.
 
 | 언제 | 이미지 | 장수 | 비고 |
 |---|---|---|---|
-| **지금** | 첫 화면 시안 A, B, C (민화) | 3 | 필수 |
-| 시안을 고른 뒤 | 고른 시안의 그림 부분(플레이트) | 1~2 | 고른 시안에 따라 다름 |
-| 시안을 고른 뒤 | 16개 유형 민화 캐릭터 | 16 | 스타일 기준 1장을 먼저 승인받고 나머지 15장 |
-| 데이터 조사 뒤 | 장소 사진 | 36~48 | 공공누리 공개 사진 (GPT 아님) |
+| **지금** | 첫 화면 시안 A, B, C | 3 | 필수 |
+| 시안을 고른 뒤 | 고른 시안의 사진·정물 부분(플레이트) | 1~2 | 글자 없이 고해상도로. 생성 이미지임을 사이트에 표기 |
+| 데이터 조사 뒤 | 장소 사진 | 36~48 | 공공누리 공개 사진 (GPT 아님). 구마다 대표 사진 포함 |
 
-목판 지도첩 시안 3장은 2026-11-06에 탈락했다(어둡고 무거움, 생기 없음, 각진 버튼과 글자). 참고용으로 `.impeccable/mocks/decision/rejected-woodblock-*.png`에 보관한다.
+방향 이력: 목판 지도첩 시안 탈락(2026-11-06, `.impeccable/mocks/decision/rejected-woodblock-*.png`), 민화 보류(만화처럼 보일 우려), 백자와 서울의 빛 확정(2026-11-09).
 
 ## 코드로 만드는 것 (준비 불필요)
 
 | 항목 | 방법 |
 |---|---|
-| 버튼, 카드, 구름 모양 말풍선, 글자 | 코드 |
-| 유형 결과 카드 조립(캐릭터 + 이름 + 구) | Satori 이미지 생성 |
-| 코스 경로, 지점 표시 | SVG + Phosphor 아이콘 |
-| 캐릭터가 걸어 나오는 연출, 두루마리 펼침 | 코드 모션 |
-| 메타버스 5개 구의 건물·소품·아바타(민화 동물 3D) | React Three Fiber 절차적 저폴리곤 모델 |
+| 버튼, 둥근 패널, 글자, 진행 표시 | 코드 |
+| 청화 코발트 선 그림(구 윤곽, 코스 경로) | 구 경계 공개 데이터 + SVG, 붓으로 그리듯 그려지는 모션 |
+| 유형 결과 카드 | Satori 이미지 생성 (유형 이름 + 코발트 선 그림 + 구 사진) |
+| 메타버스 5개 구 | React Three Fiber 절차적 저폴리곤 모델 |
 
 ## GPT에서 만들 때 공통 요령
 
 1. **비율**: 16:9 가로. 없으면 가로형(3:2)
 2. **프롬프트는 통째로 붙여 넣는다.** 따옴표 속 영어 문구가 화면에 그대로 찍혀야 한다
-3. **한글은 넣지 않았다.** GPT 이미지는 한글을 자주 깨뜨린다. 실제 글자는 코드로 넣는다
+3. **한글은 넣지 않았다.** 실제 글자는 코드로 넣는다
 4. **다시 생성해야 하는 경우**
-   - 액자 속 그림이나 포스터처럼 나왔다 → 맨 앞에 `IMPORTANT: this must look like a real website screenshot with a navigation bar and rounded buttons.`
-   - 종이가 누렇거나 베이지색이다 → 맨 끝에 `The background must be bright clean white like #F6F5F1, not yellowed, not beige.`
-   - 호랑이가 무섭거나 사실적이다 → 맨 끝에 `The tiger must be cute and funny like a Korean folk painting: big round eyes, wide grin, flat colors, no realism.`
-   - 글자만 틀렸다 → 구도와 그림이 좋으면 그대로 써도 된다
-5. **올릴 위치**: GitHub 저장소 `NATHAN18-ABLE/for-nathan` → 브랜치 `claude/seoul-tour-plan` → `assets/incoming/` (Add file → Upload files)
+   - 웹사이트가 아니라 사진이나 포스터처럼 나왔다 → 맨 앞에 `IMPORTANT: this must look like a real website screenshot with a navigation bar, readable text and rounded buttons.`
+   - 검정·금색이나 베이지가 섞였다 → 맨 끝에 `Keep the palette porcelain white, soft grey, cobalt blue and a hint of pale celadon only. No black backgrounds, no gold, no beige.`
+   - 각진 버튼이 나왔다 → 맨 끝에 `Every button is a fully rounded pill and every panel has large rounded corners.`
+   - 글자만 틀렸다 → 구도와 분위기가 좋으면 그대로 써도 된다
+5. **올릴 위치**: GitHub 저장소 `NATHAN18-ABLE/for-nathan` → 브랜치 `claude/seoul-tour-plan` → `assets/incoming/`. 채팅에 바로 올려도 된다
 
-### 색 기준 (모든 프롬프트 공통)
+### 색 기준
 
 | 이름 | 값 | 쓰임 |
 |---|---|---|
-| Hanji white | `#F6F5F1` | 바탕 |
-| Ink | `#26262B` | 먹선, 글자 |
-| Peony red | `#D9475C` | 주 버튼, 강조 |
-| Pine green | `#2F7A62` | 소나무, 산 |
-| Pollen yellow | `#EDB43F` | 포인트, 하이라이트 |
-| Indigo | `#2C4F8F` | 물, 보조 버튼 |
+| Porcelain white | `#F6F6F3` | 바탕 |
+| Porcelain shadow | `#E4E6E2` | 패널, 구분 |
+| Ink | `#1E2126` | 글자 |
+| Cobalt (cheonghwa) | `#22418F` | 유일한 포인트: 주 버튼, 선 그림, 선택 상태 |
+| Celadon | `#9CC3B3` | 아주 옅은 보조 바탕에만 |
 
 ---
 
-## 1단계: 첫 화면 시안 3장 (지금)
+## 1단계: 첫 화면 시안 3장
 
-### 시안 A: 골목 담장 너머로 웃는 호랑이와 까치
+### 시안 A: 달항아리 정물과 창 너머 서울
 
 파일 이름: `comp-a.png`
 
 ```
-A high-fidelity desktop website homepage screenshot, 16:9 landscape, 1920x1080, as seen in a browser. A real, friendly web page with a navigation bar, readable text and rounded pill buttons. It is not a poster and not a framed painting.
+A high-fidelity desktop website homepage screenshot, 16:9 landscape, 1920x1080, as seen in a browser. A real, refined web page with a navigation bar, readable text and rounded pill buttons. It is not a poster and not an advertisement photo.
 
 CONCEPT
-A playful travel website that matches foreign visitors to one of twelve Seoul districts through a short personality test. The visual world is Korean folk painting (minhwa) from the Joseon era, redrawn bright, warm and cute: soft hand-drawn ink outlines, flat gouache-like color fills, gentle humor, lots of white space.
+A premium travel website that matches foreign visitors to one of twelve Seoul districts through a short, elegant personality test. The mood is quiet luxury: Joseon white porcelain and the light of contemporary Seoul. Bright, airy, calm, expensive, never dark.
 
 LAYOUT
-1) Navigation bar, 72px tall, on the page background with no divider line. At the left, a wordmark "Which Seoul" in a soft, rounded, friendly display typeface. On the right, links in a clean rounded sans-serif: "Take the test", "12 Districts", "16 Types", "Meet travelers", and a small pill toggle "EN | KO".
-2) Left 45% of the hero: the headline on two lines "Which Seoul" / "are you?" in a large, warm, rounded display typeface with slightly brush-like stroke endings, ink color #26262B, about 96px per line. Under it, one line of body text in a clean rounded sans-serif, about 22px, ink at 75% opacity: "Answer 12 playful questions. Meet your folk-painting travel animal and the Seoul district that fits you." Under that, a large pill-shaped button filled peony red #D9475C with white text "Take the test", and beside it a pill-shaped outline button in ink with the text "See the 16 types".
-3) Right 55% of the hero: a big, cheerful minhwa-style tiger with big round eyes and a wide grin, peeking over a low stone wall of a Seoul alley with both front paws resting on top of the wall. Its stripes are bold flat shapes in pollen yellow #EDB43F and ink. Behind the wall: a twisted pine tree in pine green #2F7A62, a magpie perched on a branch looking down at the tiger (the classic minhwa tiger and magpie pairing), soft rounded minhwa clouds, and in the distance a few small Seoul rooftops drawn in the same folk style: one curved hanok roof and one modern apartment block side by side.
-4) Along the bottom of the hero, a row of five round character badges, each a white circle with a thin ink outline containing a small cute minhwa animal, with a name in small text under each: "Scholar Rabbit", "Collector Magpie", "Market Tiger", "Wall-walking Turtle", "Rooftop Squirrel".
+1) Navigation bar, 72px tall, on the porcelain white page background with no divider line. At the left, a wordmark "Seoul, Curated" in an elegant contemporary sans-serif with wide letter spacing. On the right, links in the same sans-serif, small and light: "The test", "12 Districts", "Meet travelers", "About", and a small pill toggle "EN | KO".
+2) Left 42% of the hero, vertically centered: the headline "Find your Seoul." in a large, elegant, light-weight contemporary sans-serif with generous spacing, ink #1E2126, about 88px. Under it, one line of body text, about 20px, ink at 65% opacity: "Twelve quiet questions. One district that suits you, and a day to spend there." Under that, a pill-shaped button filled cobalt blue #22418F with white text "Take the test", and beside it a pill-shaped text button with a thin grey outline: "Explore 12 districts".
+3) Right 58% of the hero: a photorealistic still life inside a large panel with 28px rounded corners. A Joseon moon jar (white porcelain, slightly asymmetric, soft milky glaze) stands on a low pale stone plinth, lit by warm late-afternoon sunlight from the left that casts a long soft shadow. Behind it, a tall window shows Seoul at golden hour, softly out of focus: curved hanok roof tiles in the foreground and modern glass towers and a mountain ridge beyond. The light is golden and gentle, the room is white and minimal.
+4) At the very bottom of the viewport, partly visible, a horizontal row of three rounded photo cards hinting at the next section, each a small sunlit photograph of a Seoul neighborhood with a name under it: "Jongno", "Seongdong", "Mapo".
 
 STYLE RULES
-Background bright clean hanji white #F6F5F1 with very subtle paper fibers. Full minhwa palette used with restraint: peony red #D9475C, pine green #2F7A62, pollen yellow #EDB43F, indigo #2C4F8F, ink #26262B. All buttons are fully rounded pills, any card has 20px rounded corners. Illustrations have hand-drawn ink outlines and flat color fills, like a modern picture book inspired by minhwa. Warm, light and inviting.
+Palette: porcelain white #F6F6F3, porcelain shadow grey #E4E6E2, ink #1E2126, one accent of cobalt underglaze blue #22418F used only on the main button, a hint of pale celadon #9CC3B3 allowed in shadows. Fully rounded pill buttons, panels and cards with large rounded corners, no sharp corners, no heavy lines. Lots of white space, like a high-end design hotel or a fine fragrance brand website.
 
 DO NOT INCLUDE
-A scary or realistic tiger, a tiger smoking a pipe, dancheong patterns, taegeuk symbols, red seal stamps, yellowed or beige aged paper, dark backgrounds, sharp square buttons, photographs, 3D rendering, gradients, glassmorphism, emoji, Korean characters, a scroll arrow.
+Black or dark backgrounds, gold or brass, beige or cream, red, dancheong patterns, taegeuk symbols, cartoon illustrations, sharp square buttons, heavy borders, gradients, glassmorphism, emoji, Korean characters, people's faces, a scroll arrow.
 ```
 
-### 시안 B: 12칸 책거리 책장에 담긴 12개 동네
+### 시안 B: 해 질 녘 서울 사진 위의 백자 패널
 
 파일 이름: `comp-b.png`
 
 ```
-A high-fidelity desktop website homepage screenshot, 16:9 landscape, 1920x1080, as seen in a browser. A real, friendly web page with a navigation bar, readable text and rounded pill buttons. It is not a poster and not a framed painting.
+A high-fidelity desktop website homepage screenshot, 16:9 landscape, 1920x1080, as seen in a browser. A real, refined web page with a navigation bar, readable text and rounded pill buttons. It is not a poster and not an advertisement photo.
 
 CONCEPT
-A playful travel website that matches foreign visitors to one of twelve Seoul districts through a short personality test. The visual world is Korean folk painting (minhwa), redrawn bright, warm and cute. The hero is a chaekgeori, the Joseon folk painting of a bookshelf full of treasures, reimagined so that each compartment holds a tiny Seoul neighborhood.
+A premium travel website that matches foreign visitors to one of twelve Seoul districts through a short, elegant personality test. Quiet luxury: Joseon white porcelain and the light of contemporary Seoul. Bright and warm, never dark.
 
 LAYOUT
-1) Navigation bar, 72px tall, on the page background with no divider line. At the left, a wordmark "Which Seoul" in a soft, rounded, friendly display typeface. On the right, links in a clean rounded sans-serif: "Take the test", "12 Districts", "16 Types", "Meet travelers", and a small pill toggle "EN | KO".
-2) Left 38% of the hero: the headline on two lines "Which Seoul" / "are you?" in a large, warm, rounded display typeface with slightly brush-like stroke endings, ink color #26262B, about 88px per line. Under it, one line of body text in a clean rounded sans-serif, about 22px: "Answer 12 playful questions. Meet your folk-painting travel animal and the Seoul district that fits you." Under that, a large pill button filled peony red #D9475C with white text "Take the test".
-3) Right 62% of the hero: a chaekgeori bookshelf drawn in minhwa style with its typical playful reverse perspective, the shelf frame painted soft pine green #2F7A62 with pollen-yellow #EDB43F trim. Twelve compartments in four columns and three rows. Each compartment is a tiny cozy folk-painted scene of one Seoul neighborhood, with a small rounded label tag under it:
-   "Jongno": a hanok alley with a craft workshop.
-   "Jung": a night alley with paper lanterns and small printing shops.
-   "Dongdaemun": an herbal medicine market with sacks of roots.
-   "Seodaemun": a forest trail beside a small stream.
-   "Nowon": a forest path along an old railway track.
-   "Songpa": a grassy ancient earthen fortress mound in a park.
-   "Yongsan": hillside stairs with colorful rooftops.
-   "Mapo": a neighborhood market street leading to the Han River.
-   "Seongdong": red-brick factories and a handmade shoe workshop.
-   "Yeongdeungpo": small metal workshops with art murals.
-   "Gwanak": a mountain path above a lively student street.
-   "Gangnam": green royal tomb mounds among pine trees and a stream walk.
-   A few cute minhwa animals play around the shelf: a rabbit reading a book on the top edge, a cat curled up asleep in one corner, a magpie hopping between two compartments.
+1) Navigation bar, 72px tall, transparent over the hero photograph, text in white: wordmark "Seoul, Curated" at the left in an elegant contemporary sans-serif with wide letter spacing; links "The test", "12 Districts", "Meet travelers", "About" and a small pill toggle "EN | KO" at the right.
+2) Hero: a full-bleed cinematic photograph of Seoul at golden hour, bright and warm rather than dark. In the foreground, the graceful upturned eave of a hanok roof with grey clay tiles, sharp and sunlit; beyond it, a softly blurred city of low neighborhoods, modern towers and a mountain ridge under a pale peach and blue sky.
+3) Over the left side of the photo, a large porcelain-white panel #F6F6F3 with 28px rounded corners, slightly translucent at the edges, occupying about 36% of the width and centered vertically. Inside: the headline "Find your Seoul." in a large, elegant, light-weight contemporary sans-serif, ink #1E2126, about 76px; one line of body text, about 19px, ink at 65%: "Twelve quiet questions. One district that suits you, and a day to spend there."; a pill button filled cobalt blue #22418F with white text "Take the test"; under it, a small grey line "About 3 minutes".
+4) Along the bottom of the hero, a row of twelve small pill-shaped chips on a frosted white strip, each with a tiny round photo thumbnail and a district name: Jongno, Jung, Yongsan, Mapo, Seodaemun, Seongdong, Dongdaemun, Nowon, Yeongdeungpo, Gwanak, Gangnam, Songpa.
 
 STYLE RULES
-Background bright clean hanji white #F6F5F1 with very subtle paper fibers. Full minhwa palette: peony red #D9475C, pine green #2F7A62, pollen yellow #EDB43F, indigo #2C4F8F, ink #26262B. All buttons are fully rounded pills, labels and cards have rounded corners. Hand-drawn ink outlines and flat color fills, like a modern picture book inspired by minhwa. Warm, light and inviting, every scene readable at a glance.
+Palette: porcelain white #F6F6F3, porcelain shadow grey #E4E6E2, ink #1E2126, one accent of cobalt blue #22418F on the main button only. Fully rounded pill buttons and chips, panels with large rounded corners, no sharp corners, no heavy lines. Feels like a luxury hotel or fine fragrance brand website: calm, generous spacing, golden light.
 
 DO NOT INCLUDE
-Dancheong patterns, taegeuk symbols, red seal stamps, yellowed or beige aged paper, dark backgrounds, sharp square buttons, photographs, 3D rendering, gradients, glassmorphism, emoji, Korean characters, a scroll arrow.
+A dark or night-time photo, black backgrounds, gold or brass, beige or cream, red, dancheong patterns, taegeuk symbols, cartoon illustrations, sharp square buttons, heavy borders, gradients over text, emoji, Korean characters, people's faces, a scroll arrow.
 ```
 
-### 시안 C: 민화풍 서울 파노라마 + 첫 문항 카드
+### 시안 C: 컨시어지 테스트 미리보기와 청화 달항아리
 
 파일 이름: `comp-c.png`
 
 ```
-A high-fidelity desktop website homepage screenshot, 16:9 landscape, 1920x1080, as seen in a browser. A real, friendly web page with a navigation bar, readable text and rounded pill buttons. It is not a poster and not a framed painting.
+A high-fidelity desktop website homepage screenshot, 16:9 landscape, 1920x1080, as seen in a browser. A real, refined web page with a navigation bar, readable text and rounded pill buttons. It is not a poster and not an advertisement photo.
 
 CONCEPT
-A playful travel website that matches foreign visitors to one of twelve Seoul districts through a short personality test. The visual world is Korean folk painting (minhwa), redrawn bright, warm and cute. The hero is a cheerful folk-painting panorama of Seoul full of small animal characters, with the first test question already waiting.
+A premium travel website that matches foreign visitors to one of twelve Seoul districts through a short, elegant personality test, presented like a fine fragrance finder. Quiet luxury: Joseon white porcelain, cobalt underglaze painting and the light of contemporary Seoul. Bright and airy.
 
 LAYOUT
-1) Navigation bar, 72px tall, on the page background with no divider line. At the left, a wordmark "Which Seoul" in a soft, rounded, friendly display typeface. On the right, links in a clean rounded sans-serif: "Take the test", "12 Districts", "16 Types", "Meet travelers", and a small pill toggle "EN | KO".
-2) The hero fills the rest of the screen with a wide minhwa-style panorama of Seoul seen from a gentle bird's-eye angle:
-   - Rounded blue-green mountains along the top in pine green #2F7A62 and indigo #2C4F8F with soft folk-painting clouds.
-   - The Han River crossing the lower third from left to right, drawn with curly minhwa wave patterns in indigo and white.
-   - Cozy neighborhood clusters on both banks: hanok roofs, small markets, red-brick factories, apartment blocks and parks, all in the same flat folk style.
-   - Small cute minhwa animals doing things around the city: a turtle walking along a stone fortress wall on a hill, a squirrel hopping across rooftops, a tiger at a market stall happily eating a rice cake, an egret reading a book on the riverbank, a deer on a mountain trail, a carp leaping out of the river, a pair of mandarin ducks having a picnic on the grass.
-3) Top-left of the hero, on a soft rounded minhwa cloud shape in white: the headline on two lines "Which Seoul" / "are you?" in a large, warm, rounded display typeface with slightly brush-like stroke endings, ink color #26262B, about 84px per line, and one line of body text under it in a clean rounded sans-serif, about 20px: "Answer 12 playful questions. Meet your folk-painting travel animal and the Seoul district that fits you."
-4) Bottom-right of the hero, a floating white card with 24px rounded corners and a soft shadow: a small label "Question 1 of 12", the question "Your first morning in Seoul?" in a rounded display typeface, two pill-shaped option buttons stacked vertically with ink outlines: "A quiet alley with an old tea house" and "A riverside run at sunrise", and under them a full-width pill button filled peony red #D9475C with white text "Take the test".
+1) Navigation bar, 72px tall, on the porcelain white background: wordmark "Seoul, Curated" at the left in an elegant contemporary sans-serif with wide letter spacing; links "The test", "12 Districts", "Meet travelers", "About" and a small pill toggle "EN | KO" at the right.
+2) Left 55% of the hero: at the top, the headline "Find your Seoul." in a large, elegant, light-weight contemporary sans-serif, ink #1E2126, about 72px, with one line of body text under it, about 19px, ink at 65%: "Twelve quiet questions. One district that suits you, and a day to spend there." Below, a large porcelain-white card with 28px rounded corners and a very soft shadow, showing the first question of the test:
+   - a small progress indicator of twelve tiny dots with the first one filled cobalt, and the label "1 of 12",
+   - the question "Your first morning in Seoul?" in the same elegant sans-serif, about 34px,
+   - two large side-by-side option tiles with rounded corners, each with a sunlit photograph on top and a caption below: "A quiet alley with an old tea house" (photo of a narrow hanok alley with a wooden tea house door in morning light) and "A riverside run at sunrise" (photo of the Han River path at sunrise with soft mist),
+   - under the tiles, a pill button filled cobalt blue #22418F with white text "Take the test".
+3) Right 45% of the hero: a tall photorealistic image of a white porcelain moon jar, softly lit from the left against a pale grey wall. On the jar, a delicate cobalt-blue underglaze painting in the Joseon cheonghwa style shows a flowing line drawing of the Seoul skyline: a mountain ridge, hanok roofs, a few modern towers and the curve of the Han River.
 
 STYLE RULES
-Background bright clean hanji white #F6F5F1 with very subtle paper fibers. Full minhwa palette: peony red #D9475C, pine green #2F7A62, pollen yellow #EDB43F, indigo #2C4F8F, ink #26262B. All buttons are fully rounded pills. Hand-drawn ink outlines and flat color fills, like a modern picture book inspired by minhwa. Warm, light and lively but not cluttered; leave calm space behind the headline and the card.
+Palette: porcelain white #F6F6F3, porcelain shadow grey #E4E6E2, ink #1E2126, one accent of cobalt blue #22418F for the progress dot, the button and the painting on the jar. Fully rounded pill buttons, cards and tiles with large rounded corners, no sharp corners, no heavy lines. Calm, generous spacing, the feel of a fine fragrance brand or a design hotel.
 
 DO NOT INCLUDE
-A scary or realistic tiger, dancheong patterns, taegeuk symbols, red seal stamps, yellowed or beige aged paper, dark backgrounds, sharp square buttons, photographs, 3D rendering, gradients, glassmorphism, emoji, Korean characters, a scroll arrow.
+Black or dark backgrounds, gold or brass, beige or cream, red, dancheong patterns, taegeuk symbols, cartoon illustrations, sharp square buttons, heavy borders, gradients, glassmorphism, emoji, Korean characters, people's faces, a scroll arrow.
 ```
 
 ---
 
 ## 2단계: 시안을 고른 뒤
 
-- **플레이트**: 고른 시안의 그림 부분만 글자와 버튼 없이 다시 그린 고해상도 이미지. 고른 시안을 ChatGPT에 첨부해서 만든다. 프롬프트는 시안을 측정한 뒤 드린다
-- **16개 민화 캐릭터**: 고른 시안의 그림체를 기준으로, 먼저 1장(시장 호랑이)을 만들어 승인받은 뒤 그 이미지를 첨부해 나머지 15장을 같은 그림체로 만든다. 투명 배경, 정사각형. 프롬프트는 시안 승인 뒤 드린다
+- **플레이트**: 고른 시안의 사진·정물 부분을 글자 없이 고해상도로 다시 만든 이미지(예: A는 달항아리 정물, B는 한옥 처마와 서울 노을 사진, C는 청화 달항아리). 고른 시안을 ChatGPT에 첨부해서 만든다. 프롬프트는 시안을 측정한 뒤 드린다. 사이트에는 생성 이미지임을 표기한다
 
 ## 3단계: 장소 사진 (공개 사진, GPT 아님)
 
 - 출처: 한국관광공사 포토코리아(photo.visitkorea.or.kr) 등 **공공누리 1유형** 사진
+- 이 방향은 사진이 생기를 맡으므로 중요하다. 밝은 시간대(아침, 해 질 녘)의 사진을 우선한다
 - 장당 가로 1600px 이상, 사람 얼굴이 크게 나오지 않은 사진
 - 올릴 위치: `assets/incoming/places/`, 같은 폴더에 `credits.csv`(`slug,제목,촬영자,출처URL,공공누리유형`)
 - 목록은 데이터 조사 단계에서 확정해 드린다(예상 36~48장)
