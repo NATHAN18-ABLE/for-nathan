@@ -259,3 +259,11 @@ At the same time, dusk turns into night evenly across the whole clip: the sky de
 
 N Seoul Tower, its two side antennas and the outline of Namsan keep the same shape and proportions throughout; nothing morphs, melts, bends or appears from nowhere. Smooth motion-control camera: no shake, no sideways drift, no rotation, no zoom pumping. Photographic and realistic. No people, no birds, no text, no lens flare, no fireworks, no moon.
 ```
+
+## 영상 2 결과 (2026-11-09, Kling 3.0 pro 5초, 7.5 크레딧, job `cc8532bf-fa06-487e-8878-f852f994f578`)
+
+- 시작 장면이 영상 A 마지막 장면과 거의 같고(평균 차이 2.1/255), 마지막 장면이 남산 키프레임과 거의 같음(3.2/255). 두 영상을 이은 곳의 프레임 변화(4.2)가 앞뒤 프레임(3.8, 7.7)과 비슷해 이음매가 보이지 않는다
+- 처마가 오른쪽으로 빠지며 지나가는 입체감이 살아 있고, 3초 즈음 처마 끝 기와가 화면 오른쪽 가장자리를 크게 스쳐 지나간다
+- 속도: 프롬프트와 달리 끝에서 느려진다(앞 1/3 프레임 변화 13.2, 중간 12.0, 뒤 1/3 8.0). 코드에서 프레임마다 움직임 양을 누적해 스크롤과 짝지으면 일정한 속도로 보이게 고칠 수 있다
+- 연속 이미지 241장 용량: 데스크톱 1280px WebP 품질 78은 19MB, 품질 60은 14MB. 모바일 세로 720px(타워 기준 자르기) 품질 60은 9.1MB. 먼저 4장마다 1장을 불러오고 나머지를 채우는 방식이 필요하다
+- 모바일 세로 자르기에서 타워가 처음엔 화면 왼쪽, 끝엔 오른쪽으로 흐른다. 자르는 위치를 프레임마다 타워를 따라가게 옮기면 된다
