@@ -25,11 +25,11 @@ OWN-WORLD: porcelain white ground #F6F6F3 with porcelain-shadow grey #E4E6E2, in
 
 STORY: visitor meets a moon jar in late-afternoon light with Seoul beyond the window, begins the test, moves through twelve unhurried questions with photo-backed choices, receives a type and a district presented like a gallery collection, then follows a morning-to-night route drawn as a cobalt line, and can step into that district's metaverse room.
 
-FIRST VIEWPORT: decided by the comp round (three compositions: moon-jar still life with the city beyond, full-bleed dusk photograph with a porcelain panel, concierge test preview beside a cobalt-painted jar). Constant across all three: headline "Find your Seoul.", one primary pill action "Take the test", real Seoul visible above the fold, one-line nav under 80px.
+FIRST VIEWPORT: approved comp B (.impeccable/mocks/comp-b.png): full-bleed golden-hour photograph of Seoul with a hanok eave on the right and N Seoul Tower slightly right of centre; porcelain panel at left with "Find your Seoul.", one line of body text, a cobalt pill "Take the test" and "About 3 minutes"; a strip of twelve district pills along the bottom; one-line nav with wordmark "Seoul, Curated".
 
 FORM: Porcelain Seoul, user-pinned 2026-11-09 (replaces woodblock atlas seed 8ed26da8 and the unbuilt minhwa direction).
 
-SIGNATURE INTERACTION: the glaze: on the result, a cobalt line draws the district's outline and day route across a porcelain surface as if painted with a brush, stop by stop, while the district photograph resolves behind it (code motion over SVG).
+SIGNATURE INTERACTION: scroll-scrubbed hero (built 2026-11-10). 241 frames joined from two Kling clips (camera descends at dusk, then a lens zoom onto N Seoul Tower at night), mapped to scroll by cumulative visual change so speed is even across the seam; then the photo overexposes toward porcelain while a cobalt line traces the same ridge and tower on top, and the first question card rises. Reduced motion shows the same story as still sections.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 

@@ -1,0 +1,122 @@
+:root {
+  --porcelain: #f6f6f3;
+  --porcelain-shadow: #e4e6e2;
+  --ink: #1e2126;
+  --ink-soft: rgb(30 33 38 / 0.66);
+  --cobalt: #22418f;
+  --cobalt-press: #1b3577;
+  --celadon: #9cc3b3;
+  --white: #fbfbf9;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --radius-panel: 28px;
+  --gutter: clamp(16px, 4vw, 56px);
+  --font: "Jost Variable", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  scrollbar-color: var(--porcelain-shadow) var(--porcelain);
+}
+
+body {
+  margin: 0;
+  background: var(--porcelain);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.55;
+  font-weight: 380;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--cobalt);
+  color: var(--white);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cobalt);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.22em;
+}
+
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 52px;
+  padding: 0 30px;
+  border-radius: 999px;
+  border: 0;
+  font-size: 18px;
+  font-weight: 450;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 160ms var(--ease-out), background-color 200ms ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: var(--cobalt);
+  color: var(--white);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover {
+    background: var(--cobalt-press);
+  }
+}
+
+/* Footer */
+.site-footer {
+  padding: 40px var(--gutter) calc(40px + env(safe-area-inset-bottom));
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 72ch;
+}
+
+.site-footer p {
+  margin: 0 0 6px;
+}

@@ -1,0 +1,90 @@
+.page {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--porcelain);
+}
+
+.nav {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  padding: env(safe-area-inset-top) var(--gutter) 0;
+}
+
+.wordmark {
+  font-size: 20px;
+  font-weight: 340;
+  letter-spacing: 0.26em;
+  text-decoration: none;
+}
+
+.center {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px var(--gutter) calc(48px + env(safe-area-inset-bottom));
+}
+
+.result {
+  flex: 1;
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: clamp(32px, 8vh, 96px) var(--gutter) calc(64px + env(safe-area-inset-bottom));
+}
+
+.code {
+  margin: 0 0 8px;
+  font-size: 18px;
+  letter-spacing: 0.32em;
+  color: var(--cobalt);
+  font-weight: 500;
+}
+
+.typeName {
+  margin: 0 0 12px;
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1.04;
+  font-weight: 330;
+  letter-spacing: -0.025em;
+}
+
+.typeLine {
+  margin: 0 0 40px;
+  max-width: 50ch;
+  font-size: 20px;
+  color: var(--ink-soft);
+}
+
+.district {
+  padding: 28px 0 8px;
+  border-top: 1px solid var(--porcelain-shadow);
+}
+
+.district h2 {
+  margin: 0 0 8px;
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 380;
+  letter-spacing: -0.015em;
+}
+
+.district h2 span,
+.runner span {
+  color: var(--ink-soft);
+  font-weight: 340;
+}
+
+.district p {
+  margin: 0 0 8px;
+  max-width: 60ch;
+}
+
+.runner {
+  color: var(--ink-soft);
+}
+
+.note {
+  margin: 24px 0 28px;
+  color: var(--ink-soft);
+  font-size: 15px;
+}
