@@ -1,43 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { QUESTIONS } from "@/lib/match/questions.ts";
-import { DISTRICTS } from "@/lib/match/districts.ts";
 import type { Answer } from "@/lib/match/match.ts";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
-import { COPY, DISTRICT_ORDER, type Lang } from "@/lib/hero/copy.ts";
+import { COPY, type Lang } from "@/lib/hero/copy.ts";
 import { asset } from "@/lib/base-path.ts";
-import Link from "next/link";
 import { QuestionCard } from "./QuestionCard";
 import styles from "./HeroScroll.module.css";
 
-interface Ridge {
-  ridge: [number, number][];
-  tower: { x: number; tip: number; antennaBase: number; deckTop: number; deckBottom: number; deckHalfWidth: number; shaftHalfWidth: number; base: number };
-  antennas: { x: number; top: number; base: number }[];
-}
-
 // Scroll map (share of the pinned track).
-const UI_OUT = 0.06;
-const FRAMES_FROM = 0.07;
-const FRAMES_TO = 0.74;
-// After the last frame: the photo overexposes toward porcelain while the cobalt line
-// traces its own ridge and tower on top, so the drawing reads as the same view.
-const GLOW_FROM = 0.74;
-const GLOW_LEN = 0.14;
-const LINE_FROM = 0.765;
-const LINE_LEN = 0.11;
-const PORCELAIN_FROM = 0.8;
-const PORCELAIN_LEN = 0.1;
-const AFTER_FROM = 0.905;
-const AFTER_LEN = 0.07;
-const END_ZOOM = 0.12;
-
-// Portrait frames are a 9:16 slice of the 16:9 frames, centred on the tower.
-const MOBILE_SLICE = { x0: 0.573 - (9 / 16) / (16 / 9) / 2, w: (9 / 16) / (16 / 9) };
+const INTRO_OUT = 0.06; // the title steps back as soon as scrolling starts
+const FRAMES_FROM = 0.05;
+const FRAMES_TO = 0.84;
+const NIGHT_FROM = 0.82; // the last frame softens into a blurred night backdrop
+const NIGHT_LEN = 0.1;
+const AFTER_FROM = 0.88;
+const AFTER_LEN = 0.08;
+const SMOOTH_MS = 120; // time constant of the scroll follow; frame-rate independent
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const phase = (p: number, from: number, len: number) => clamp01((p - from) / len);
@@ -55,26 +39,22 @@ function loadOrder(n: number): number[] {
   return order;
 }
 
+type Frame = HTMLImageElement | ImageBitmap;
+
 export function HeroScroll() {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>("en");
   const [reduced, setReduced] = useState(false);
   const [portrait, setPortrait] = useState(false);
-  const [ridge, setRidge] = useState<Ridge | null>(null);
-  const ridgeRef = useRef<Ridge | null>(null);
   const t = COPY[lang];
+  const set = portrait ? "m" : "d";
 
   const trackRef = useRef<HTMLElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const bloomRef = useRef<HTMLDivElement>(null);
-  const porcelainRef = useRef<HTMLDivElement>(null);
-  const lineRef = useRef<SVGSVGElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const chipsRef = useRef<HTMLDivElement>(null);
+  const nightRef = useRef<HTMLDivElement>(null);
+  const introRef = useRef<HTMLDivElement>(null);
   const afterRef = useRef<HTMLDivElement>(null);
-  const navRef = useRef<HTMLElement>(null);
-  const scrimRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -90,13 +70,6 @@ export function HeroScroll() {
     sync();
     rm.addEventListener("change", sync);
     pm.addEventListener("change", sync);
-    fetch(asset("/hero/ridge.json"))
-      .then((r) => r.json())
-      .then((data: Ridge) => {
-        ridgeRef.current = data;
-        setRidge(data);
-      })
-      .catch(() => {});
     return () => {
       rm.removeEventListener("change", sync);
       pm.removeEventListener("change", sync);
@@ -127,8 +100,7 @@ export function HeroScroll() {
       document.getElementById("first-question")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
       return;
     }
-    const top = track.offsetTop + (track.offsetHeight - window.innerHeight) * 0.985;
-    window.scrollTo({ top, behavior: "smooth" });
+    window.scrollTo({ top: track.offsetTop + track.offsetHeight - window.innerHeight, behavior: "smooth" });
   };
 
   // Main scroll-driven scene.
@@ -137,24 +109,28 @@ export function HeroScroll() {
     const canvas = canvasRef.current;
     const track = trackRef.current;
     if (!canvas || !track) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
     gsap.registerPlugin(ScrollTrigger);
-    const set = portrait ? "m" : "d";
     let timing: Timing | null = null;
     let windows: ReturnType<typeof scrollWindows> = [];
-    const frames: (HTMLImageElement | null)[] = [];
+    const frames: (Frame | null)[] = [];
+    let frameW = portrait ? 720 : 1280;
     let target = 0;
     let current = -1;
     let drawn = -1;
     let raf = 0;
+    let last = performance.now();
     let cancelled = false;
 
+    // Draw no larger than the frames themselves: a bigger canvas costs time, not detail.
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(canvas.clientWidth * dpr);
-      canvas.height = Math.round(canvas.clientHeight * dpr);
+      const scale = Math.min(dpr, (frameW * 1.15) / Math.max(1, canvas.clientWidth));
+      canvas.width = Math.round(canvas.clientWidth * scale);
+      canvas.height = Math.round(canvas.clientHeight * scale);
+      ctx.imageSmoothingQuality = "high";
       drawn = -1;
     };
 
@@ -166,37 +142,21 @@ export function HeroScroll() {
       return null;
     };
 
-    const cover = (img: HTMLImageElement, alpha: number) => {
+    const cover = (img: Frame, alpha: number) => {
       const cw = canvas.width;
       const ch = canvas.height;
-      const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
-      const w = img.naturalWidth * s;
-      const h = img.naturalHeight * s;
+      const s = Math.max(cw / img.width, ch / img.height);
+      const w = img.width * s;
+      const h = img.height * s;
       ctx.globalAlpha = alpha;
       ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
       ctx.globalAlpha = 1;
     };
 
-    // Screen position of the tower's observation deck on the last frame.
-    const deckPoint = () => {
-      const cw = canvas.clientWidth;
-      const ch = canvas.clientHeight;
-      const fw = portrait ? 9 : 16;
-      const fh = portrait ? 16 : 9;
-      const s = Math.max(cw / fw, ch / fh);
-      const w = fw * s;
-      const h = fh * s;
-      const rg = ridgeRef.current;
-      const tx = rg ? rg.tower.x : 0.574;
-      const ty = rg ? (rg.tower.deckTop + rg.tower.deckBottom) / 2 : 0.58;
-      const nx = portrait ? (tx - MOBILE_SLICE.x0) / MOBILE_SLICE.w : tx;
-      return { x: (cw - w) / 2 + nx * w, y: (ch - h) / 2 + ty * h };
-    };
-
     const render = (p: number) => {
       if (timing) {
         const f = frameAt(p, timing, windows);
-        const key = Math.round(f * 20);
+        const key = Math.round(f * 16);
         if (key !== drawn) {
           const i0 = Math.floor(f);
           const a = f - i0;
@@ -204,71 +164,44 @@ export function HeroScroll() {
           if (base) {
             cover(base, 1);
             const next = frames[i0 + 1];
-            if (a > 0.04 && next) cover(next, a);
+            if (a > 0.06 && next) cover(next, a);
             drawn = key;
           }
         }
       }
-      const u = phase(p, 0, UI_OUT);
-      const panel = panelRef.current;
-      const chips = chipsRef.current;
-      if (panel) {
-        panel.style.opacity = String(1 - u);
-        panel.style.transform = `translateY(${-28 * easeOut(u)}px)`;
-        panel.style.visibility = u >= 1 ? "hidden" : "visible";
+      const u = easeOut(phase(p, 0, INTRO_OUT));
+      const intro = introRef.current;
+      if (intro) {
+        intro.style.opacity = String(1 - u);
+        intro.style.transform = `translateY(${-24 * u}px)`;
+        intro.style.filter = u > 0 ? `blur(${6 * u}px)` : "";
+        intro.style.visibility = u >= 1 ? "hidden" : "visible";
       }
-      if (chips) {
-        chips.style.opacity = String(1 - u);
-        chips.style.transform = `translateY(${24 * easeOut(u)}px)`;
-        chips.style.visibility = u >= 1 ? "hidden" : "visible";
-      }
-      const z = phase(p, GLOW_FROM, GLOW_LEN);
-      const deck = deckPoint();
+      const z = smooth(phase(p, NIGHT_FROM, NIGHT_LEN));
       const scene = sceneRef.current;
-      if (scene) {
-        scene.style.transformOrigin = `${deck.x}px ${deck.y}px`;
-        scene.style.transform = `scale(${1 + END_ZOOM * easeOut(z)})`;
+      if (scene) scene.style.transform = z > 0 ? `scale(${1 + 0.04 * z})` : "";
+      const night = nightRef.current;
+      if (night) {
+        night.style.opacity = String(z);
+        night.style.transform = `scale(${1 + 0.04 * z})`;
       }
-      // Exposure rises like a camera opening up toward the tower lights.
-      canvas.style.filter = z > 0 ? `brightness(${1 + 1.6 * z * z}) saturate(${1 - 0.7 * z})` : "";
-      const bloom = bloomRef.current;
-      if (bloom) {
-        bloom.style.opacity = String(smooth(phase(p, GLOW_FROM, GLOW_LEN * 0.6)) * (1 - phase(p, PORCELAIN_FROM + 0.04, 0.05)));
-        bloom.style.setProperty("--bx", `${deck.x}px`);
-        bloom.style.setProperty("--by", `${deck.y}px`);
-        bloom.style.setProperty("--br", `${5 + 14 * z}vmax`);
-      }
-      const w = smooth(phase(p, PORCELAIN_FROM, PORCELAIN_LEN));
-      const porcelain = porcelainRef.current;
-      if (porcelain) porcelain.style.opacity = String(w);
-      const scrim = scrimRef.current;
-      if (scrim) scrim.style.opacity = String(1 - w);
       const c = phase(p, AFTER_FROM, AFTER_LEN);
-      const line = lineRef.current;
-      if (line) {
-        const r = easeOut(phase(p, LINE_FROM, LINE_LEN));
-        const r2 = easeOut(phase(p, LINE_FROM + 0.02, LINE_LEN));
-        line.style.setProperty("--draw", String(1 - r));
-        line.style.setProperty("--draw-tower", String(1 - r2));
-        // On tall screens the drawing rises and steps back behind the question card.
-        const settle = portrait ? easeOut(c) : 0;
-        line.style.opacity = r > 0 ? String(1 - 0.7 * settle) : "0";
-        line.style.transform = `translateY(${-0.3 * canvas.clientHeight * settle}px)`;
-      }
       const after = afterRef.current;
       if (after) {
-        after.style.opacity = String(c);
-        after.style.transform = `translateY(${32 * (1 - easeOut(c))}px)`;
+        after.style.opacity = String(easeOut(c));
+        after.style.transform = `translateY(${28 * (1 - easeOut(c))}px)`;
         after.style.visibility = c > 0 ? "visible" : "hidden";
         after.style.pointerEvents = c > 0.6 ? "auto" : "none";
       }
-      navRef.current?.setAttribute("data-tone", p > PORCELAIN_FROM + 0.02 ? "ink" : "light");
     };
 
-    const tick = () => {
+    const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
-      const next = current < 0 ? target : current + (target - current) * 0.16;
-      if (Math.abs(next - current) < 0.00005 && current >= 0) return;
+      const dt = Math.min(64, now - last);
+      last = now;
+      const k = 1 - Math.exp(-dt / SMOOTH_MS);
+      const next = current < 0 ? target : current + (target - current) * k;
+      if (Math.abs(next - current) < 0.00002 && current >= 0 && drawn >= 0) return;
       current = next;
       render(current);
     };
@@ -288,14 +221,19 @@ export function HeroScroll() {
           const img = new Image();
           img.decoding = "async";
           img.src = frameUrl(set, i);
-          img.decode().then(
-            () => {
+          img
+            .decode()
+            .then((): Promise<Frame> | Frame => ("createImageBitmap" in window ? createImageBitmap(img) : img))
+            .then((bmp: Frame) => {
               if (cancelled) return;
-              frames[i] = img;
+              if (i === 0 && bmp.width !== frameW) {
+                frameW = bmp.width;
+                resize();
+              }
+              frames[i] = bmp;
               drawn = -1;
-            },
-            () => {},
-          );
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});
@@ -316,55 +254,15 @@ export function HeroScroll() {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       st.kill();
+      for (const f of frames) if (f && "close" in f) f.close();
     };
-  }, [reduced, portrait]);
+  }, [reduced, portrait, set]);
 
-  const lineGeometry = useMemo(() => {
-    if (!ridge) return null;
-    const vw = portrait ? 900 : 1600;
-    const vh = portrait ? 1600 : 900;
-    const X = (x: number) => (portrait ? ((x - MOBILE_SLICE.x0) / MOBILE_SLICE.w) * vw : x * vw);
-    const Y = (y: number) => y * vh;
-    const ridgePath = ridge.ridge.map(([x, y], i) => `${i ? "L" : "M"}${X(x).toFixed(1)} ${Y(y).toFixed(1)}`).join(" ");
-    const tw = ridge.tower;
-    const sx = portrait ? vw / MOBILE_SLICE.w : vw; // scale for horizontal widths
-    const shaft = tw.shaftHalfWidth * sx;
-    const deck = tw.deckHalfWidth * sx;
-    const cx = X(tw.x);
-    const f = (n: number) => n.toFixed(1);
-    const dt = Y(tw.deckTop);
-    const db = Y(tw.deckBottom);
-    const mid = (dt + db) / 2;
-    const bulge = (db - dt) * 0.35;
-    const mast = Y(tw.antennaBase) - (db - dt) * 0.9;
-    const towerPath = [
-      // tapering shaft
-      `M${f(cx - shaft)} ${f(Y(tw.base))} L${f(cx - shaft * 0.72)} ${f(db)}`,
-      `M${f(cx + shaft)} ${f(Y(tw.base))} L${f(cx + shaft * 0.72)} ${f(db)}`,
-      // observation deck: a soft drum, wider at its waist
-      `M${f(cx - deck * 0.8)} ${f(db)} Q${f(cx - deck - bulge)} ${f(mid)} ${f(cx - deck * 0.8)} ${f(dt)}`,
-      `M${f(cx + deck * 0.8)} ${f(db)} Q${f(cx + deck + bulge)} ${f(mid)} ${f(cx + deck * 0.8)} ${f(dt)}`,
-      `M${f(cx - deck * 0.8)} ${f(db)} L${f(cx + deck * 0.8)} ${f(db)}`,
-      `M${f(cx - deck * 0.8)} ${f(dt)} L${f(cx + deck * 0.8)} ${f(dt)}`,
-      `M${f(cx - deck)} ${f(mid)} L${f(cx + deck)} ${f(mid)}`,
-      // upper mast and antenna
-      `M${f(cx - shaft * 0.45)} ${f(dt)} L${f(cx - shaft * 0.3)} ${f(mast)} L${f(cx)} ${f(Y(tw.tip))} L${f(cx + shaft * 0.3)} ${f(mast)} L${f(cx + shaft * 0.45)} ${f(dt)}`,
-    ].join(" ");
-    const antennaPath = ridge.antennas
-      .map((a) => {
-        const ax = X(a.x);
-        const half = 0.006 * sx;
-        return `M${(ax - half).toFixed(1)} ${Y(a.base).toFixed(1)} L${ax.toFixed(1)} ${Y(a.top).toFixed(1)} L${(ax + half).toFixed(1)} ${Y(a.base).toFixed(1)}`;
-      })
-      .join(" ");
-    return { vw, vh, ridgePath, towerPath, antennaPath };
-  }, [ridge, portrait]);
-
-  const districts = DISTRICT_ORDER.map((slug) => DISTRICTS.find((d) => d.slug === slug)!);
   const first = QUESTIONS[0];
+  const nightBg = { backgroundImage: `url(${asset(`/hero/night-${set}.jpg`)})` };
 
   const nav = (
-    <header ref={navRef} className={styles.nav} data-tone="light">
+    <header className={styles.nav}>
       <Link className={styles.wordmark} href="/">
         Seoul, Curated
       </Link>
@@ -388,24 +286,10 @@ export function HeroScroll() {
     </header>
   );
 
-  const panel = (
-    <div ref={panelRef} className={styles.panel}>
+  const intro = (
+    <div ref={introRef} className={styles.intro}>
       <h1 className={styles.headline}>{t.headline}</h1>
       <p className={styles.sub}>{t.sub}</p>
-      <button type="button" className="btn btn-primary" onClick={jumpToTest}>
-        {t.cta}
-      </button>
-      <p className={styles.time}>{t.time}</p>
-    </div>
-  );
-
-  const chips = (
-    <div ref={chipsRef} className={styles.chips}>
-      <ul aria-label={t.districtsLabel}>
-        {districts.map((d) => (
-          <li key={d.slug}>{lang === "ko" ? d.nameKo : d.nameEn}</li>
-        ))}
-      </ul>
     </div>
   );
 
@@ -417,37 +301,16 @@ export function HeroScroll() {
     </div>
   );
 
-  const lineArt = lineGeometry && (
-    <svg
-      ref={lineRef}
-      className={styles.line}
-      viewBox={`0 0 ${lineGeometry.vw} ${lineGeometry.vh}`}
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden="true"
-    >
-      <path className={styles.ridge} d={lineGeometry.ridgePath} pathLength={1} />
-      <path className={styles.tower} d={lineGeometry.towerPath} pathLength={1} />
-      <path className={styles.tower} d={lineGeometry.antennaPath} pathLength={1} />
-    </svg>
-  );
-
   if (reduced) {
     return (
       <div className={styles.root}>
         {nav}
-        <section className={styles.staticHero}>
-          <picture>
-            <source media="(max-aspect-ratio: 4/5)" srcSet={asset("/hero/poster-m.jpg")} />
-            <img src={asset("/hero/poster-d.jpg")} alt="Hanok roof eaves in the foreground and Seoul with N Seoul Tower at golden hour" />
-          </picture>
-          {panel}
-          {chips}
+        <section className={styles.staticHero} style={{ backgroundImage: `url(${asset(`/hero/poster-${set}.jpg`)})` }}>
+          <div className={styles.shade} aria-hidden="true" />
+          {intro}
         </section>
-        <section className={styles.staticNight}>
-          <img src={asset(portrait ? "/hero/m/0241.webp" : "/hero/d/0241.webp")} alt="N Seoul Tower lit at night on Namsan" />
-        </section>
-        <section className={styles.staticAfter}>
-          {lineArt}
+        <section className={styles.staticNight} style={nightBg}>
+          <div className={styles.dusk} aria-hidden="true" />
           {after}
         </section>
         <Footer t={t} />
@@ -464,16 +327,15 @@ export function HeroScroll() {
             <canvas
               ref={canvasRef}
               className={styles.canvas}
-              style={{ backgroundImage: `url(${asset(portrait ? "/hero/poster-m.jpg" : "/hero/poster-d.jpg")})` }}
+              style={{ backgroundImage: `url(${asset(`/hero/poster-${set}.jpg`)})` }}
               aria-hidden="true"
             />
-            <div ref={bloomRef} className={styles.bloom} aria-hidden="true" />
-            <div ref={porcelainRef} className={styles.porcelain} aria-hidden="true" />
-            {lineArt}
           </div>
-          <div ref={scrimRef} className={styles.scrim} aria-hidden="true" />
-          {panel}
-          {chips}
+          <div ref={nightRef} className={styles.night} style={nightBg} aria-hidden="true">
+            <div className={styles.dusk} />
+          </div>
+          <div className={styles.shade} aria-hidden="true" />
+          {intro}
           {after}
         </div>
       </section>

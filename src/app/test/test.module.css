@@ -1,8 +1,34 @@
 .page {
+  position: relative;
+  isolation: isolate;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  background: var(--porcelain);
+  color: var(--white);
+  background: var(--night);
+}
+
+/* Same night as the end of the opening scroll, so the test feels like one place. */
+.page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(120% 90% at 50% 40%, rgb(16 28 70 / 0.1), rgb(10 18 46 / 0.55)),
+    linear-gradient(to bottom, rgb(10 18 46 / 0.15), rgb(10 18 46 / 0.45)),
+    var(--night-d) center / cover no-repeat,
+    var(--night);
+}
+
+@media (max-aspect-ratio: 4/5) {
+  .page::before {
+    background:
+      radial-gradient(120% 90% at 50% 40%, rgb(16 28 70 / 0.1), rgb(10 18 46 / 0.55)),
+      linear-gradient(to bottom, rgb(10 18 46 / 0.15), rgb(10 18 46 / 0.45)),
+      var(--night-m) center / cover no-repeat,
+      var(--night);
+  }
 }
 
 .nav {
@@ -37,7 +63,7 @@
   margin: 0 0 8px;
   font-size: 18px;
   letter-spacing: 0.32em;
-  color: var(--cobalt);
+  color: #c9def5;
   font-weight: 500;
 }
 
@@ -53,12 +79,12 @@
   margin: 0 0 40px;
   max-width: 50ch;
   font-size: 20px;
-  color: var(--ink-soft);
+  color: rgb(251 251 249 / 0.82);
 }
 
 .district {
   padding: 28px 0 8px;
-  border-top: 1px solid var(--porcelain-shadow);
+  border-top: 1px solid rgb(251 251 249 / 0.22);
 }
 
 .district h2 {
@@ -70,7 +96,7 @@
 
 .district h2 span,
 .runner span {
-  color: var(--ink-soft);
+  color: rgb(251 251 249 / 0.7);
   font-weight: 340;
 }
 
@@ -80,11 +106,11 @@
 }
 
 .runner {
-  color: var(--ink-soft);
+  color: rgb(251 251 249 / 0.78);
 }
 
 .note {
   margin: 24px 0 28px;
-  color: var(--ink-soft);
+  color: rgb(251 251 249 / 0.7);
   font-size: 15px;
 }

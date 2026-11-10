@@ -1,9 +1,10 @@
 .card {
   width: min(640px, 100%);
+  color: var(--ink);
   background: var(--white);
   border-radius: var(--radius-panel);
   padding: clamp(24px, 4vw, 40px);
-  box-shadow: 0 24px 60px -28px rgb(30 45 80 / 0.28);
+  box-shadow: 0 30px 80px -30px rgb(4 10 30 / 0.6);
 }
 
 .progress {

@@ -7,6 +7,7 @@
   --cobalt-press: #1b3577;
   --celadon: #9cc3b3;
   --white: #fbfbf9;
+  --night: #101b3f;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --radius-panel: 28px;
   --gutter: clamp(16px, 4vw, 56px);
@@ -102,9 +103,17 @@ button {
   color: var(--white);
 }
 
+.btn-light {
+  background: var(--white);
+  color: var(--ink);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .btn-primary:hover {
     background: var(--cobalt-press);
+  }
+  .btn-light:hover {
+    background: #ffffff;
   }
 }
 

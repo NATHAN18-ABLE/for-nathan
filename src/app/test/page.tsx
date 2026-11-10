@@ -6,6 +6,7 @@ import { TRAVEL_TYPES } from "@/lib/match/travel-types.ts";
 import { matchDistricts, scoreAnswers, typeCode, type Answer } from "@/lib/match/match.ts";
 import { QuestionCard } from "@/components/QuestionCard";
 import Link from "next/link";
+import { asset } from "@/lib/base-path.ts";
 import styles from "./test.module.css";
 
 const KEY = "seoul.answers";
@@ -29,13 +30,18 @@ export default function TestPage() {
     } catch {}
   };
 
-  if (!answers) return <main className={styles.page} aria-busy="true" />;
+  const backdrop = {
+    "--night-d": `url(${asset("/hero/night-d.jpg")})`,
+    "--night-m": `url(${asset("/hero/night-m.jpg")})`,
+  } as React.CSSProperties;
+
+  if (!answers) return <main className={styles.page} style={backdrop} aria-busy="true" />;
 
   const step = answers.length;
   const done = step >= QUESTIONS.length;
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} style={backdrop}>
       <header className={styles.nav}>
         <Link className={styles.wordmark} href="/">
           Seoul, Curated
@@ -80,7 +86,7 @@ function Result({ answers, onRestart }: { answers: Answer[]; onRestart: () => vo
         </p>
       </div>
       <p className={styles.note}>A day course for {best.nameEn} is in preparation.</p>
-      <button type="button" className="btn btn-primary" onClick={onRestart}>
+      <button type="button" className="btn btn-light" onClick={onRestart}>
         Take the test again
       </button>
     </section>

@@ -1,15 +1,19 @@
 """Build the hero scroll assets from the two approved clips.
 
 Outputs into public/hero/:
-  d/0001.webp ... desktop frames (1280 wide)
-  m/0001.webp ... mobile portrait frames (720x1280, cropped around N Seoul Tower)
+  d/0001.webp ...   desktop frames, 1280 wide
+  m/0001.webp ...   mobile portrait frames, 720x1280, cropped around N Seoul Tower
   poster-d.jpg, poster-m.jpg   first frame for instant paint
-  timing.json  per-segment cumulative visual change, used to map scroll to frames
-               so the camera speed feels even (video 2 front-loads its motion)
-  ridge.json   Namsan ridge line and tower geometry of the last frame, normalized,
-               for the cobalt line drawing that follows the photo
+  night-d.jpg, night-m.jpg     last frame, softly blurred and dimmed, used behind the
+                               question card and on the test page
+  timing.json   per-segment cumulative visual change, used to map scroll to frames
+                so the speed feels even (the zoom clip front-loads its motion)
+
+The joined 24 fps sequence is motion-interpolated to 48 fps, so scrubbing has twice
+as many real in-between frames instead of cross-fading neighbours (which ghosts on
+the fast part of the zoom).
 """
-import json, subprocess, sys
+import json, subprocess, sys, tempfile
 from pathlib import Path
 import numpy as np
 
@@ -18,9 +22,11 @@ VID = ROOT / "assets/incoming/video"
 OUT = ROOT / "public/hero"
 CLIPS = [VID / "test-a-day-only.mp4", VID / "video-2-zoom.mp4"]
 TOWER_X = 0.573  # tower position in both clips, measured on the frames
+SEAM_24 = 119    # last frame of clip A in the joined 24 fps sequence
+INTERP = "minterpolate=fps=48:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"
 
 def run(*args):
-    subprocess.run(args, check=True)
+    subprocess.run([str(a) for a in args], check=True)
 
 def gray_frames(path, w=320, h=180):
     raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(path), "-vf",
@@ -29,30 +35,34 @@ def gray_frames(path, w=320, h=180):
     return np.frombuffer(raw, np.uint8).reshape(-1, h, w).astype(np.float32)
 
 def main():
+    tmp = Path(tempfile.mkdtemp())
     for sub in ("d", "m"):
         (OUT / sub).mkdir(parents=True, exist_ok=True)
         for f in (OUT / sub).glob("*.webp"):
             f.unlink()
-    combined = OUT / "_combined.mp4"
-    # Clip A minus its last frame (identical to clip 2's first frame), then clip 2.
-    run("ffmpeg", "-loglevel", "error", "-y", "-i", str(CLIPS[0]), "-i", str(CLIPS[1]),
-        "-filter_complex",
-        "[0:v]trim=end_frame=120,setpts=PTS-STARTPTS[a];[1:v]setpts=PTS-STARTPTS[b];[a][b]concat=n=2:v=1[v]",
-        "-map", "[v]", "-c:v", "libx264", "-crf", "12", "-pix_fmt", "yuv420p", str(combined))
-    run("ffmpeg", "-loglevel", "error", "-y", "-i", str(combined), "-vf",
-        "scale=1280:-2:flags=lanczos", "-c:v", "libwebp", "-quality", "62", str(OUT / "d/%04d.webp"))
-    crop = f"crop=ih*9/16:ih:iw*{TOWER_X}-ih*9/32:0,scale=720:1280:flags=lanczos"
-    run("ffmpeg", "-loglevel", "error", "-y", "-i", str(combined), "-vf", crop,
-        "-c:v", "libwebp", "-quality", "60", str(OUT / "m/%04d.webp"))
-    run("ffmpeg", "-loglevel", "error", "-y", "-i", str(combined), "-vf", "scale=1280:-2",
-        "-frames:v", "1", "-q:v", "3", str(OUT / "poster-d.jpg"))
-    run("ffmpeg", "-loglevel", "error", "-y", "-i", str(combined), "-vf", crop,
-        "-frames:v", "1", "-q:v", "3", str(OUT / "poster-m.jpg"))
+    for stale in ("ridge.json",):
+        (OUT / stale).unlink(missing_ok=True)
 
-    g = gray_frames(combined)
+    # Clip A minus its last frame (identical to clip 2's first frame), then clip 2.
+    join = "[0:v]trim=end_frame=120,setpts=PTS-STARTPTS[a];[1:v]setpts=PTS-STARTPTS[b];[a][b]concat=n=2:v=1"
+    crop = f"crop=ih*9/16:ih:iw*{TOWER_X}-ih*9/32:0"
+    for name, chain in (("d", "scale=1280:-2:flags=lanczos"), ("m", f"{crop},scale=720:1280:flags=lanczos")):
+        clip = tmp / f"{name}.mp4"
+        run("ffmpeg", "-loglevel", "error", "-y", "-i", CLIPS[0], "-i", CLIPS[1], "-filter_complex",
+            f"{join},{chain},{INTERP}[v]", "-map", "[v]", "-c:v", "libx264", "-crf", "12", clip)
+        q = "60" if name == "d" else "58"
+        run("ffmpeg", "-loglevel", "error", "-y", "-i", clip, "-c:v", "libwebp", "-quality", q,
+            OUT / name / "%04d.webp")
+        run("ffmpeg", "-loglevel", "error", "-y", "-i", clip, "-frames:v", "1", "-q:v", "3",
+            OUT / f"poster-{name}.jpg")
+        run("ffmpeg", "-loglevel", "error", "-y", "-sseof", "-0.05", "-i", clip, "-frames:v", "1",
+            "-vf", "gblur=sigma=14,eq=brightness=-0.06:saturation=1.1", "-q:v", "4",
+            OUT / f"night-{name}.jpg")
+        if name == "d":
+            g = gray_frames(clip)
+
     n = len(g)
-    seg_a = list(range(0, 120))          # frames 0..119 come from clip A
-    seg_b = list(range(119, n))          # 119 is the seam, shared by both curves
+    seam = SEAM_24 * 2  # 48 fps index of the seam
     def segment(idx):
         d = np.abs(np.diff(g[idx], axis=0)).mean(axis=(1, 2))
         c = np.concatenate([[0.0], np.cumsum(d)])
@@ -60,44 +70,9 @@ def main():
                 "curve": (c / c[-1]).round(5).tolist()}
     # "total" lets the page give each clip scroll length in proportion to how much
     # the picture changes, so the speed matches across the seam.
-    timing = {"frames": n, "segments": [segment(seg_a), segment(seg_b)]}
+    timing = {"frames": n, "segments": [segment(list(range(0, seam + 1))), segment(list(range(seam, n)))]}
     (OUT / "timing.json").write_text(json.dumps(timing))
-
-    # Ridge line and tower on the last frame.
-    last = subprocess.run(["ffmpeg", "-loglevel", "error", "-sseof", "-0.05", "-i", str(combined),
-                           "-vf", "scale=960:540", "-frames:v", "1", "-f", "rawvideo",
-                           "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
-    img = np.frombuffer(last, np.uint8).reshape(540, 960, 3).astype(np.float32)
-    blue_minus_green = img[..., 2] - img[..., 1]
-    lum = img.mean(axis=2)
-    ridge = []
-    for x in range(0, 960, 8):
-        col = (blue_minus_green[:, x] < 25) & (lum[:, x] < 90)
-        start = 200
-        ys = np.where(col[start:])[0]
-        if len(ys):
-            # first run of at least 6 mountain pixels avoids thin antenna lattices
-            y = None
-            for k in ys:
-                if col[start + k:start + k + 6].all():
-                    y = start + k
-                    break
-            if y is not None:
-                ridge.append([round(x / 960, 4), round(y / 540, 4)])
-    # Drop ridge samples that climbed the tower or the side antennas, then smooth.
-    pts = np.array(ridge)
-    on_mast = ((pts[:, 0] > 0.535) & (pts[:, 0] < 0.61)) | ((pts[:, 0] > 0.44) & (pts[:, 0] < 0.475)) \
-        | ((pts[:, 0] > 0.755) & (pts[:, 0] < 0.795))
-    ys = np.interp(pts[:, 0], pts[~on_mast, 0], pts[~on_mast, 1])
-    ys = np.convolve(np.pad(ys, (2, 2), mode="edge"), np.ones(5) / 5, mode="valid")
-    ridge = [[round(float(x), 4), round(float(y), 4)] for x, y in zip(pts[:, 0], ys)]
-    # Tower and antenna geometry measured by eye on the last frame (960x540).
-    tower = {"x": 0.574, "tip": 0.296, "antennaBase": 0.55, "deckTop": 0.555, "deckBottom": 0.61,
-             "deckHalfWidth": 0.02, "shaftHalfWidth": 0.011, "base": 0.785}
-    antennas = [{"x": 0.458, "top": 0.59, "base": 0.78}, {"x": 0.775, "top": 0.595, "base": 0.825}]
-    (OUT / "ridge.json").write_text(json.dumps({"ridge": ridge, "tower": tower, "antennas": antennas}))
-    combined.unlink()
-    print(n, "frames; ridge points", len(ridge))
+    print(n, "frames; seam at", seam)
 
 if __name__ == "__main__":
     sys.exit(main())
