@@ -8,6 +8,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { QUESTIONS } from "@/lib/match/questions.ts";
 import type { Answer } from "@/lib/match/match.ts";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
+import { evictions, wanted } from "@/lib/hero/frame-cache.ts";
 import { COPY, type Lang } from "@/lib/hero/copy.ts";
 import { asset } from "@/lib/base-path.ts";
 import { QuestionCard } from "./QuestionCard";
@@ -115,14 +116,25 @@ export function HeroScroll() {
     gsap.registerPlugin(ScrollTrigger);
     let timing: Timing | null = null;
     let windows: ReturnType<typeof scrollWindows> = [];
-    const frames: (Frame | null)[] = [];
+    // Frames stay compressed as blobs; only a window around the current frame is
+    // decoded, because hundreds of decoded bitmaps exhaust mobile Safari's memory.
+    const blobs: (Blob | null)[] = [];
+    const bitmaps = new Map<number, Frame>();
+    const decoding = new Set<number>();
+    const maxDecoded = portrait ? 24 : 32;
     let frameW = portrait ? 720 : 1280;
+    let lastFrame = 0;
+    let direction: 1 | -1 = 1;
     let target = 0;
     let current = -1;
     let drawn = -1;
     let raf = 0;
     let last = performance.now();
     let cancelled = false;
+
+    const release = (f: Frame) => {
+      if ("close" in f) f.close();
+    };
 
     // Draw no larger than the frames themselves: a bigger canvas costs time, not detail.
     const resize = () => {
@@ -134,12 +146,56 @@ export function HeroScroll() {
       drawn = -1;
     };
 
-    const nearest = (i: number) => {
-      for (let d = 0; d < frames.length; d++) {
-        if (frames[i - d]) return frames[i - d];
-        if (frames[i + d]) return frames[i + d];
+    const trim = () => {
+      for (const k of evictions([...bitmaps.keys()], lastFrame, maxDecoded)) {
+        const f = bitmaps.get(k);
+        bitmaps.delete(k);
+        if (f) release(f);
       }
-      return null;
+    };
+
+    const decode = (i: number) => {
+      const blob = blobs[i];
+      if (!blob || bitmaps.has(i) || decoding.has(i)) return;
+      decoding.add(i);
+      const done = (f: Frame) => {
+        decoding.delete(i);
+        if (cancelled) return release(f);
+        if (i === 0 && f.width !== frameW) {
+          frameW = f.width;
+          resize();
+        }
+        bitmaps.set(i, f);
+        trim();
+        drawn = -1;
+      };
+      if ("createImageBitmap" in window) {
+        createImageBitmap(blob).then(done, () => decoding.delete(i));
+      } else {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.src = url;
+        img.decode().then(
+          () => {
+            URL.revokeObjectURL(url);
+            done(img);
+          },
+          () => decoding.delete(i),
+        );
+      }
+    };
+
+    const nearestDecoded = (i: number) => {
+      let best: Frame | null = null;
+      let dist = Infinity;
+      for (const [k, f] of bitmaps) {
+        const d = Math.abs(k - i);
+        if (d < dist) {
+          dist = d;
+          best = f;
+        }
+      }
+      return best;
     };
 
     const cover = (img: Frame, alpha: number) => {
@@ -156,16 +212,23 @@ export function HeroScroll() {
     const render = (p: number) => {
       if (timing) {
         const f = frameAt(p, timing, windows);
+        const i0 = Math.floor(f);
+        if (i0 !== lastFrame) direction = i0 > lastFrame ? 1 : -1;
+        lastFrame = i0;
+        for (const i of wanted(i0, direction, timing.frames, 6, 16)) {
+          if (decoding.size >= 3) break;
+          decode(i);
+        }
         const key = Math.round(f * 16);
         if (key !== drawn) {
-          const i0 = Math.floor(f);
           const a = f - i0;
-          const base = nearest(i0);
+          const exact = bitmaps.get(i0);
+          const base = exact ?? nearestDecoded(i0);
           if (base) {
             cover(base, 1);
-            const next = frames[i0 + 1];
-            if (a > 0.06 && next) cover(next, a);
-            drawn = key;
+            const next = bitmaps.get(i0 + 1);
+            if (exact && a > 0.06 && next) cover(next, a);
+            drawn = exact ? key : -1;
           }
         }
       }
@@ -209,32 +272,26 @@ export function HeroScroll() {
     resize();
     window.addEventListener("resize", resize);
 
+    // Download every frame as a compressed blob, coarse frames first, a few at a time.
     fetch(asset("/hero/timing.json"))
       .then((r) => r.json())
-      .then((data: Timing) => {
+      .then(async (data: Timing) => {
         if (cancelled) return;
         timing = data;
         windows = scrollWindows(data, FRAMES_FROM, FRAMES_TO);
-        frames.length = data.frames;
-        frames.fill(null);
-        for (const i of loadOrder(data.frames)) {
-          const img = new Image();
-          img.decoding = "async";
-          img.src = frameUrl(set, i);
-          img
-            .decode()
-            .then((): Promise<Frame> | Frame => ("createImageBitmap" in window ? createImageBitmap(img) : img))
-            .then((bmp: Frame) => {
-              if (cancelled) return;
-              if (i === 0 && bmp.width !== frameW) {
-                frameW = bmp.width;
-                resize();
-              }
-              frames[i] = bmp;
+        blobs.length = data.frames;
+        blobs.fill(null);
+        const queue = loadOrder(data.frames);
+        const worker = async () => {
+          for (let i = queue.shift(); i !== undefined && !cancelled; i = queue.shift()) {
+            try {
+              const r = await fetch(frameUrl(set, i));
+              blobs[i] = await r.blob();
               drawn = -1;
-            })
-            .catch(() => {});
-        }
+            } catch {}
+          }
+        };
+        await Promise.all(Array.from({ length: 6 }, worker));
       })
       .catch(() => {});
 
@@ -254,7 +311,8 @@ export function HeroScroll() {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       st.kill();
-      for (const f of frames) if (f && "close" in f) f.close();
+      for (const f of bitmaps.values()) release(f);
+      bitmaps.clear();
     };
   }, [reduced, portrait, set]);
 
