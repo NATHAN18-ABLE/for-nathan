@@ -5,6 +5,7 @@ import { QUESTIONS } from "@/lib/match/questions.ts";
 import { TRAVEL_TYPES } from "@/lib/match/travel-types.ts";
 import { matchDistricts, scoreAnswers, typeCode, type Answer } from "@/lib/match/match.ts";
 import { QuestionCard } from "@/components/QuestionCard";
+import Link from "next/link";
 import styles from "./test.module.css";
 
 const KEY = "seoul.answers";
@@ -36,9 +37,9 @@ export default function TestPage() {
   return (
     <main className={styles.page}>
       <header className={styles.nav}>
-        <a className={styles.wordmark} href="/">
+        <Link className={styles.wordmark} href="/">
           Seoul, Curated
-        </a>
+        </Link>
       </header>
       {!done ? (
         <section className={styles.center} aria-live="polite">

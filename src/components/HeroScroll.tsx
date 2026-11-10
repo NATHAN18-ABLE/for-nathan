@@ -9,6 +9,8 @@ import { DISTRICTS } from "@/lib/match/districts.ts";
 import type { Answer } from "@/lib/match/match.ts";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
 import { COPY, DISTRICT_ORDER, type Lang } from "@/lib/hero/copy.ts";
+import { asset } from "@/lib/base-path.ts";
+import Link from "next/link";
 import { QuestionCard } from "./QuestionCard";
 import styles from "./HeroScroll.module.css";
 
@@ -41,7 +43,7 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const phase = (p: number, from: number, len: number) => clamp01((p - from) / len);
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 const smooth = (t: number) => t * t * (3 - 2 * t);
-const frameUrl = (set: string, i: number) => `/hero/${set}/${String(i + 1).padStart(4, "0")}.webp`;
+const frameUrl = (set: string, i: number) => asset(`/hero/${set}/${String(i + 1).padStart(4, "0")}.webp`);
 
 function loadOrder(n: number): number[] {
   const seen = new Set<number>();
@@ -88,7 +90,7 @@ export function HeroScroll() {
     sync();
     rm.addEventListener("change", sync);
     pm.addEventListener("change", sync);
-    fetch("/hero/ridge.json")
+    fetch(asset("/hero/ridge.json"))
       .then((r) => r.json())
       .then((data: Ridge) => {
         ridgeRef.current = data;
@@ -274,7 +276,7 @@ export function HeroScroll() {
     resize();
     window.addEventListener("resize", resize);
 
-    fetch("/hero/timing.json")
+    fetch(asset("/hero/timing.json"))
       .then((r) => r.json())
       .then((data: Timing) => {
         if (cancelled) return;
@@ -363,9 +365,9 @@ export function HeroScroll() {
 
   const nav = (
     <header ref={navRef} className={styles.nav} data-tone="light">
-      <a className={styles.wordmark} href="/">
+      <Link className={styles.wordmark} href="/">
         Seoul, Curated
-      </a>
+      </Link>
       <nav className={styles.links} aria-label="Main">
         <button type="button" className={styles.link} onClick={jumpToTest}>
           {t.nav.test}
@@ -435,14 +437,14 @@ export function HeroScroll() {
         {nav}
         <section className={styles.staticHero}>
           <picture>
-            <source media="(max-aspect-ratio: 4/5)" srcSet="/hero/poster-m.jpg" />
-            <img src="/hero/poster-d.jpg" alt="Hanok roof eaves in the foreground and Seoul with N Seoul Tower at golden hour" />
+            <source media="(max-aspect-ratio: 4/5)" srcSet={asset("/hero/poster-m.jpg")} />
+            <img src={asset("/hero/poster-d.jpg")} alt="Hanok roof eaves in the foreground and Seoul with N Seoul Tower at golden hour" />
           </picture>
           {panel}
           {chips}
         </section>
         <section className={styles.staticNight}>
-          <img src={portrait ? "/hero/m/0241.webp" : "/hero/d/0241.webp"} alt="N Seoul Tower lit at night on Namsan" />
+          <img src={asset(portrait ? "/hero/m/0241.webp" : "/hero/d/0241.webp")} alt="N Seoul Tower lit at night on Namsan" />
         </section>
         <section className={styles.staticAfter}>
           {lineArt}
@@ -462,7 +464,7 @@ export function HeroScroll() {
             <canvas
               ref={canvasRef}
               className={styles.canvas}
-              style={{ backgroundImage: `url(${portrait ? "/hero/poster-m.jpg" : "/hero/poster-d.jpg"})` }}
+              style={{ backgroundImage: `url(${asset(portrait ? "/hero/poster-m.jpg" : "/hero/poster-d.jpg")})` }}
               aria-hidden="true"
             />
             <div ref={bloomRef} className={styles.bloom} aria-hidden="true" />
