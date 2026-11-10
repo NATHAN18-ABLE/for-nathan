@@ -5,7 +5,8 @@ import { QUESTIONS } from "@/lib/match/questions.ts";
 import { TRAVEL_TYPES } from "@/lib/match/travel-types.ts";
 import { matchDistricts, scoreAnswers, typeCode, type Answer } from "@/lib/match/match.ts";
 import { QuestionCard } from "@/components/QuestionCard";
-import Link from "next/link";
+import { SiteNav } from "@/components/SiteNav";
+import { useLang } from "@/lib/lang.ts";
 import { asset } from "@/lib/base-path.ts";
 import styles from "./test.module.css";
 
@@ -13,6 +14,7 @@ const KEY = "seoul.answers";
 
 export default function TestPage() {
   const [answers, setAnswers] = useState<Answer[] | null>(null);
+  const [lang, chooseLang] = useLang();
 
   useEffect(() => {
     let saved: Answer[] = [];
@@ -42,11 +44,7 @@ export default function TestPage() {
 
   return (
     <main className={styles.page} style={backdrop}>
-      <header className={styles.nav}>
-        <Link className={styles.wordmark} href="/">
-          Seoul, Curated
-        </Link>
-      </header>
+      <SiteNav lang={lang} onLang={chooseLang} />
       {!done ? (
         <section className={styles.center} aria-live="polite">
           <QuestionCard

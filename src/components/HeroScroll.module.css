@@ -7,74 +7,10 @@
   color: rgb(251 251 249 / 0.66);
 }
 
-/* Navigation */
-.nav {
-  position: fixed;
-  inset: 0 0 auto 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 72px;
-  padding: env(safe-area-inset-top) var(--gutter) 0;
-  color: var(--white);
-  text-shadow: 0 1px 14px rgb(12 22 52 / 0.35);
-}
-
-.wordmark {
-  font-size: 20px;
-  font-weight: 340;
-  letter-spacing: 0.28em;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.links {
-  display: flex;
-  align-items: center;
-  gap: clamp(16px, 3vw, 40px);
-}
-
-.link {
-  background: none;
-  border: 0;
-  padding: 8px 0;
-  font-size: 16px;
-  font-weight: 380;
-  text-decoration: none;
-}
-
-.lang {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border: 1px solid rgb(251 251 249 / 0.7);
-  border-radius: 999px;
-  font-size: 14px;
-}
-
-.lang span {
-  opacity: 0.6;
-}
-
-.lang button {
-  background: none;
-  border: 0;
-  padding: 4px;
-  font-size: 14px;
-  opacity: 0.7;
-}
-
-.lang button[aria-pressed="true"] {
-  opacity: 1;
-  font-weight: 520;
-}
-
 /* Pinned track */
 .track {
   position: relative;
-  height: 820svh;
+  height: 900svh;
 }
 
 .stage {
@@ -117,14 +53,71 @@
     linear-gradient(to bottom, rgb(10 18 46 / 0.15), rgb(10 18 46 / 0.4));
 }
 
-/* Gentle top and bottom shade so white type reads on the bright sky. */
+/* Soft shade so white type reads on the bright day sky: a band under the menu
+   and a wide, low pool of blue behind the title. */
 .shade {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(to bottom, rgb(18 32 72 / 0.3), rgb(18 32 72 / 0) 22%),
-    radial-gradient(60% 45% at 50% 46%, rgb(18 32 72 / 0.16), rgb(18 32 72 / 0));
+    linear-gradient(to bottom, rgb(16 30 70 / 0.42), rgb(16 30 70 / 0) 24%),
+    radial-gradient(56% 34% at 50% 45%, rgb(16 30 70 / 0.34), rgb(16 30 70 / 0.12) 60%, rgb(16 30 70 / 0));
+}
+
+/* Appears only while a caption is up, so the lines read over trees and rooftops. */
+.lowShade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(to top, rgb(10 18 46 / 0.55), rgb(10 18 46 / 0.18) 34%, rgb(10 18 46 / 0) 52%);
+  will-change: opacity;
+}
+
+.caption {
+  position: absolute;
+  left: var(--gutter);
+  bottom: calc(clamp(40px, 11svh, 120px) + env(safe-area-inset-bottom));
+  margin: 0;
+  max-width: min(18ch, calc(100% - 2 * var(--gutter)));
+  font-size: clamp(32px, 4vw, 60px);
+  line-height: 1.08;
+  font-weight: 360;
+  letter-spacing: -0.022em;
+  color: var(--white);
+  text-shadow:
+    0 1px 2px rgb(10 20 50 / 0.3),
+    0 4px 32px rgb(10 20 50 / 0.45);
+  text-wrap: balance;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform, filter;
+}
+
+.caption:lang(ko) {
+  letter-spacing: -0.01em;
+}
+
+/* The arrival line between the film and the first question */
+.welcome {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  padding: 0 var(--gutter) 6svh;
+  text-align: center;
+  font-size: clamp(48px, 7.6vw, 116px);
+  line-height: 1.02;
+  font-weight: 340;
+  letter-spacing: -0.025em;
+  color: var(--white);
+  text-shadow: 0 4px 40px rgb(6 12 34 / 0.5);
+  text-wrap: balance;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: opacity, transform, filter;
 }
 
 /* Opening title: alone, centred, nothing to press yet. */
@@ -137,25 +130,27 @@
   padding: 0 var(--gutter) 10svh;
   text-align: center;
   color: var(--white);
-  text-shadow: 0 2px 30px rgb(12 22 52 / 0.35);
+  text-shadow:
+    0 1px 3px rgb(10 20 50 / 0.28),
+    0 6px 48px rgb(10 20 50 / 0.42);
   will-change: opacity, transform, filter;
 }
 
 .headline {
   margin: 0;
-  font-size: clamp(52px, 8.4vw, 128px);
+  font-size: clamp(54px, 8.4vw, 124px);
   line-height: 1;
-  font-weight: 300;
+  font-weight: 370;
   letter-spacing: -0.025em;
 }
 
 .sub {
-  margin: 22px 0 0;
-  max-width: 34ch;
-  font-size: clamp(16px, 1.3vw, 19px);
-  font-weight: 380;
-  letter-spacing: 0.01em;
-  opacity: 0.88;
+  margin: 24px 0 0;
+  max-width: 32ch;
+  font-size: clamp(18px, 1.5vw, 22px);
+  line-height: 1.45;
+  font-weight: 460;
+  letter-spacing: 0.005em;
   text-wrap: balance;
 }
 
@@ -221,18 +216,8 @@
 }
 
 @media (max-width: 760px) {
-  .nav {
-    height: 60px;
-  }
-  .wordmark {
-    font-size: 15px;
-    letter-spacing: 0.2em;
-  }
-  .link[href="#about"] {
-    display: none;
-  }
-  .link {
-    font-size: 15px;
+  .caption {
+    bottom: calc(48px + env(safe-area-inset-bottom));
   }
   .after {
     top: auto;

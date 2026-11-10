@@ -2,8 +2,20 @@ export type Lang = "en" | "ko";
 
 export const COPY = {
   en: {
-    nav: { test: "The test", districts: "12 Districts", meet: "Meet travelers", about: "About" },
+    nav: {
+      test: "The Test",
+      districts: "12 Districts",
+      story: "Seoul Story",
+      metaverse: "Metaverse",
+      about: "About Us",
+      menu: "Menu",
+      close: "Close",
+      main: "Main",
+      language: "Language",
+    },
     headline: "Find your Seoul.",
+    captions: ["600 years of rooftops.", "Then the city lights up.", "Every district, a different Seoul."],
+    welcome: "Welcome to Seoul!",
     sub: "Twelve quiet questions. One district that suits you, and a day to spend there.",
     afterTitle: "Every district answers a different traveler.",
     afterBody: "Start with one morning. We'll take it from there.",
@@ -12,8 +24,20 @@ export const COPY = {
     proposal: "A concept proposal for a personalized Seoul travel site. Not an official Seoul Tourism Organization service.",
   },
   ko: {
-    nav: { test: "테스트", districts: "12개 구", meet: "여행자 만나기", about: "소개" },
+    nav: {
+      test: "테스트",
+      districts: "12개 구",
+      story: "서울 이야기",
+      metaverse: "메타버스",
+      about: "팀 소개",
+      menu: "메뉴",
+      close: "닫기",
+      main: "주요 메뉴",
+      language: "언어",
+    },
     headline: "나의 서울을 찾아서.",
+    captions: ["600년의 지붕 아래", "그리고 도시에 불이 켜지면", "구마다 다른 서울"],
+    welcome: "서울에 오신 걸 환영해요!",
     sub: "조용한 질문 열두 개. 나와 맞는 동네 하나, 그리고 그곳에서의 하루.",
     afterTitle: "구마다 어울리는 여행자가 다릅니다.",
     afterBody: "아침 하나를 고르는 것부터 시작해요.",

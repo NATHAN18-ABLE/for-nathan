@@ -2,26 +2,36 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { QUESTIONS } from "@/lib/match/questions.ts";
 import type { Answer } from "@/lib/match/match.ts";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
 import { evictions, wanted } from "@/lib/hero/frame-cache.ts";
-import { COPY, type Lang } from "@/lib/hero/copy.ts";
+import { COPY } from "@/lib/hero/copy.ts";
+import { useLang } from "@/lib/lang.ts";
 import { asset } from "@/lib/base-path.ts";
 import { QuestionCard } from "./QuestionCard";
+import { SiteNav } from "./SiteNav";
 import styles from "./HeroScroll.module.css";
 
 // Scroll map (share of the pinned track).
-const INTRO_OUT = 0.06; // the title steps back as soon as scrolling starts
-const FRAMES_FROM = 0.05;
-const FRAMES_TO = 0.84;
-const NIGHT_FROM = 0.82; // the last frame softens into a blurred night backdrop
-const NIGHT_LEN = 0.1;
-const AFTER_FROM = 0.88;
-const AFTER_LEN = 0.08;
+const INTRO_OUT = 0.05; // the title steps back as soon as scrolling starts
+const FRAMES_FROM = 0.04;
+const FRAMES_TO = 0.76;
+const NIGHT_FROM = 0.74; // the last frame softens into a blurred night backdrop
+const NIGHT_LEN = 0.08;
+const WELCOME_IN = [0.77, 0.05] as const; // "Welcome to Seoul!" rises in…
+const WELCOME_OUT = [0.87, 0.04] as const; // …holds, then lifts away for the first question
+const AFTER_FROM = 0.9;
+const AFTER_LEN = 0.07;
+// Short lines over the film, placed by frame so they land on the right scene.
+const CAPTION_FRAMES: readonly [number, number][] = [
+  [20, 130], // rooftops by day
+  [165, 275], // lights coming on
+  [285, 440], // closing in on Namsan
+];
+const CAPTION_FADE = 22;
 const SMOOTH_MS = 120; // time constant of the scroll follow; frame-rate independent
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -44,7 +54,7 @@ type Frame = HTMLImageElement | ImageBitmap;
 
 export function HeroScroll() {
   const router = useRouter();
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, chooseLang] = useLang();
   const [reduced, setReduced] = useState(false);
   const [portrait, setPortrait] = useState(false);
   const t = COPY[lang];
@@ -56,12 +66,11 @@ export function HeroScroll() {
   const nightRef = useRef<HTMLDivElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
   const afterRef = useRef<HTMLDivElement>(null);
+  const welcomeRef = useRef<HTMLHeadingElement>(null);
+  const captionRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const lowShadeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("seoul.lang");
-      if (saved === "en" || saved === "ko") setLang(saved);
-    } catch {}
     const rm = matchMedia("(prefers-reduced-motion: reduce)");
     const pm = matchMedia("(max-aspect-ratio: 4/5)");
     const sync = () => {
@@ -76,17 +85,6 @@ export function HeroScroll() {
       pm.removeEventListener("change", sync);
     };
   }, []);
-
-  useEffect(() => {
-    document.documentElement.lang = lang;
-  }, [lang]);
-
-  const chooseLang = (next: Lang) => {
-    setLang(next);
-    try {
-      localStorage.setItem("seoul.lang", next);
-    } catch {}
-  };
 
   const startTest = (answer: Answer) => {
     try {
@@ -210,8 +208,21 @@ export function HeroScroll() {
     };
 
     const render = (p: number) => {
+      let shade = 0;
       if (timing) {
         const f = frameAt(p, timing, windows);
+        CAPTION_FRAMES.forEach(([a, b], k) => {
+          const el = captionRefs.current[k];
+          if (!el) return;
+          const v = Math.min(clamp01((f - a) / CAPTION_FADE), clamp01((b - f) / CAPTION_FADE));
+          const e = easeOut(v);
+          const dir = f < (a + b) / 2 ? 1 : -1; // rise in from below, lift away above
+          el.style.opacity = String(e);
+          el.style.transform = `translateY(${dir * 18 * (1 - e)}px)`;
+          el.style.filter = e < 1 ? `blur(${5 * (1 - e)}px)` : "";
+          el.style.visibility = v > 0 ? "visible" : "hidden";
+          shade = Math.max(shade, e);
+        });
         const i0 = Math.floor(f);
         if (i0 !== lastFrame) direction = i0 > lastFrame ? 1 : -1;
         lastFrame = i0;
@@ -231,6 +242,17 @@ export function HeroScroll() {
             drawn = exact ? key : -1;
           }
         }
+      }
+      if (lowShadeRef.current) lowShadeRef.current.style.opacity = String(shade);
+      const w = welcomeRef.current;
+      if (w) {
+        const win = easeOut(phase(p, WELCOME_IN[0], WELCOME_IN[1]));
+        const wout = easeOut(phase(p, WELCOME_OUT[0], WELCOME_OUT[1]));
+        const v = win * (1 - wout);
+        w.style.opacity = String(v);
+        w.style.transform = `translateY(${24 * (1 - win) - 40 * wout}px) scale(${0.98 + 0.02 * win})`;
+        w.style.filter = v < 1 ? `blur(${8 * (1 - v)}px)` : "";
+        w.style.visibility = v > 0 ? "visible" : "hidden";
       }
       const u = easeOut(phase(p, 0, INTRO_OUT));
       const intro = introRef.current;
@@ -319,30 +341,7 @@ export function HeroScroll() {
   const first = QUESTIONS[0];
   const nightBg = { backgroundImage: `url(${asset(`/hero/night-${set}.jpg`)})` };
 
-  const nav = (
-    <header className={styles.nav}>
-      <Link className={styles.wordmark} href="/">
-        Seoul, Curated
-      </Link>
-      <nav className={styles.links} aria-label="Main">
-        <button type="button" className={styles.link} onClick={jumpToTest}>
-          {t.nav.test}
-        </button>
-        <a className={styles.link} href="#about">
-          {t.nav.about}
-        </a>
-        <div className={styles.lang} role="group" aria-label="Language">
-          <button type="button" aria-pressed={lang === "en"} onClick={() => chooseLang("en")}>
-            EN
-          </button>
-          <span aria-hidden="true">|</span>
-          <button type="button" aria-pressed={lang === "ko"} onClick={() => chooseLang("ko")}>
-            KO
-          </button>
-        </div>
-      </nav>
-    </header>
-  );
+  const nav = <SiteNav lang={lang} onLang={chooseLang} onTest={jumpToTest} />;
 
   const intro = (
     <div ref={introRef} className={styles.intro}>
@@ -353,7 +352,7 @@ export function HeroScroll() {
 
   const after = (
     <div ref={afterRef} className={styles.after} id="first-question">
-      <h2 className={styles.afterTitle}>{t.afterTitle}</h2>
+      <h2 className={styles.afterTitle}>{reduced ? t.welcome : t.afterTitle}</h2>
       <p className={styles.afterBody}>{t.afterBody}</p>
       <QuestionCard question={first} index={1} total={QUESTIONS.length} label={t.cardOf(1, QUESTIONS.length)} onAnswer={startTest} headingLevel="h3" />
     </div>
@@ -393,7 +392,22 @@ export function HeroScroll() {
             <div className={styles.dusk} />
           </div>
           <div className={styles.shade} aria-hidden="true" />
+          <div ref={lowShadeRef} className={styles.lowShade} aria-hidden="true" />
           {intro}
+          {t.captions.map((line, k) => (
+            <p
+              key={k}
+              ref={(el) => {
+                captionRefs.current[k] = el;
+              }}
+              className={styles.caption}
+            >
+              {line}
+            </p>
+          ))}
+          <h2 ref={welcomeRef} className={styles.welcome}>
+            {t.welcome}
+          </h2>
           {after}
         </div>
       </section>
@@ -402,7 +416,7 @@ export function HeroScroll() {
   );
 }
 
-function Footer({ t }: { t: (typeof COPY)[Lang] }) {
+function Footer({ t }: { t: (typeof COPY)[keyof typeof COPY] }) {
   return (
     <footer className="site-footer" id="about">
       <p>{t.proposal}</p>

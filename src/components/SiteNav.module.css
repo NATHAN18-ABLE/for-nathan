@@ -1,0 +1,225 @@
+.nav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 72px;
+  padding: env(safe-area-inset-top) var(--gutter) 0;
+}
+
+.nav[data-tone="light"] {
+  color: var(--white);
+  text-shadow:
+    0 1px 2px rgb(10 20 50 / 0.3),
+    0 2px 16px rgb(10 20 50 / 0.35);
+}
+
+.nav[data-tone="dark"] {
+  position: sticky;
+  color: var(--ink);
+  background: rgb(246 246 243 / 0.92);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+}
+
+.wordmark {
+  font-size: 20px;
+  font-weight: 380;
+  letter-spacing: 0.26em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 2.4vw, 36px);
+}
+
+.link {
+  position: relative;
+  padding: 8px 0;
+  font-size: 16px;
+  font-weight: 430;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms var(--ease-out);
+}
+
+.link[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .link:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+.lang {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.lang span {
+  opacity: 0.55;
+}
+
+.lang button {
+  background: none;
+  border: 0;
+  padding: 4px;
+  font-size: 14px;
+  opacity: 0.72;
+}
+
+.lang button[aria-pressed="true"] {
+  opacity: 1;
+  font-weight: 560;
+}
+
+.menuButton {
+  display: none;
+  min-height: 44px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  font-size: 16px;
+  font-weight: 450;
+  letter-spacing: 0.04em;
+}
+
+/* Full-screen menu for tablets and phones */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) var(--gutter) calc(24px + env(safe-area-inset-bottom));
+  color: var(--ink);
+  background: var(--porcelain);
+  visibility: hidden;
+  clip-path: inset(0 0 100% 0);
+  transition:
+    clip-path 240ms var(--ease-out),
+    visibility 0s linear 240ms;
+}
+
+.sheet[data-open="true"] {
+  visibility: visible;
+  clip-path: inset(0 0 0 0);
+  transition:
+    clip-path 460ms var(--ease-out),
+    visibility 0s;
+}
+
+.sheetTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.sheetLinks {
+  display: flex;
+  flex-direction: column;
+  margin-top: clamp(24px, 8svh, 72px);
+}
+
+.sheetLink {
+  padding: 14px 0;
+  font-size: clamp(30px, 7vw, 44px);
+  line-height: 1.1;
+  font-weight: 340;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  border-bottom: 1px solid var(--porcelain-shadow);
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 200ms ease,
+    transform 200ms var(--ease-out);
+}
+
+.sheetLink[aria-current="page"] {
+  color: var(--cobalt);
+}
+
+.sheet[data-open="true"] .sheetLink {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 420ms ease,
+    transform 520ms var(--ease-out);
+}
+
+.sheet[data-open="true"] .sheetLink:nth-child(1) { transition-delay: 90ms; }
+.sheet[data-open="true"] .sheetLink:nth-child(2) { transition-delay: 125ms; }
+.sheet[data-open="true"] .sheetLink:nth-child(3) { transition-delay: 160ms; }
+.sheet[data-open="true"] .sheetLink:nth-child(4) { transition-delay: 195ms; }
+.sheet[data-open="true"] .sheetLink:nth-child(5) { transition-delay: 230ms; }
+
+.sheetFoot {
+  margin-top: auto;
+  display: flex;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet[data-open="true"] {
+    clip-path: none;
+    opacity: 0;
+    transition: opacity 160ms ease, visibility 0s linear 160ms;
+  }
+  .sheet[data-open="true"] {
+    opacity: 1;
+    transition: opacity 160ms ease, visibility 0s;
+  }
+  .sheetLink,
+  .sheet[data-open="true"] .sheetLink {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 1099px) {
+  .links {
+    display: none;
+  }
+  .menuButton {
+    display: block;
+  }
+}
+
+@media (max-width: 760px) {
+  .nav {
+    height: 60px;
+  }
+  .wordmark {
+    font-size: 15px;
+    letter-spacing: 0.2em;
+  }
+}

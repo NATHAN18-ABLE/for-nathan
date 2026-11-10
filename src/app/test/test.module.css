@@ -4,6 +4,7 @@
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+  padding-top: calc(72px + env(safe-area-inset-top));
   color: var(--white);
   background: var(--night);
 }
@@ -29,20 +30,6 @@
       var(--night-m) center / cover no-repeat,
       var(--night);
   }
-}
-
-.nav {
-  height: 72px;
-  display: flex;
-  align-items: center;
-  padding: env(safe-area-inset-top) var(--gutter) 0;
-}
-
-.wordmark {
-  font-size: 20px;
-  font-weight: 340;
-  letter-spacing: 0.26em;
-  text-decoration: none;
 }
 
 .center {
