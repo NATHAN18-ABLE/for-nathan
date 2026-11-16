@@ -18,8 +18,8 @@ const PAGES = {
       lede: "Two thousand years of Seoul, from Hanseong Baekje to the city you are about to walk. Coming next.",
     },
     metaverse: {
-      lede: "Meet travelers who found the same district. The first five rooms open together.",
-      list: ["Jongno", "Dongdaemun", "Mapo", "Seongdong", "Yongsan"],
+      lede: "Meet travelers who found the same district. Four rooms open first.",
+      list: ["Jongno", "Seodaemun", "Yongsan", "Yeongdeungpo"],
     },
     about: {
       lede: "The team behind Seoul, Curated. Introductions are on their way.",
@@ -35,8 +35,8 @@ const PAGES = {
       lede: "한성백제부터 지금 걷게 될 도시까지, 서울의 2천 년. 곧 이어집니다.",
     },
     metaverse: {
-      lede: "같은 구를 고른 여행자들을 만나 보세요. 첫 다섯 개의 방이 함께 열립니다.",
-      list: ["종로", "동대문", "마포", "성동", "용산"],
+      lede: "같은 구를 고른 여행자들을 만나 보세요. 네 개의 방이 먼저 열립니다.",
+      list: ["종로", "서대문", "용산", "영등포"],
     },
     about: {
       lede: "Seoul, Curated를 만든 팀을 곧 소개합니다.",

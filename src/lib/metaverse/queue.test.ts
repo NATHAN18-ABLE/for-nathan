@@ -50,7 +50,9 @@ test("a district with a room goes to its own room", () => {
 });
 
 test("a district without a room goes to the closest room by profile", () => {
-  assert.equal(nearestRoom("jung"), "dongdaemun");
+  assert.equal(nearestRoom("jung"), "yongsan");
+  assert.equal(nearestRoom("mapo"), "yeongdeungpo");
+  assert.equal(nearestRoom("songpa"), "seodaemun");
   for (const d of DISTRICTS) assert.ok(ROOMS.includes(nearestRoom(d.slug)), d.slug);
 });
 

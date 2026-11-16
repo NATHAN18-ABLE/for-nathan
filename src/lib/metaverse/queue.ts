@@ -4,7 +4,7 @@ import { DISTRICTS } from "../match/districts.ts";
 export const CAPACITY = 10;
 export const IDLE_MS = 120_000;
 // Districts with a metaverse room. Add a slug here once its scene exists.
-export const ROOMS = ["jongno", "dongdaemun", "mapo", "seongdong", "yongsan"];
+export const ROOMS = ["jongno", "seodaemun", "yongsan", "yeongdeungpo"];
 
 export interface Member {
   id: string;
