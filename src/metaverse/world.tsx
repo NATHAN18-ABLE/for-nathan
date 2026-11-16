@@ -6,6 +6,7 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, useLoader } from "@react-three/fiber";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { asset } from "@/lib/base-path.ts";
 
 type V3 = [number, number, number];
@@ -319,12 +320,15 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
   const trunk = useRef<THREE.InstancedMesh>(null);
   const crown = useRef<THREE.InstancedMesh>(null);
   const crownGeo = useMemo(() => {
-    const g = new THREE.IcosahedronGeometry(1, 2);
+    // Weld the sphere first, then push vertices in and out smoothly, so the crown stays
+    // one soft mass instead of splitting into loose triangles.
+    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 3).deleteAttribute("normal").deleteAttribute("uv"));
     const p = g.attributes.position;
-    const r = rand(seed);
+    const v = new THREE.Vector3();
     for (let i = 0; i < p.count; i++) {
-      const k = 0.88 + r() * 0.2;
-      p.setXYZ(i, p.getX(i) * k, p.getY(i) * k * 0.85, p.getZ(i) * k);
+      v.fromBufferAttribute(p, i);
+      const bump = 1 + 0.09 * Math.sin(v.x * 5 + seed) * Math.cos(v.z * 4.3) + 0.06 * Math.sin(v.y * 7.1 + seed * 2);
+      p.setXYZ(i, v.x * bump, v.y * bump * 0.86, v.z * bump);
     }
     g.computeVertexNormals();
     return g;
@@ -409,7 +413,8 @@ export function Mountains({ seed = 7, radius = 170 }: { seed?: number; radius?: 
   }, [seed, radius]);
   return (
     <mesh geometry={geom}>
-      <meshStandardMaterial color="#7f9a86" roughness={1} side={THREE.BackSide} />
+      {/* Kept out of the fog so the ridges stay green rather than melting into the warm haze. */}
+      <meshStandardMaterial color="#5f7f58" roughness={1} side={THREE.BackSide} fog={false} />
     </mesh>
   );
 }
@@ -437,6 +442,47 @@ export function LampPost({ position, lit, hills = [] }: { position: [number, num
         <coneGeometry args={[0.36, 0.22, 4]} />
         <meshStandardMaterial color="#2c2f35" roughness={0.6} />
       </mesh>
+    </group>
+  );
+}
+
+/** Onggi jars on a low stone terrace (jangdokdae): glazed, dark brown, a few sizes. */
+export function JarTerrace({ position, rotation = 0, seed = 2 }: { position: [number, number, number]; rotation?: number; seed?: number }) {
+  const jar = useMemo(() => {
+    const pts = [
+      [0.0, 0],
+      [0.26, 0.02],
+      [0.36, 0.18],
+      [0.42, 0.38],
+      [0.4, 0.55],
+      [0.3, 0.66],
+      [0.22, 0.68],
+      [0.22, 0.72],
+      [0.0, 0.72],
+    ].map(([x, y]) => new THREE.Vector2(x, y));
+    return new THREE.LatheGeometry(pts, 24);
+  }, []);
+  const lid = useMemo(() => new THREE.SphereGeometry(0.24, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2.6), []);
+  const jars = useMemo(() => {
+    const r = rand(seed);
+    const out: { x: number; z: number; s: number }[] = [];
+    for (let row = 0; row < 2; row++)
+      for (let i = 0; i < 4 - row; i++) out.push({ x: -1.2 + i * 0.85 + row * 0.42, z: row * -0.8, s: 0.75 + r() * 0.45 + row * 0.15 });
+    return out;
+  }, [seed]);
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <TexBox size={[3.6, 0.32, 2.1]} position={[0, 0.16, -0.4]} name="granite" tile={1.2} />
+      {jars.map((j, i) => (
+        <group key={i} position={[j.x, 0.32, j.z]} scale={j.s}>
+          <mesh geometry={jar} castShadow receiveShadow>
+            <meshStandardMaterial color="#5a3424" roughness={0.28} metalness={0.05} />
+          </mesh>
+          <mesh geometry={lid} position={[0, 0.69, 0]} castShadow>
+            <meshStandardMaterial color="#4b2b1e" roughness={0.3} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }

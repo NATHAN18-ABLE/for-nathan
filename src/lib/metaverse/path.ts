@@ -13,19 +13,36 @@ export interface Rect {
   z1: number;
 }
 
+export interface Hole {
+  x: number;
+  z: number;
+  r: number;
+}
+
 export interface Walkable {
   cell: number; // grid size in metres used for path finding
   rects: Rect[];
+  holes?: Hole[]; // posts, trees and benches standing inside the walkable area
 }
 
 const EPS = 1e-6;
 
 export function isWalkable(p: P, w: Walkable): boolean {
-  return w.rects.some((r) => p.x >= r.x0 - EPS && p.x <= r.x1 + EPS && p.z >= r.z0 - EPS && p.z <= r.z1 + EPS);
+  if (!w.rects.some((r) => p.x >= r.x0 - EPS && p.x <= r.x1 + EPS && p.z >= r.z0 - EPS && p.z <= r.z1 + EPS)) return false;
+  return !w.holes?.some((h) => Math.hypot(p.x - h.x, p.z - h.z) < h.r - EPS);
 }
 
 export function nearestWalkable(p: P, w: Walkable): P {
   if (isWalkable(p, w)) return p;
+  // Inside a post or tree: step out to its edge on the side of the tap.
+  for (const h of w.holes ?? []) {
+    const d = Math.hypot(p.x - h.x, p.z - h.z);
+    if (d < h.r) {
+      const k = (h.r + 0.05) / Math.max(d, 1e-6);
+      const q = d > 1e-6 ? { x: h.x + (p.x - h.x) * k, z: h.z + (p.z - h.z) * k } : { x: h.x + h.r + 0.05, z: h.z };
+      if (isWalkable(q, w)) return q;
+    }
+  }
   let best = p;
   let bestD = Infinity;
   for (const r of w.rects) {

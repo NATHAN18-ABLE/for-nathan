@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import { Forest, GableRoof, Hanok, Mountains, Pavement, TexBox, Terrain, TiledWall, heightAt, rand, type Hill, type TreeSpot } from "../world";
+import { Forest, GableRoof, Hanok, JarTerrace, Mountains, Pavement, TexBox, Terrain, TiledWall, heightAt, rand, type Hill, type TreeSpot } from "../world";
 import { LeafLitter } from "../autumn";
+import { Workshop } from "../Workshop";
 import type { RoomConfig } from "../types";
 
 // Seosulla-gil and its neighbourhood, about 90 m x 80 m.
@@ -16,8 +16,9 @@ const HILLS: Hill[] = [
   { x: -40, z: 18, r: 10, h: 1.6 },
 ];
 
-function useTrees(): TreeSpot[] {
-  return useMemo(() => {
+// Trees are laid out once so the walk map can keep travelers out of their trunks.
+const TREES: TreeSpot[] = (() => {
+  {
     const r = rand(11);
     const out: TreeSpot[] = [];
     // Jongmyo woods beyond the wall
@@ -46,8 +47,8 @@ function useTrees(): TreeSpot[] {
       out.push({ x: Math.cos(a) * (52 + r() * 6), z: Math.sin(a) * (48 + r() * 6), s: 1.1 + r() * 0.4, kind: k < 0.35 ? "maple" : k < 0.5 ? "ginkgo" : k < 0.7 ? "green" : "pine" });
     }
     return out;
-  }, []);
-}
+  }
+})();
 
 function MainHall() {
   // A long hall on a stone terrace, roof running north-south (like Jongmyo Jeongjeon).
@@ -110,12 +111,54 @@ function WishRack() {
   );
 }
 
+const BENCHES: [number, number, number][] = [
+  [-20, 33.5, 0],
+  [-6, 33.5, 0],
+  [-37, -3.5, Math.PI / 2],
+];
+
+const LAMPS: [number, number][] = [
+  [-36, 30.6],
+  [-24, 30.6],
+  [-12, 30.6],
+  [-2, 30.6],
+  [18.9, -34],
+  [18.9, -22.5],
+  [18.9, -11],
+  [18.9, 17.5],
+  [18.9, 29],
+  [9.9, 6.8],
+];
+
+const RECTS = [
+  { x0: 10, z0: -38, x1: 19.2, z1: 34 }, // the lane
+  { x0: -31.5, z0: 30.5, x1: 19.2, z1: 39 }, // entrance plaza
+  { x0: -30, z0: -15.6, x1: 10, z1: -12.4 }, // north alley
+  { x0: -30, z0: 12.4, x1: 10, z1: 15.6 }, // south alley
+  { x0: 0.6, z0: -4, x1: 10, z1: -0.4 }, // courtyard, around the platform
+  { x0: 0.6, z0: 2.4, x1: 10, z1: 6 },
+  { x0: 5.2, z0: -0.4, x1: 10, z1: 2.4 },
+  { x0: -32, z0: -16, x1: -28, z1: 39 }, // west road
+  { x0: -48, z0: -28, x1: -32, z1: 4 }, // the hill
+];
+
+const near = (x: number, z: number) => RECTS.some((r) => x > r.x0 - 1 && x < r.x1 + 1 && z > r.z0 - 1 && z < r.z1 + 1);
+
+// Everything solid that stands on walkable ground: trunks, lamps, rack posts, benches,
+// the workshop bench and the pavilion's posts.
+const HOLES = [
+  ...TREES.filter((t) => near(t.x, t.z)).map((t) => ({ x: t.x, z: t.z, r: 0.45 * t.s + 0.25 })),
+  ...LAMPS.map(([x, z]) => ({ x, z, r: 0.4 })),
+  ...[-8, 3, 14].map((z) => ({ x: 19.15, z, r: 0.35 })),
+  ...BENCHES.map(([x, z]) => ({ x, z, r: 1.2 })),
+  { x: 10.8, z: -28.6, r: 1 },
+  { x: 1.6, z: 4.8, r: 1.5 },
+  { x: 3.6, z: 4.8, r: 1.3 },
+  ...[-2, 2].flatMap((dx) => [-2, 2].map((dz) => ({ x: -37 + dx, z: -12 + dz, r: 0.35 }))),
+];
+
 function Benches() {
-  const spots: [number, number, number][] = [
-    [-20, 33.5, 0],
-    [-6, 33.5, 0],
-    [-37, -3.5, Math.PI / 2],
-  ];
+  const spots = BENCHES;
   return (
     <>
       {spots.map(([x, z, r], i) => (
@@ -130,7 +173,7 @@ function Benches() {
 }
 
 function Scene() {
-  const trees = useTrees();
+  const trees = TREES;
   return (
     <group>
       <Mountains />
@@ -166,6 +209,7 @@ function Scene() {
       <Hanok position={[-18, 0, 20.6]} rotation={Math.PI} width={9} depth={6.5} seed={15} />
 
       <Pyeongsang position={[3.6, 0, 1]} rotation={Math.PI / 2} />
+      <JarTerrace position={[2.6, 0, 5.2]} rotation={0} />
       <WishRack />
       <Pavilion />
       <Benches />
@@ -189,20 +233,7 @@ export const jongno: RoomConfig = {
   name: { en: "Jongno", ko: "종로" },
   place: { en: "Seosulla-gil, along the Jongmyo wall", ko: "서순라길, 종묘 돌담길" },
   hour: { en: "Autumn afternoon", ko: "가을 오후" },
-  walk: {
-    cell: 0.5,
-    rects: [
-      { x0: 10, z0: -38, x1: 19.2, z1: 34 }, // the lane
-      { x0: -31.5, z0: 30.5, x1: 19.2, z1: 39 }, // entrance plaza
-      { x0: -30, z0: -15.6, x1: 10, z1: -12.4 }, // north alley
-      { x0: -30, z0: 12.4, x1: 10, z1: 15.6 }, // south alley
-      { x0: 0.6, z0: -4, x1: 10, z1: -0.4 }, // courtyard, around the platform
-      { x0: 0.6, z0: 2.4, x1: 10, z1: 6 },
-      { x0: 5.2, z0: -0.4, x1: 10, z1: 2.4 },
-      { x0: -32, z0: -16, x1: -28, z1: 39 }, // west road
-      { x0: -48, z0: -28, x1: -32, z1: 4 }, // the hill
-    ],
-  },
+  walk: { cell: 0.5, rects: RECTS, holes: HOLES },
   spawn: { x: 13, z: 35 },
   spawnHeading: Math.PI,
   sky: { top: "#d9c4a8", bottom: "#f2e3cc" },
@@ -215,18 +246,7 @@ export const jongno: RoomConfig = {
     fog: ["#e6cfb2", 40, 175],
   },
   lanterns: true,
-  lamps: [
-    [-36, 30.6],
-    [-24, 30.6],
-    [-12, 30.6],
-    [-2, 30.6],
-    [18.9, -34],
-    [18.9, -22.5],
-    [18.9, -11],
-    [18.9, 17.5],
-    [18.9, 29],
-    [9.9, 6.8],
-  ],
+  lamps: LAMPS,
   pois: [
     {
       id: "entrance",
@@ -251,7 +271,7 @@ export const jongno: RoomConfig = {
     },
     {
       id: "workshop",
-      at: { x: 11, z: -26 },
+      at: { x: 12, z: -28.6 },
       radius: 3.5,
       action: "watch",
       title: { en: "Jewelry workshops", ko: "귀금속 공방" },
@@ -284,4 +304,6 @@ export const jongno: RoomConfig = {
     },
   ],
   Scene,
+  // The workbench sits in front of the southern workshop, facing the lane.
+  Live: () => <Workshop position={[10.8, 0, -28.6]} rotation={Math.PI / 2} />,
 };

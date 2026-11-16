@@ -53,6 +53,37 @@ type Props = {
 
 const shortestAngle = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
+/**
+ * The generated idle shifts its weight a lot. Keep only its calmest stretch: measure how
+ * far the bones turn in each tenth of a second and loop the quietest two seconds back and forth.
+ */
+function calmIdle(clip: THREE.AnimationClip, span = 2): THREE.AnimationClip {
+  const bins = Math.ceil(clip.duration * 10);
+  const energy = new Float32Array(bins);
+  const q0 = new THREE.Quaternion();
+  const q1 = new THREE.Quaternion();
+  for (const track of clip.tracks) {
+    if (!track.name.endsWith(".quaternion")) continue;
+    const { times, values } = track;
+    for (let i = 1; i < times.length; i++) {
+      q0.fromArray(values, (i - 1) * 4);
+      q1.fromArray(values, i * 4);
+      const bin = Math.min(bins - 1, Math.floor(times[i] * 10));
+      energy[bin] += q0.angleTo(q1);
+    }
+  }
+  const w = Math.max(1, Math.round(span * 10));
+  let best = 0;
+  let bestSum = Infinity;
+  for (let i = 0; i + w <= bins; i++) {
+    let sum = 0;
+    for (let k = i; k < i + w; k++) sum += energy[k];
+    if (sum < bestSum) (bestSum = sum), (best = i);
+  }
+  const fps = 30;
+  return THREE.AnimationUtils.subclip(clip, "IdleCalm", Math.round((best / 10) * fps), Math.round(((best + w) / 10) * fps), fps);
+}
+
 type Pose = "walk" | "idle" | "wave" | "bow" | "sit";
 
 /** The rigged traveler figure, with its own copy of the skeleton and a mixer. */
@@ -69,8 +100,10 @@ function Figure({ pose, hop, look }: { pose: React.RefObject<Pose>; hop: React.R
     const mixer = new THREE.AnimationMixer(scene);
     const actions = Object.fromEntries(
       (Object.keys(CLIP) as Pose[]).map((k) => {
-        const clip = gltf.animations.find((c) => c.name === CLIP[k]);
+        const found = gltf.animations.find((c) => c.name === CLIP[k]);
+        const clip = found && k === "idle" ? calmIdle(found) : found;
         const a = clip ? mixer.clipAction(clip) : null;
+        if (a && k === "idle") a.setLoop(THREE.LoopPingPong, Infinity);
         if (a && (k === "wave" || k === "bow")) {
           a.setLoop(THREE.LoopOnce, 1);
           a.clampWhenFinished = true;
@@ -94,7 +127,7 @@ function Figure({ pose, hop, look }: { pose: React.RefObject<Pose>; hop: React.R
       if (to) {
         to.reset();
         to.setEffectiveWeight(1);
-        to.timeScale = next === "walk" ? 1.35 : 1;
+        to.timeScale = next === "walk" ? 1.35 : next === "idle" ? 0.6 : 1;
         to.play();
         if (from && from !== to) from.crossFadeTo(to, 0.25, false);
       }

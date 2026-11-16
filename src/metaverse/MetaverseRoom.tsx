@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
+import { Environment, Lightformer, PerformanceMonitor } from "@react-three/drei";
 import * as THREE from "three";
 import { findPath, isWalkable, nearestWalkable, type P } from "@/lib/metaverse/path.ts";
 import { fetchLanterns, hangLantern, joinRoom, type Lantern, type Presence, type RoomConnection, type RoomEvent } from "@/lib/metaverse/realtime.ts";
@@ -21,7 +21,8 @@ import { heightAt, LampPost } from "./world";
 import { LanternRack } from "./Lanterns";
 import { FallingLeaves } from "./autumn";
 import { Effects } from "./Effects";
-import { chime, setSound, stopSound, tap } from "./sound";
+import { chime, setSound, stopSound } from "./sound";
+import { emit } from "./bus";
 import { asset } from "@/lib/base-path.ts";
 import type { Poi, RoomConfig } from "./types";
 import styles from "./Metaverse.module.css";
@@ -143,6 +144,10 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const [actsOpen, setActsOpen] = useState(false);
   const [away, setAway] = useState(false);
   const [hint, setHint] = useState(true);
+  useEffect(() => {
+    const id = setTimeout(() => setHint(false), 7000);
+    return () => clearTimeout(id);
+  }, []);
   const [look, setLook] = useState<Look>(defaultLook());
   const [dressOpen, setDressOpen] = useState(false);
   const [hangOpen, setHangOpen] = useState(false);
@@ -164,8 +169,8 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef(0);
   const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0), [room]);
-  // Phones get lighter effects; iPads and computers the full set.
-  const lowPower = typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 600;
+  // Phones start with lighter effects; any device steps down if frames start dropping.
+  const [lowPower, setLowPower] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 600);
 
   // Drag to look around, wheel or pinch to come closer.
   const onPointerDown = (e: React.PointerEvent) => {
@@ -382,7 +387,10 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
 
   const watch = () => {
     touch();
-    for (let i = 0; i < 8; i++) setTimeout(tap, i * 420 + Math.random() * 60);
+    const m = motions.current.get(me.current.id);
+    const poi = near;
+    if (m && poi) m.heading = Math.atan2(poi.at.x - 1.2 - m.x, poi.at.z - m.z); // face the bench
+    emit("workshop");
   };
 
   const wear = (id: ItemId) => {
@@ -463,7 +471,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         <Canvas
           className={styles.canvas}
           shadows
-          dpr={[1, 1.5]}
+          dpr={lowPower ? 1 : [1, 1.5]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
           camera={{ fov: room.world ? 50 : 34, near: 0.3, far: 600, position: [0, 12, 14] }}
           onCreated={({ gl }) => {
@@ -471,9 +479,13 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             gl.toneMappingExposure = 1.08;
           }}
         >
-          <Lights room={room} motions={motions} meId={me.current.id} />
+          <PerformanceMonitor onDecline={() => setLowPower(true)} flipflops={1} />
+          <Lights room={room} motions={motions} meId={me.current.id} low={lowPower} />
           <Walkable room={room} onPick={walkTo}>
-            <room.Scene />
+            <Frozen>
+              <room.Scene />
+            </Frozen>
+            {room.Live && <room.Live />}
             {room.lamps?.map((pos, i) => <LampPost key={i} position={pos} lit={!!lit[i]} hills={room.world?.hills} />)}
             {room.lanterns && <LanternRack lanterns={lanterns} fresh={fresh} />}
           </Walkable>
@@ -558,14 +570,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       {status === "offline" && !away && <p className={styles.notice}>{t.offline}</p>}
       {hint && inside && <p className={styles.hint}>{t.hint}</p>}
 
-      {near && inside && (
-        <aside className={styles.poi} aria-live="polite">
-          <h2>{near.title[lang]}</h2>
-          <p>
-            <Phrases text={near.line[lang]} />
-          </p>
-        </aside>
-      )}
+      {near && inside && <PoiCard key={near.id} poi={near} lang={lang} />}
 
       {toast && <p className={styles.notice}>{toast}</p>}
 
@@ -725,7 +730,26 @@ export interface View {
   touchedAt: number; // last time the person turned the camera themselves
 }
 
-function Lights({ room, motions, meId }: { room: RoomConfig; motions: React.RefObject<Map<string, Motion>>; meId: string }) {
+/** Static scenery: compute transforms once, then skip them every frame. */
+function Frozen({ children }: { children: React.ReactNode }) {
+  const g = useRef<THREE.Group>(null);
+  const done = useRef(0);
+  useFrame(() => {
+    if (done.current > 2 || !g.current) return;
+    // A couple of frames in, everything (including late textures) has been placed.
+    if (++done.current === 2) {
+      g.current.updateMatrixWorld(true);
+      g.current.traverse((o) => {
+        if (o === g.current) return;
+        o.matrixAutoUpdate = false;
+        o.matrixWorldAutoUpdate = false;
+      });
+    }
+  });
+  return <group ref={g}>{children}</group>;
+}
+
+function Lights({ room, motions, meId, low }: { room: RoomConfig; motions: React.RefObject<Map<string, Motion>>; meId: string; low: boolean }) {
   const sun = useRef<THREE.DirectionalLight>(null);
   const { scene } = useThree();
   // The sun's shadow box follows the traveler, so a large map keeps crisp shadows nearby.
@@ -751,7 +775,7 @@ function Lights({ room, motions, meId }: { room: RoomConfig; motions: React.RefO
         color={room.sun.color}
         intensity={room.sun.intensity}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={low ? [1024, 1024] : [2048, 2048]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.04}
         shadow-camera-left={wide ? -26 : -18}
@@ -1024,5 +1048,26 @@ function ContextAction({
     <button type="button" className={styles.contextAction} onClick={run}>
       {label}
     </button>
+  );
+}
+
+/** The place note: opens for a few seconds, then folds to its title so it stays out of the way. */
+function PoiCard({ poi, lang }: { poi: Poi; lang: "en" | "ko" }) {
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    const id = setTimeout(() => setOpen(false), 6000);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <aside className={styles.poi} data-open={open} aria-live="polite">
+      <button type="button" className={styles.poiHead} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <h2>{poi.title[lang]}</h2>
+      </button>
+      {open && (
+        <p>
+          <Phrases text={poi.line[lang]} />
+        </p>
+      )}
+    </aside>
   );
 }

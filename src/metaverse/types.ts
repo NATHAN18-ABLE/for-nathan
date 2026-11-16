@@ -31,5 +31,6 @@ export interface RoomConfig {
   pois: Poi[];
   lamps?: [number, number][]; // street lamps travelers can light
   lanterns?: boolean; // this room has the wish-lantern rack
-  Scene: ComponentType;
+  Scene: ComponentType; // static: its transforms are frozen after the first frame
+  Live?: ComponentType; // moving parts of the room (workshop hammer, etc.)
 }

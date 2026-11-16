@@ -75,3 +75,25 @@ test("paths across a large neighbourhood are found quickly", () => {
   assert.ok(path.length >= 3, "should route around the block");
   assert.ok(ms < 120, `took ${ms.toFixed(0)} ms`);
 });
+
+test("posts and trees inside a walkable area are walked around, never through", () => {
+  const yard: Walkable = { cell: 0.5, rects: [{ x0: -10, z0: -3, x1: 10, z1: 3 }], holes: [{ x: 0, z: 0, r: 1.2 }] };
+  assert.ok(!isWalkable({ x: 0.5, z: 0.3 }, yard));
+  const path = findPath({ x: -8, z: 0 }, { x: 8, z: 0 }, yard);
+  assert.ok(path.length >= 3, "should bend around the post");
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    for (let t = 0; t <= 1; t += 0.02) {
+      const p = { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t };
+      assert.ok(Math.hypot(p.x, p.z) >= 1.2 - 1e-6, `went through the post at ${JSON.stringify(p)}`);
+    }
+  }
+});
+
+test("a tap on a post sends you to its edge", () => {
+  const yard: Walkable = { cell: 0.5, rects: [{ x0: -10, z0: -3, x1: 10, z1: 3 }], holes: [{ x: 0, z: 0, r: 1 }] };
+  const p = nearestWalkable({ x: 0.2, z: 0.1 }, yard);
+  assert.ok(isWalkable(p, yard));
+  assert.ok(Math.hypot(p.x, p.z) < 1.3);
+});
