@@ -54,34 +54,40 @@ type Props = {
 const shortestAngle = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 /**
- * The generated idle shifts its weight a lot. Keep only its calmest stretch: measure how
- * far the bones turn in each tenth of a second and loop the quietest two seconds back and forth.
+ * The generated idle shifts its weight a lot and sometimes leans far forward. Keep a short
+ * stretch around the moment whose posture is closest to the clip's average (upright, centred),
+ * and loop it gently back and forth.
  */
-function calmIdle(clip: THREE.AnimationClip, span = 2): THREE.AnimationClip {
-  const bins = Math.ceil(clip.duration * 10);
-  const energy = new Float32Array(bins);
-  const q0 = new THREE.Quaternion();
-  const q1 = new THREE.Quaternion();
-  for (const track of clip.tracks) {
-    if (!track.name.endsWith(".quaternion")) continue;
-    const { times, values } = track;
-    for (let i = 1; i < times.length; i++) {
-      q0.fromArray(values, (i - 1) * 4);
-      q1.fromArray(values, i * 4);
-      const bin = Math.min(bins - 1, Math.floor(times[i] * 10));
-      energy[bin] += q0.angleTo(q1);
+function calmIdle(clip: THREE.AnimationClip, half = 0.7): THREE.AnimationClip {
+  const rot = clip.tracks.filter((t) => t.name.endsWith(".quaternion") && t.times.length > 2);
+  if (!rot.length) return clip;
+  const frames = rot[0].times.length;
+  const mean = rot.map((t) => {
+    const m = new THREE.Quaternion(0, 0, 0, 0);
+    const q = new THREE.Quaternion();
+    const first = new THREE.Quaternion().fromArray(t.values, 0);
+    for (let i = 0; i < t.times.length; i++) {
+      q.fromArray(t.values, i * 4);
+      if (q.dot(first) < 0) q.set(-q.x, -q.y, -q.z, -q.w); // keep one hemisphere
+      m.set(m.x + q.x, m.y + q.y, m.z + q.z, m.w + q.w);
     }
-  }
-  const w = Math.max(1, Math.round(span * 10));
+    return m.normalize();
+  });
+  const q = new THREE.Quaternion();
   let best = 0;
-  let bestSum = Infinity;
-  for (let i = 0; i + w <= bins; i++) {
-    let sum = 0;
-    for (let k = i; k < i + w; k++) sum += energy[k];
-    if (sum < bestSum) (bestSum = sum), (best = i);
+  let bestDev = Infinity;
+  for (let i = 0; i < frames; i++) {
+    let dev = 0;
+    rot.forEach((t, k) => {
+      if (i < t.times.length) dev += q.fromArray(t.values, i * 4).angleTo(mean[k]);
+    });
+    if (dev < bestDev) (bestDev = dev), (best = i);
   }
   const fps = 30;
-  return THREE.AnimationUtils.subclip(clip, "IdleCalm", Math.round((best / 10) * fps), Math.round(((best + w) / 10) * fps), fps);
+  const at = rot[0].times[best];
+  const from = Math.max(0, at - half);
+  const to = Math.min(clip.duration, from + half * 2);
+  return THREE.AnimationUtils.subclip(clip, "IdleCalm", Math.round(from * fps), Math.round(to * fps), fps);
 }
 
 type Pose = "walk" | "idle" | "wave" | "bow" | "sit";
@@ -92,9 +98,13 @@ function Figure({ pose, hop, look }: { pose: React.RefObject<Pose>; hop: React.R
   const { scene, mixer, actions } = useMemo(() => {
     const scene = cloneSkinned(gltf.scene);
     scene.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) {
-        o.castShadow = true;
-        o.receiveShadow = false;
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
+        // Keep the face and clothes sharp when seen at a slant.
+        const map = (mesh.material as THREE.MeshStandardMaterial).map;
+        if (map) map.anisotropy = 8;
       }
     });
     const mixer = new THREE.AnimationMixer(scene);

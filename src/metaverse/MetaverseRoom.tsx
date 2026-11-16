@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Environment, Lightformer, PerformanceMonitor } from "@react-three/drei";
+import { Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
 import { findPath, isWalkable, nearestWalkable, type P } from "@/lib/metaverse/path.ts";
 import { fetchLanterns, hangLantern, joinRoom, type Lantern, type Presence, type RoomConnection, type RoomEvent } from "@/lib/metaverse/realtime.ts";
@@ -169,8 +169,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef(0);
   const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0), [room]);
-  // Phones start with lighter effects; any device steps down if frames start dropping.
-  const [lowPower, setLowPower] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 600);
+  // Phones get lighter effects; iPads and computers keep the full set. (An automatic
+  // step-down tripped on loading hitches and left iPads blurry and jagged, so it is gone.)
+  const [lowPower] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 600);
 
   // Drag to look around, wheel or pinch to come closer.
   const onPointerDown = (e: React.PointerEvent) => {
@@ -471,7 +472,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         <Canvas
           className={styles.canvas}
           shadows
-          dpr={lowPower ? 1 : [1, 1.5]}
+          dpr={lowPower ? [1, 1.25] : [1, 1.5]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
           camera={{ fov: room.world ? 50 : 34, near: 0.3, far: 600, position: [0, 12, 14] }}
           onCreated={({ gl }) => {
@@ -479,7 +480,6 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             gl.toneMappingExposure = 1.08;
           }}
         >
-          <PerformanceMonitor onDecline={() => setLowPower(true)} flipflops={1} />
           <Lights room={room} motions={motions} meId={me.current.id} low={lowPower} />
           <Walkable room={room} onPick={walkTo}>
             <Frozen>
@@ -775,7 +775,7 @@ function Lights({ room, motions, meId, low }: { room: RoomConfig; motions: React
         color={room.sun.color}
         intensity={room.sun.intensity}
         castShadow
-        shadow-mapSize={low ? [1024, 1024] : [2048, 2048]}
+        shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.04}
         shadow-camera-left={wide ? -26 : -18}
