@@ -4,34 +4,31 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { QUESTIONS } from "@/lib/match/questions.ts";
-import type { Answer } from "@/lib/match/match.ts";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
 import { evictions, wanted } from "@/lib/hero/frame-cache.ts";
 import { COPY } from "@/lib/hero/copy.ts";
 import { useLang } from "@/lib/lang.ts";
 import { asset } from "@/lib/base-path.ts";
-import { QuestionCard } from "./QuestionCard";
 import { SiteNav } from "./SiteNav";
 import styles from "./HeroScroll.module.css";
 
-// Scroll map (share of the pinned track).
+// Scroll map (share of the pinned track, 960svh tall).
 const INTRO_OUT = 0.05; // the title steps back as soon as scrolling starts
 const FRAMES_FROM = 0.04;
-const FRAMES_TO = 0.76;
-const NIGHT_FROM = 0.74; // the last frame softens into a blurred night backdrop
+const FRAMES_TO = 0.71;
+// After the zoom lands, the last shot holds for a beat (with a slow push-in) before night falls.
+const HOLD_LEN = 0.09;
+const NIGHT_FROM = FRAMES_TO + HOLD_LEN; // the held shot softens into a blurred night backdrop
 const NIGHT_LEN = 0.08;
-const WELCOME_IN = [0.77, 0.05] as const; // "Welcome to Seoul!" rises in…
-const WELCOME_OUT = [0.87, 0.04] as const; // …holds, then lifts away for the first question
-const AFTER_FROM = 0.9;
-const AFTER_LEN = 0.07;
-// Short lines over the film, placed by frame so they land on the right scene.
-const CAPTION_FRAMES: readonly [number, number][] = [
-  [20, 130], // rooftops by day
-  [165, 275], // lights coming on
-  [285, 440], // closing in on Namsan
+const WELCOME_IN = [0.84, 0.06] as const; // "Welcome to Seoul!" rises in and stays
+const START_IN = [0.91, 0.05] as const; // then the button that opens the test
+// Short lines over the film, placed by share of the film so they land on the right scene.
+const CAPTIONS: readonly [number, number][] = [
+  [0.03, 0.19], // rooftops by day
+  [0.24, 0.52], // lights coming on
+  [0.57, 0.95], // closing in on Namsan
 ];
-const CAPTION_FADE = 22;
+const CAPTION_FADE = 0.035;
 const SMOOTH_MS = 120; // time constant of the scroll follow; frame-rate independent
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -65,7 +62,7 @@ export function HeroScroll() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nightRef = useRef<HTMLDivElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
-  const afterRef = useRef<HTMLDivElement>(null);
+  const startRef = useRef<HTMLDivElement>(null);
   const welcomeRef = useRef<HTMLHeadingElement>(null);
   const captionRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const lowShadeRef = useRef<HTMLDivElement>(null);
@@ -86,20 +83,11 @@ export function HeroScroll() {
     };
   }, []);
 
-  const startTest = (answer: Answer) => {
+  const startTest = () => {
     try {
-      sessionStorage.setItem("seoul.answers", JSON.stringify([answer]));
+      sessionStorage.removeItem("seoul.answers");
     } catch {}
     router.push("/test");
-  };
-
-  const jumpToTest = () => {
-    const track = trackRef.current;
-    if (!track || reduced) {
-      document.getElementById("first-question")?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
-      return;
-    }
-    window.scrollTo({ top: track.offsetTop + track.offsetHeight - window.innerHeight, behavior: "smooth" });
   };
 
   // Main scroll-driven scene.
@@ -209,20 +197,21 @@ export function HeroScroll() {
 
     const render = (p: number) => {
       let shade = 0;
+      const film = phase(p, FRAMES_FROM, FRAMES_TO - FRAMES_FROM);
+      CAPTIONS.forEach(([a, b], k) => {
+        const el = captionRefs.current[k];
+        if (!el) return;
+        const v = Math.min(clamp01((film - a) / CAPTION_FADE), clamp01((b - film) / CAPTION_FADE));
+        const e = easeOut(v);
+        const dir = film < (a + b) / 2 ? 1 : -1; // rise in from below, lift away above
+        el.style.opacity = String(e);
+        el.style.transform = `translateY(${dir * 18 * (1 - e)}px)`;
+        el.style.filter = e < 1 ? `blur(${5 * (1 - e)}px)` : "";
+        el.style.visibility = v > 0 ? "visible" : "hidden";
+        shade = Math.max(shade, e);
+      });
       if (timing) {
         const f = frameAt(p, timing, windows);
-        CAPTION_FRAMES.forEach(([a, b], k) => {
-          const el = captionRefs.current[k];
-          if (!el) return;
-          const v = Math.min(clamp01((f - a) / CAPTION_FADE), clamp01((b - f) / CAPTION_FADE));
-          const e = easeOut(v);
-          const dir = f < (a + b) / 2 ? 1 : -1; // rise in from below, lift away above
-          el.style.opacity = String(e);
-          el.style.transform = `translateY(${dir * 18 * (1 - e)}px)`;
-          el.style.filter = e < 1 ? `blur(${5 * (1 - e)}px)` : "";
-          el.style.visibility = v > 0 ? "visible" : "hidden";
-          shade = Math.max(shade, e);
-        });
         const i0 = Math.floor(f);
         if (i0 !== lastFrame) direction = i0 > lastFrame ? 1 : -1;
         lastFrame = i0;
@@ -246,11 +235,9 @@ export function HeroScroll() {
       if (lowShadeRef.current) lowShadeRef.current.style.opacity = String(shade);
       const w = welcomeRef.current;
       if (w) {
-        const win = easeOut(phase(p, WELCOME_IN[0], WELCOME_IN[1]));
-        const wout = easeOut(phase(p, WELCOME_OUT[0], WELCOME_OUT[1]));
-        const v = win * (1 - wout);
+        const v = easeOut(phase(p, WELCOME_IN[0], WELCOME_IN[1]));
         w.style.opacity = String(v);
-        w.style.transform = `translateY(${24 * (1 - win) - 40 * wout}px) scale(${0.98 + 0.02 * win})`;
+        w.style.transform = `translateY(${24 * (1 - v)}px) scale(${0.98 + 0.02 * v})`;
         w.style.filter = v < 1 ? `blur(${8 * (1 - v)}px)` : "";
         w.style.visibility = v > 0 ? "visible" : "hidden";
       }
@@ -262,21 +249,24 @@ export function HeroScroll() {
         intro.style.filter = u > 0 ? `blur(${6 * u}px)` : "";
         intro.style.visibility = u >= 1 ? "hidden" : "visible";
       }
+      // The held shot keeps a slow push-in so it settles rather than freezes.
+      const h = phase(p, FRAMES_TO, HOLD_LEN + NIGHT_LEN);
+      const push = 1 + 0.035 * (1 - Math.pow(1 - h, 2));
       const z = smooth(phase(p, NIGHT_FROM, NIGHT_LEN));
       const scene = sceneRef.current;
-      if (scene) scene.style.transform = z > 0 ? `scale(${1 + 0.04 * z})` : "";
+      if (scene) scene.style.transform = push > 1 ? `scale(${push})` : "";
       const night = nightRef.current;
       if (night) {
         night.style.opacity = String(z);
-        night.style.transform = `scale(${1 + 0.04 * z})`;
+        night.style.transform = `scale(${push})`;
       }
-      const c = phase(p, AFTER_FROM, AFTER_LEN);
-      const after = afterRef.current;
-      if (after) {
-        after.style.opacity = String(easeOut(c));
-        after.style.transform = `translateY(${28 * (1 - easeOut(c))}px)`;
-        after.style.visibility = c > 0 ? "visible" : "hidden";
-        after.style.pointerEvents = c > 0.6 ? "auto" : "none";
+      const c = easeOut(phase(p, START_IN[0], START_IN[1]));
+      const start = startRef.current;
+      if (start) {
+        start.style.opacity = String(c);
+        start.style.transform = `translateY(${16 * (1 - c)}px)`;
+        start.style.visibility = c > 0 ? "visible" : "hidden";
+        start.style.pointerEvents = c > 0.5 ? "auto" : "none";
       }
     };
 
@@ -338,10 +328,9 @@ export function HeroScroll() {
     };
   }, [reduced, portrait, set]);
 
-  const first = QUESTIONS[0];
   const nightBg = { backgroundImage: `url(${asset(`/hero/night-${set}.jpg`)})` };
 
-  const nav = <SiteNav lang={lang} onLang={chooseLang} onTest={jumpToTest} />;
+  const nav = <SiteNav lang={lang} onLang={chooseLang} />;
 
   const intro = (
     <div ref={introRef} className={styles.intro}>
@@ -350,11 +339,12 @@ export function HeroScroll() {
     </div>
   );
 
-  const after = (
-    <div ref={afterRef} className={styles.after} id="first-question">
-      <h2 className={styles.afterTitle}>{reduced ? t.welcome : t.afterTitle}</h2>
-      <p className={styles.afterBody}>{t.afterBody}</p>
-      <QuestionCard question={first} index={1} total={QUESTIONS.length} label={t.cardOf(1, QUESTIONS.length)} onAnswer={startTest} headingLevel="h3" />
+  const startBlock = (
+    <div ref={startRef} className={styles.start}>
+      <p className={styles.startLine}>{t.startLine}</p>
+      <button type="button" className="btn btn-light" onClick={startTest}>
+        {t.start}
+      </button>
     </div>
   );
 
@@ -368,7 +358,10 @@ export function HeroScroll() {
         </section>
         <section className={styles.staticNight} style={nightBg}>
           <div className={styles.dusk} aria-hidden="true" />
-          {after}
+          <div className={styles.arrival}>
+            <h2 className={styles.welcome}>{t.welcome}</h2>
+            {startBlock}
+          </div>
         </section>
         <Footer t={t} />
       </div>
@@ -405,10 +398,12 @@ export function HeroScroll() {
               {line}
             </p>
           ))}
-          <h2 ref={welcomeRef} className={styles.welcome}>
-            {t.welcome}
-          </h2>
-          {after}
+          <div className={styles.arrival}>
+            <h2 ref={welcomeRef} className={styles.welcome}>
+              {t.welcome}
+            </h2>
+            {startBlock}
+          </div>
         </div>
       </section>
       <Footer t={t} />

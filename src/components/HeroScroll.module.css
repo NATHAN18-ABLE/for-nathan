@@ -10,7 +10,7 @@
 /* Pinned track */
 .track {
   position: relative;
-  height: 900svh;
+  height: 960svh;
 }
 
 .stage {
@@ -98,15 +98,20 @@
   letter-spacing: -0.01em;
 }
 
-/* The arrival line between the film and the first question */
-.welcome {
+/* The arrival: the welcome line, then the button that opens the test */
+.arrival {
   position: absolute;
   inset: 0;
   display: grid;
   place-content: center;
-  margin: 0;
-  padding: 0 var(--gutter) 6svh;
+  justify-items: center;
+  padding: 0 var(--gutter) 4svh;
   text-align: center;
+  pointer-events: none;
+}
+
+.welcome {
+  margin: 0;
   font-size: clamp(48px, 7.6vw, 116px);
   line-height: 1.02;
   font-weight: 340;
@@ -116,8 +121,34 @@
   text-wrap: balance;
   opacity: 0;
   visibility: hidden;
-  pointer-events: none;
   will-change: opacity, transform, filter;
+}
+
+.start {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  margin-top: clamp(20px, 3.4svh, 36px);
+  color: var(--white);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.startLine {
+  margin: 0;
+  max-width: 32ch;
+  font-size: clamp(17px, 1.4vw, 20px);
+  font-weight: 440;
+  opacity: 0.9;
+  text-shadow: 0 2px 20px rgb(6 12 34 / 0.5);
+  text-wrap: balance;
+}
+
+.start :global(.btn) {
+  min-height: 52px;
+  padding-inline: 30px;
+  font-size: 17px;
 }
 
 /* Opening title: alone, centred, nothing to press yet. */
@@ -172,34 +203,6 @@
   }
 }
 
-/* First question over the night backdrop */
-.after {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(640px, calc(100% - 2 * var(--gutter)));
-  margin-left: max(-320px, calc(-50% + var(--gutter)));
-  translate: 0 -50%;
-  opacity: 0;
-  visibility: hidden;
-  color: var(--white);
-}
-
-.afterTitle {
-  margin: 0 0 8px;
-  font-size: clamp(30px, 3.4vw, 46px);
-  line-height: 1.12;
-  font-weight: 320;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-}
-
-.afterBody {
-  margin: 0 0 24px;
-  font-size: 18px;
-  opacity: 0.85;
-}
-
 /* Reduced motion: the same story as still sections */
 .staticHero,
 .staticNight {
@@ -210,25 +213,18 @@
   background-position: center;
 }
 
-.staticNight .after {
+.staticNight .welcome,
+.staticNight .start {
   opacity: 1;
   visibility: visible;
+}
+
+.staticNight .start {
+  pointer-events: auto;
 }
 
 @media (max-width: 760px) {
   .caption {
     bottom: calc(48px + env(safe-area-inset-bottom));
-  }
-  .after {
-    top: auto;
-    bottom: calc(20px + env(safe-area-inset-bottom));
-    translate: none;
-  }
-  .afterTitle {
-    font-size: 27px;
-  }
-  .afterBody {
-    font-size: 16px;
-    margin-bottom: 16px;
   }
 }

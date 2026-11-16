@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { COPY, type Lang } from "@/lib/hero/copy.ts";
+import { asset } from "@/lib/base-path.ts";
 import styles from "./SiteNav.module.css";
 
 type Props = {
@@ -11,10 +12,9 @@ type Props = {
   onLang: (next: Lang) => void;
   // "light": white type over imagery. "dark": ink type over porcelain.
   tone?: "light" | "dark";
-  // On the home page the test lives at the end of the scroll, so the link scrolls there.
-  onTest?: () => void;
 };
 
+// Each section takes an hour of the same view, so the menu reads from day to night.
 const ROUTES = [
   { key: "test", href: "/test" },
   { key: "districts", href: "/districts" },
@@ -23,10 +23,13 @@ const ROUTES = [
   { key: "about", href: "/about" },
 ] as const;
 
-export function SiteNav({ lang, onLang, tone = "light", onTest }: Props) {
+const image = (key: string) => asset(`/menu/${key}.jpg`);
+
+export function SiteNav({ lang, onLang, tone = "light" }: Props) {
   const t = COPY[lang].nav;
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
   const menuButton = useRef<HTMLButtonElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
 
@@ -34,6 +37,8 @@ export function SiteNav({ lang, onLang, tone = "light", onTest }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    const here = ROUTES.findIndex((r) => isCurrent(r.href));
+    setActive(here < 0 ? 0 : here);
     const root = document.documentElement;
     root.style.overflow = "hidden";
     sheet.current?.querySelector<HTMLElement>("a, button")?.focus();
@@ -45,31 +50,13 @@ export function SiteNav({ lang, onLang, tone = "light", onTest }: Props) {
       root.style.overflow = "";
       window.removeEventListener("keydown", onKey);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const close = (refocus = true) => {
     setOpen(false);
     if (refocus) menuButton.current?.focus();
   };
-
-  const links = (inSheet: boolean) =>
-    ROUTES.map(({ key, href }) => (
-      <Link
-        key={key}
-        href={href}
-        className={inSheet ? styles.sheetLink : styles.link}
-        aria-current={isCurrent(href) ? "page" : undefined}
-        onClick={(e) => {
-          if (key === "test" && onTest) {
-            e.preventDefault();
-            onTest();
-          }
-          if (inSheet) close(false);
-        }}
-      >
-        {t[key]}
-      </Link>
-    ));
 
   const langToggle = (
     <div className={styles.lang} role="group" aria-label={t.language}>
@@ -90,7 +77,11 @@ export function SiteNav({ lang, onLang, tone = "light", onTest }: Props) {
           Seoul, Curated
         </Link>
         <nav className={styles.links} aria-label={t.main}>
-          {links(false)}
+          {ROUTES.map(({ key, href }) => (
+            <Link key={key} href={href} className={styles.link} aria-current={isCurrent(href) ? "page" : undefined}>
+              {t[key]}
+            </Link>
+          ))}
           {langToggle}
         </nav>
         <button
@@ -115,18 +106,51 @@ export function SiteNav({ lang, onLang, tone = "light", onTest }: Props) {
         aria-label={t.main}
         inert={!open}
       >
-        <div className={styles.sheetTop}>
-          <Link className={styles.wordmark} href="/" onClick={() => close(false)}>
-            Seoul, Curated
-          </Link>
-          <button type="button" className={styles.menuButton} onClick={() => close()}>
-            {t.close}
-          </button>
+        <div className={styles.sheetMain}>
+          <div className={styles.sheetTop}>
+            <Link className={styles.wordmark} href="/" onClick={() => close(false)}>
+              Seoul, Curated
+            </Link>
+            <button type="button" className={styles.menuButton} onClick={() => close()}>
+              {t.close}
+            </button>
+          </div>
+          <nav className={styles.sheetLinks} aria-label={t.main}>
+            {ROUTES.map(({ key, href }, i) => (
+              <Link
+                key={key}
+                href={href}
+                className={styles.sheetLink}
+                aria-current={isCurrent(href) ? "page" : undefined}
+                data-active={i === active}
+                onMouseEnter={() => setActive(i)}
+                onFocus={() => setActive(i)}
+                onClick={() => close(false)}
+              >
+                <span className={styles.sheetText}>
+                  <span className={styles.sheetLabel}>{t[key]}</span>
+                  <span className={styles.sheetHint}>{t.hints[key]}</span>
+                </span>
+                <img className={styles.thumb} src={image(key)} alt="" loading="lazy" decoding="async" />
+              </Link>
+            ))}
+          </nav>
+          <div className={styles.sheetFoot}>{langToggle}</div>
         </div>
-        <nav className={styles.sheetLinks} aria-label={t.main}>
-          {links(true)}
-        </nav>
-        <div className={styles.sheetFoot}>{langToggle}</div>
+
+        <div className={styles.panel} aria-hidden="true">
+          {ROUTES.map(({ key }, i) => (
+            <img
+              key={key}
+              className={styles.panelImage}
+              data-active={i === active}
+              src={image(key)}
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          ))}
+        </div>
       </div>
     </>
   );

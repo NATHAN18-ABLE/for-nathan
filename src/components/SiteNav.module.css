@@ -109,14 +109,14 @@
   letter-spacing: 0.04em;
 }
 
-/* Full-screen menu for tablets and phones */
+/* Full-screen menu for tablets and phones. Each section is an hour of the same view,
+   so the list reads from day to night and the picture follows the row in focus. */
 .sheet {
   position: fixed;
   inset: 0;
   z-index: 40;
-  display: flex;
-  flex-direction: column;
-  padding: env(safe-area-inset-top) var(--gutter) calc(24px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   color: var(--ink);
   background: var(--porcelain);
   visibility: hidden;
@@ -134,6 +134,14 @@
     visibility 0s;
 }
 
+.sheetMain {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: env(safe-area-inset-top) var(--gutter) calc(24px + env(safe-area-inset-bottom));
+}
+
 .sheetTop {
   display: flex;
   align-items: center;
@@ -145,15 +153,15 @@
 .sheetLinks {
   display: flex;
   flex-direction: column;
-  margin-top: clamp(24px, 8svh, 72px);
+  margin-top: clamp(16px, 5svh, 56px);
 }
 
 .sheetLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   padding: 14px 0;
-  font-size: clamp(30px, 7vw, 44px);
-  line-height: 1.1;
-  font-weight: 340;
-  letter-spacing: -0.02em;
   text-decoration: none;
   border-bottom: 1px solid var(--porcelain-shadow);
   opacity: 0;
@@ -163,8 +171,37 @@
     transform 200ms var(--ease-out);
 }
 
-.sheetLink[aria-current="page"] {
+.sheetText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sheetLabel {
+  font-size: clamp(28px, 6.4vw, 44px);
+  line-height: 1.08;
+  font-weight: 340;
+  letter-spacing: -0.02em;
+  transition: color 200ms ease;
+}
+
+.sheetHint {
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+.sheetLink[aria-current="page"] .sheetLabel {
   color: var(--cobalt);
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--porcelain-shadow);
 }
 
 .sheet[data-open="true"] .sheetLink {
@@ -183,7 +220,52 @@
 
 .sheetFoot {
   margin-top: auto;
+  padding-top: 32px;
   display: flex;
+}
+
+/* The large picture appears once there is room beside the list (iPad and up). */
+.panel {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  background: var(--night);
+}
+
+.panelImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.06);
+  transition:
+    opacity 520ms ease,
+    transform 1200ms var(--ease-out);
+}
+
+.panelImage[data-active="true"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (min-width: 700px) {
+  .sheet {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 44%);
+  }
+  .panel {
+    display: block;
+  }
+  .thumb {
+    display: none;
+  }
+  .sheetLink {
+    padding: 18px 0;
+  }
+  .sheetLink[data-active="true"] .sheetLabel {
+    color: var(--cobalt);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -202,6 +284,10 @@
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  .panelImage {
+    transform: none;
+    transition: opacity 160ms ease;
   }
 }
 
