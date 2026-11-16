@@ -51,9 +51,13 @@ test("frames never go backwards as the page scrolls down", () => {
   }
 });
 
-test("on the real clips the picture changes at the same rate just before and after the seam", () => {
-  const real = JSON.parse(readFileSync(new URL("../../../public/hero/timing.json", import.meta.url), "utf8")) as Timing;
-  const w = scrollWindows(real, 0.07, 0.74);
-  const rate = (i: number) => real.segments[i].total / (w[i].to - w[i].from);
-  assert.ok(Math.abs(rate(0) - rate(1)) / rate(0) < 1e-6);
+test("on the real frames each step changes the picture about as much on both sides of the seam", () => {
+  const real = JSON.parse(readFileSync(new URL("../../../public/hero/timing.json", import.meta.url), "utf8")) as Timing & {
+    seam: number;
+  };
+  const [seg] = real.segments;
+  const step = (from: number, to: number) => ((seg.curve[to] - seg.curve[from]) * seg.total) / (to - from);
+  const before = step(real.seam - 24, real.seam);
+  const after = step(real.seam, real.seam + 24);
+  assert.ok(after / before < 1.4, `day ${before.toFixed(2)} vs zoom ${after.toFixed(2)} per frame`);
 });
