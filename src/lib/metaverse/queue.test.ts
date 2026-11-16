@@ -1,26 +1,27 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { seatMembers, statusOf, isIdle, nearestRoom, ROOMS, type Member } from "./queue.ts";
+import { seatMembers, statusOf, isIdle, nearestRoom, pickInstance, ROOMS, CAPACITY, MAX_INSTANCES, type Member } from "./queue.ts";
 import { DISTRICTS } from "../match/districts.ts";
 
 const members = (n: number, start = 1000): Member[] =>
   Array.from({ length: n }, (_, i) => ({ id: `u${i}`, joinedAt: start + i }));
 
-test("the first ten to join are in the room", () => {
-  const seats = seatMembers(members(10));
-  assert.equal(seats.inRoom.length, 10);
+test("a room holds thirty people", () => {
+  assert.equal(CAPACITY, 30);
+  const seats = seatMembers(members(30));
+  assert.equal(seats.inRoom.length, 30);
   assert.equal(seats.waiting.length, 0);
 });
 
-test("the eleventh is first in line and the twelfth second", () => {
-  const seats = seatMembers(members(12));
-  assert.deepEqual(seats.waiting, ["u10", "u11"]);
+test("the next to arrive is first in line and the one after second", () => {
+  const seats = seatMembers(members(CAPACITY + 2));
+  assert.deepEqual(seats.waiting, [`u${CAPACITY}`, `u${CAPACITY + 1}`]);
 });
 
 test("every client reaches the same seating whatever order presence arrives in", () => {
   const list = members(12);
   const shuffled = [list[11], list[3], list[0], list[10], ...list.slice(4, 10), list[1], list[2]];
-  assert.deepEqual(seatMembers(shuffled), seatMembers(list));
+  assert.deepEqual(seatMembers(shuffled, 10), seatMembers(list, 10));
 });
 
 test("members who joined in the same millisecond are ordered by id", () => {
@@ -31,9 +32,9 @@ test("members who joined in the same millisecond are ordered by id", () => {
 
 test("when someone in the room leaves, the first in line moves in", () => {
   const list = members(11);
-  assert.deepEqual(statusOf("u10", list), { state: "waiting", position: 1 });
+  assert.deepEqual(statusOf("u10", list, 10), { state: "waiting", position: 1 });
   const afterLeave = list.filter((m) => m.id !== "u3");
-  assert.deepEqual(statusOf("u10", afterLeave), { state: "in" });
+  assert.deepEqual(statusOf("u10", afterLeave, 10), { state: "in" });
 });
 
 test("a client not in presence is absent", () => {
@@ -58,4 +59,16 @@ test("a district without a room goes to the closest room by profile", () => {
 
 test("adding a room changes where its district is sent", () => {
   assert.equal(nearestRoom("jung", [...ROOMS, "jung"]), "jung");
+});
+
+test("travelers go to the first copy of a room with space", () => {
+  assert.equal(pickInstance([]), 1);
+  assert.equal(pickInstance([12]), 1);
+  assert.equal(pickInstance([30, 4]), 2);
+  assert.equal(pickInstance([30, 30]), 3); // open a new copy
+});
+
+test("when every copy is full, wait in the shortest line", () => {
+  const counts = Array.from({ length: MAX_INSTANCES }, (_, i) => 30 + (i === 2 ? 1 : 5));
+  assert.equal(pickInstance(counts), 3);
 });

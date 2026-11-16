@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
+import { Environment, Lightformer, useProgress } from "@react-three/drei";
 import * as THREE from "three";
 import { findPath, isWalkable, nearestWalkable, type P } from "@/lib/metaverse/path.ts";
-import { fetchLanterns, hangLantern, joinRoom, type Lantern, type Presence, type RoomConnection, type RoomEvent } from "@/lib/metaverse/realtime.ts";
+import { fetchLanterns, hangLantern, joinRoom, peekCounts, type Lantern, type Presence, type RoomConnection, type RoomEvent } from "@/lib/metaverse/realtime.ts";
 import { LANTERN_COLORS, WISHES, type WishId } from "@/lib/metaverse/lanterns.ts";
 import { ITEMS, SCARF_COLORS, defaultLook, sanitizeLook, toggleItem, type ItemId, type Look } from "@/lib/metaverse/look.ts";
-import { CAPACITY, isIdle, seatMembers, statusOf } from "@/lib/metaverse/queue.ts";
+import { CAPACITY, MAX_INSTANCES, isIdle, pickInstance, seatMembers, statusOf } from "@/lib/metaverse/queue.ts";
 import { EMOTES, PHRASES, phraseText } from "@/lib/metaverse/phrases.ts";
 import { autoName } from "@/lib/metaverse/names.ts";
 import { typeCode, type Answer } from "@/lib/match/match.ts";
@@ -23,6 +23,7 @@ import { FallingLeaves } from "./autumn";
 import { Effects } from "./Effects";
 import { chime, setSound, stopSound } from "./sound";
 import { emit } from "./bus";
+import { MapSheet } from "./MapSheet";
 import { asset } from "@/lib/base-path.ts";
 import type { Poi, RoomConfig } from "./types";
 import styles from "./Metaverse.module.css";
@@ -44,6 +45,8 @@ const UI = {
     color: "Colour",
     hang: "Hang it",
     hung: "Your lantern is lit.",
+    recent: "Recently hung",
+    lanternsToday: (n: number) => (n === 1 ? "1 lantern on the wall today" : `${n} lanterns on the wall today`),
     lightLamp: "Light the lamp",
     sit: "Sit on the pyeongsang",
     watch: "Watch the craftsperson",
@@ -51,6 +54,12 @@ const UI = {
     dressBody: "Tap an item to wear it, tap again to take it off. One item per spot.",
     scarfColor: "Scarf colour",
     done: "Done",
+    otherCopy: "Go to another copy",
+    map: "Map",
+    loading: "Setting up the neighbourhood",
+    mapTitle: "Around Seosulla-gil",
+    mapHint: "Tap a place to walk there.",
+    you: "You",
     hint: "Tap the ground to walk. Drag to look around.",
     connecting: "Finding other travelers…",
     offline: "Couldn't reach other travelers right now. You can still look around.",
@@ -79,6 +88,8 @@ const UI = {
     color: "색",
     hang: "달기",
     hung: "소원 등에 불이 켜졌어요.",
+    recent: "최근에 달린 소원",
+    lanternsToday: (n: number) => `오늘 담장에 걸린 등 ${n}개`,
     lightLamp: "등불 켜기",
     sit: "평상에 앉기",
     watch: "공방 구경하기",
@@ -86,6 +97,12 @@ const UI = {
     dressBody: "소품을 누르면 착용하고, 다시 누르면 벗어요. 한 부위에 하나씩이에요.",
     scarfColor: "목도리 색",
     done: "완료",
+    otherCopy: "다른 방으로 가기",
+    map: "지도",
+    loading: "동네를 준비하는 중",
+    mapTitle: "서순라길 둘러보기",
+    mapHint: "가고 싶은 곳을 누르면 걸어가요.",
+    you: "나",
     hint: "바닥을 누르면 걸어가요. 드래그하면 둘러볼 수 있어요.",
     connecting: "다른 여행자를 찾는 중…",
     offline: "지금은 다른 여행자와 연결되지 않아요. 혼자 둘러볼 수는 있어요.",
@@ -136,6 +153,11 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const [ready, setReady] = useState(false);
   const [webgl, setWebgl] = useState(true);
   const [session, setSession] = useState(0); // bump to rejoin
+  // Which copy of the room ("Jongno 01", "02"…). Chosen from how full each copy is.
+  const [instance, setInstance] = useState<number | null>(null);
+  const [copies, setCopies] = useState<number[]>([]);
+  const [copiesOpen, setCopiesOpen] = useState(false);
+  const lastSpot = useRef<{ x: number; z: number; heading: number } | null>(null);
   const [members, setMembers] = useState<Presence[]>([]);
   const [status, setStatus] = useState<"connecting" | "live" | "offline">("connecting");
   const [bubbles, setBubbles] = useState<Record<string, string>>({});
@@ -150,6 +172,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   }, []);
   const [look, setLook] = useState<Look>(defaultLook());
   const [dressOpen, setDressOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [hangOpen, setHangOpen] = useState(false);
   const [wish, setWish] = useState<WishId>("journey");
   const [paper, setPaper] = useState(0);
@@ -159,6 +182,8 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const [nearLamp, setNearLamp] = useState<number | null>(null);
   const [sound, setSoundOn] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Realtime reconnects on its own; only mention it if it stays down for a while.
+  const [offlineLong, setOfflineLong] = useState(false);
   const pending = useRef<(() => void) | null>(null);
 
   const me = useRef<{ id: string; type: string | null; name: string }>({ id: "", type: null, name: "" });
@@ -231,17 +256,50 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const showBubbleRef = useRef(showBubble);
   showBubbleRef.current = showBubble;
 
+  // Pick the first copy of the room with space (or ?copy=N for a specific one).
+  useEffect(() => {
+    if (!ready || !webgl || instance !== null) return;
+    const asked = Number(new URLSearchParams(location.search).get("copy"));
+    if (Number.isInteger(asked) && asked >= 1 && asked <= MAX_INSTANCES) {
+      setInstance(asked);
+      return;
+    }
+    let live = true;
+    peekCounts(room.slug, MAX_INSTANCES).then((counts) => {
+      if (!live) return;
+      setCopies(counts);
+      setInstance(pickInstance(counts));
+    });
+    return () => {
+      live = false;
+    };
+  }, [ready, webgl, instance, room]);
+
+  const switchCopy = (n: number) => {
+    const m = motions.current.get(me.current.id);
+    if (m) lastSpot.current = { x: m.x, z: m.z, heading: m.heading };
+    setCopiesOpen(false);
+    setInstance(n);
+  };
+
+  const openCopies = () => {
+    setCopiesOpen((v) => !v);
+    peekCounts(room.slug, MAX_INSTANCES, 1200).then(setCopies);
+  };
+
   // Join the room's channel.
   useEffect(() => {
-    if (!ready || !webgl) return;
+    if (!ready || !webgl || instance === null) return;
     const { id, type, name } = me.current;
     // ?at=x,z starts somewhere else (for checking a spot); the point is snapped onto the walkable area.
     const at = new URLSearchParams(location.search).get("at")?.split(",").map(Number);
-    const spawn =
-      at && at.length === 2 && at.every(Number.isFinite)
+    const spawn = lastSpot.current
+      ? lastSpot.current
+      : at && at.length === 2 && at.every(Number.isFinite)
         ? nearestWalkable({ x: at[0], z: at[1] }, room.walk)
         : { x: room.spawn.x + (Math.random() - 0.5) * 3, z: room.spawn.z + (Math.random() - 0.5) * 1.5 };
-    motions.current.set(id, newMotion(spawn.x, spawn.z, room.spawnHeading ?? 0));
+    motions.current.set(id, newMotion(spawn.x, spawn.z, lastSpot.current?.heading ?? room.spawnHeading ?? 0));
+    lastSpot.current = null;
     const presence: Presence = { id, joinedAt: Date.now(), name, type, look, x: spawn.x, z: spawn.z, heading: 0 };
     lastInput.current = Date.now();
     setAway(false);
@@ -268,7 +326,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       }
     };
     if (room.lanterns) fetchLanterns(room.slug).then(setLanterns);
-    const c = joinRoom(room.slug, presence, {
+    const c = joinRoom(room.slug, instance, presence, {
       onMembers: (list) => {
         for (const p of list) if (!motions.current.has(p.id)) motions.current.set(p.id, newMotion(p.x, p.z, p.heading));
         setMembers(list);
@@ -288,7 +346,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     };
     // Look changes are sent with update(), not by rejoining.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, webgl, room, session]);
+  }, [ready, webgl, room, session, instance]);
 
   // Give the spot away after a long time without input.
   useEffect(() => {
@@ -302,6 +360,15 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     }, 5000);
     return () => clearInterval(iv);
   }, [away, session]);
+
+  useEffect(() => {
+    if (status !== "offline") {
+      setOfflineLong(false);
+      return;
+    }
+    const id = setTimeout(() => setOfflineLong(true), 10000);
+    return () => clearTimeout(id);
+  }, [status]);
 
   const seated = useMemo(() => new Set(seatMembers(members).inRoom), [members]);
   const myStatus = status === "live" && me.current.id ? statusOf(me.current.id, members) : null;
@@ -381,6 +448,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       const m = motions.current.get(me.current.id);
       if (!m) return;
       m.heading = seat.heading;
+      m.seat = seat.on ?? null;
       emote("sit");
     };
     walkTo({ x: seat.x, z: seat.z });
@@ -501,6 +569,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               sameType={false}
               isMe
               bubble={bubbles[me.current.id] ?? null}
+              meLabel={t.you}
               onArrive={arrived}
               ground={ground}
             />
@@ -529,12 +598,21 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         </Canvas>
       )}
 
+      {ready && <Loader label={t.loading} />}
+
       <header className={styles.top}>
         <Link href="/metaverse" className={styles.back}>
           {t.rooms}
         </Link>
         <div className={styles.title}>
-          <h1>{room.name[lang]}</h1>
+          <h1>
+            {room.name[lang]}
+            {instance !== null && (
+              <button type="button" className={styles.copy} aria-expanded={copiesOpen} onClick={openCopies}>
+                {String(instance).padStart(2, "0")}
+              </button>
+            )}
+          </h1>
           <p>
             <span className="phrase">{room.place[lang]}</span> <span className="phrase">· {room.hour[lang]}</span>
           </p>
@@ -567,14 +645,42 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         </div>
       </header>
 
-      {status === "offline" && !away && <p className={styles.notice}>{t.offline}</p>}
+      {copiesOpen && (
+        <div className={styles.copies} role="menu">
+          {Array.from({ length: Math.min(MAX_INSTANCES, Math.max(copies.length + 1, 2)) }, (_, i) => i + 1).map((n) => (
+            <button key={n} type="button" role="menuitemradio" aria-checked={n === instance} onClick={() => switchCopy(n)}>
+              <span>
+                {room.name[lang]} {String(n).padStart(2, "0")}
+              </span>
+              <span className={styles.copyCount}>{t.here(copies[n - 1] ?? 0)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {status === "offline" && !away && offlineLong && <p className={styles.notice}>{t.offline}</p>}
       {hint && inside && <p className={styles.hint}>{t.hint}</p>}
 
       {near && inside && <PoiCard key={near.id} poi={near} lang={lang} />}
 
       {toast && <p className={styles.notice}>{toast}</p>}
 
-      {inside && !sayOpen && !actsOpen && !dressOpen && !hangOpen && (
+      {inside && mapOpen && (
+        <MapSheet
+          room={room}
+          lang={lang}
+          labels={t}
+          motions={motions}
+          meId={me.current.id}
+          onGo={(p) => {
+            setMapOpen(false);
+            walkTo(nearestWalkable(p, room.walk));
+          }}
+          onClose={() => setMapOpen(false)}
+        />
+      )}
+
+      {inside && !sayOpen && !actsOpen && !dressOpen && !hangOpen && !mapOpen && (
         <ContextAction
           poi={near}
           lamp={nearLamp !== null && !lit[nearLamp] ? nearLamp : null}
@@ -606,6 +712,25 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               <button key={c} type="button" aria-pressed={paper === i} aria-label={`${t.color} ${i + 1}`} style={{ background: c }} onClick={() => setPaper(i)} />
             ))}
           </fieldset>
+          {lanterns.length > 0 && (
+            <div className={styles.recent}>
+              <p>
+                {t.recent} · {t.lanternsToday(lanterns.length)}
+              </p>
+              <ul>
+                {lanterns
+                  .slice(-4)
+                  .reverse()
+                  .map((l, i) => (
+                    <li key={i}>
+                      <span className={styles.recentDot} style={{ background: LANTERN_COLORS[l.color] ?? LANTERN_COLORS[0] }} />
+                      <span>{l.name}</span>
+                      <span className={styles.recentWish}>{WISHES.find((w) => w.id === l.wish)?.[lang]}</span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
           <div className={styles.sheetActions}>
             <button type="button" className={styles.ghost} onClick={() => setHangOpen(false)}>
               {t.close}
@@ -688,6 +813,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           <button type="button" className={styles.dockButton} onClick={() => (setSayOpen(false), setActsOpen(false), setDressOpen(true))}>
             {t.dress}
           </button>
+          <button type="button" className={styles.dockButton} onClick={() => (setSayOpen(false), setActsOpen(false), setMapOpen(true))}>
+            {t.map}
+          </button>
         </nav>
       )}
 
@@ -698,9 +826,14 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             <p>
               <Phrases text={t.fullBody(waiting)} />
             </p>
-            <Link className="btn btn-primary" href="/metaverse">
-              {t.leave}
-            </Link>
+            <div className={styles.sheetActions}>
+              <Link className={styles.ghost} href="/metaverse">
+                {t.leave}
+              </Link>
+              <button type="button" className="btn btn-primary" onClick={() => switchCopy(pickInstance(copies.map((c, i) => (i + 1 === instance ? CAPACITY : c))))}>
+                {t.otherCopy}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1069,5 +1202,27 @@ function PoiCard({ poi, lang }: { poi: Poi; lang: "en" | "ko" }) {
         </p>
       )}
     </aside>
+  );
+}
+
+/** Covers the first load (textures, the traveler, the sky) with a quiet progress line. */
+function Loader({ label }: { label: string }) {
+  const { progress, active } = useProgress();
+  const [gone, setGone] = useState(false);
+  const done = !active && progress >= 100;
+  useEffect(() => {
+    if (!done) return;
+    const id = setTimeout(() => setGone(true), 700);
+    return () => clearTimeout(id);
+  }, [done]);
+  if (gone) return null;
+  return (
+    <div className={styles.loader} data-done={done} role="status" aria-live="polite">
+      <p>{label}</p>
+      <div className={styles.loaderBar}>
+        <span style={{ transform: `scaleX(${Math.max(0.04, progress / 100)})` }} />
+      </div>
+      <p className={styles.loaderPct}>{Math.round(progress)}%</p>
+    </div>
   );
 }

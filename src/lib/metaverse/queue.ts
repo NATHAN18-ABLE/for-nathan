@@ -1,7 +1,9 @@
 import { AXES } from "../match/match.ts";
 import { DISTRICTS } from "../match/districts.ts";
 
-export const CAPACITY = 10;
+export const CAPACITY = 30;
+// When a room is full, another copy of it opens ("Jongno 02"), up to this many.
+export const MAX_INSTANCES = 5;
 export const IDLE_MS = 120_000;
 // Districts with a metaverse room. Add a slug here once its scene exists.
 export const ROOMS = ["jongno", "seodaemun", "yongsan", "yeongdeungpo"];
@@ -47,4 +49,14 @@ export function nearestRoom(slug: string, rooms: string[] = ROOMS): string {
     }
   }
   return best;
+}
+
+/** Which copy of a room to join, given how many people are in each copy (1-based). */
+export function pickInstance(counts: number[], capacity = CAPACITY, max = MAX_INSTANCES): number {
+  const free = counts.findIndex((n) => n < capacity);
+  if (free >= 0) return free + 1;
+  if (counts.length < max) return counts.length + 1;
+  let best = 0;
+  for (let i = 1; i < counts.length; i++) if (counts[i] < counts[best]) best = i;
+  return best + 1;
 }

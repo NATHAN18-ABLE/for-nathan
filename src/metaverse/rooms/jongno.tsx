@@ -104,9 +104,9 @@ function WishRack() {
   return (
     <group position={[19.15, 0, 3]}>
       {[-11, 0, 11].map((z) => (
-        <TexBox key={z} size={[0.2, 2.9, 0.2]} position={[0, 1.45, z]} name="wood" tile={1} />
+        <TexBox key={z} size={[0.2, 3.05, 0.2]} position={[0, 1.52, z]} name="wood" tile={1} />
       ))}
-      <TexBox size={[0.16, 0.16, 22.6]} position={[0, 2.8, 0]} name="wood" tile={1} />
+      <TexBox size={[0.16, 0.16, 22.6]} position={[0, 2.95, 0]} name="wood" tile={1} />
     </group>
   );
 }
@@ -246,6 +246,25 @@ export const jongno: RoomConfig = {
     fog: ["#e6cfb2", 40, 175],
   },
   lanterns: true,
+  map: {
+    blocks: [
+      [2.3, -36.5, 8.9, -17], // workshops along the lane
+      [2.3, -12, 8.9, -5],
+      [2.3, 6.6, 8.9, 30],
+      [-23, -24.5, -2, -16.6],
+      [-29, -12, -9, -5],
+      [-29, 5, -9, 12],
+      [-23, 16.6, -2, 24.5],
+      [-8, -3, -1, 5], // courtyard house
+      [28, -33, 44, 17], // Jongmyo main hall terrace
+    ],
+    walls: [[20.4, -42, 20.4, 34]],
+    green: [
+      [-37, -12, 12],
+      [34, 25, 10],
+      [34, -38, 8],
+    ],
+  },
   lamps: LAMPS,
   pois: [
     {
@@ -285,7 +304,7 @@ export const jongno: RoomConfig = {
       at: { x: 6, z: 1 },
       radius: 3.2,
       action: "sit",
-      seat: { x: 5.3, z: 1, heading: Math.PI / 2 },
+      seat: { x: 5.3, z: 1, heading: Math.PI / 2, on: { x: 4.25, z: 1, y: 0.16 } },
       title: { en: "A courtyard and a pyeongsang", ko: "마당과 평상" },
       line: {
         en: "Neighbors rest on a wooden platform under the persimmon tree. Sit down for a while.",

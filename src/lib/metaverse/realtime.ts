@@ -49,9 +49,12 @@ export interface RoomConnection {
   leave: () => void;
 }
 
-export function joinRoom(room: string, me: Presence, h: RoomHandlers): RoomConnection {
+/** Channel name for one copy of a room ("jongno", copy 2 → "room:jongno:2"). */
+const topic = (room: string, instance: number) => `room:${room}:${instance}`;
+
+export function joinRoom(room: string, instance: number, me: Presence, h: RoomHandlers): RoomConnection {
   let state = { ...me };
-  let channel: RealtimeChannel | null = supabase().channel(`room:${room}`, {
+  let channel: RealtimeChannel | null = supabase().channel(topic(room, instance), {
     config: { presence: { key: me.id }, broadcast: { self: false } },
   });
   h.onStatus("connecting");
@@ -91,9 +94,11 @@ export function joinRoom(room: string, me: Presence, h: RoomHandlers): RoomConne
   };
 }
 
-/** Listen to how many people are in a room without joining it. */
-export function watchRoom(room: string, onCount: (n: number) => void): () => void {
-  let channel: RealtimeChannel | null = supabase().channel(`room:${room}`, { config: { presence: { key: `watch-${Math.random().toString(36).slice(2)}` } } });
+/** Listen to how many people are in one copy of a room without joining it. */
+export function watchRoom(room: string, instance: number, onCount: (n: number) => void): () => void {
+  let channel: RealtimeChannel | null = supabase().channel(topic(room, instance), {
+    config: { presence: { key: `watch-${Math.random().toString(36).slice(2)}` } },
+  });
   channel.on("presence", { event: "sync" }, () => {
     if (channel) onCount(Object.keys(channel.presenceState()).length);
   });
@@ -103,6 +108,21 @@ export function watchRoom(room: string, onCount: (n: number) => void): () => voi
     channel = null;
     if (c) supabase().removeChannel(c);
   };
+}
+
+/** A quick look at how full each copy of a room is (copies 1..max), then stop listening. */
+export function peekCounts(room: string, max: number, waitMs = 1800): Promise<number[]> {
+  return new Promise((resolve) => {
+    const counts = Array.from({ length: max }, () => 0);
+    const stops = counts.map((_, i) => watchRoom(room, i + 1, (n) => (counts[i] = n)));
+    setTimeout(() => {
+      stops.forEach((s) => s());
+      // Trim empty copies at the end, keeping copy 1.
+      let last = counts.length;
+      while (last > 1 && counts[last - 1] === 0) last--;
+      resolve(counts.slice(0, last));
+    }, waitMs);
+  });
 }
 
 /** Lanterns hung in a room during the last day, oldest first. */

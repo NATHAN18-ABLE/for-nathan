@@ -15,8 +15,21 @@ export type WishId = (typeof WISHES)[number]["id"];
 // Paper colours: red, gold, celadon, cobalt, white.
 export const LANTERN_COLORS = ["#d9534a", "#e8b94a", "#8fc1a8", "#5a78c8", "#f4efe4"] as const;
 
-/** The rack along the Jongmyo wall: rows of ropes between posts. */
-export const RACK = { x: 19.05, z0: -7.6, z1: 13.6, rows: 3, perRow: 24, yTop: 2.55, rowGap: 0.55 };
+/** The rack along the Jongmyo wall: rows of ropes strung between three posts. */
+export const RACK = { x: 19.05, z0: -7.6, z1: 13.6, rows: 3, perRow: 22, yTop: 2.6, rowGap: 0.62, posts: [-8, 3, 14], sag: 0.32 };
+
+/** Height of a rope row at z: highest at the posts, lowest mid-span. */
+export function ropeY(row: number, z: number) {
+  const top = RACK.yTop - row * RACK.rowGap;
+  const p = RACK.posts;
+  for (let i = 1; i < p.length; i++) {
+    if (z <= p[i] + 1e-9) {
+      const t = Math.min(1, Math.max(0, (z - p[i - 1]) / (p[i] - p[i - 1])));
+      return top - RACK.sag * 4 * t * (1 - t);
+    }
+  }
+  return top;
+}
 
 /** Where the i-th lantern hangs. Past the last slot, the oldest spot is reused. */
 export function lanternSpot(i: number) {
@@ -30,5 +43,5 @@ export function lanternSpot(i: number) {
   const step = (RACK.z1 - RACK.z0) / (RACK.perRow - 1);
   // Alternate rows sit half a step over, like lanterns on a festival rope.
   const z = Math.min(RACK.z1, RACK.z0 + col * step + (row % 2 ? step / 2 : 0));
-  return { x: RACK.x, y: RACK.yTop - row * RACK.rowGap - 0.25, z };
+  return { x: RACK.x, y: ropeY(row, z) - 0.3, z };
 }

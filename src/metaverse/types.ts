@@ -10,7 +10,8 @@ export interface Poi {
   line: { en: string; ko: string };
   // What the traveler can do here: hang a wish lantern, sit down, or watch a craftsperson.
   action?: "lantern" | "sit" | "watch";
-  seat?: { x: number; z: number; heading: number };
+  // Walk to (x, z), then sit at `on` (off the floor, e.g. on a platform edge) at height y.
+  seat?: { x: number; z: number; heading: number; on?: { x: number; z: number; y: number } };
 }
 
 export interface RoomConfig {
@@ -31,6 +32,8 @@ export interface RoomConfig {
   pois: Poi[];
   lamps?: [number, number][]; // street lamps travelers can light
   lanterns?: boolean; // this room has the wish-lantern rack
+  // Extra shapes for the 2D map: building blocks and walls [x0,z0,x1,z1], green patches [x,z,r].
+  map?: { blocks?: [number, number, number, number][]; walls?: [number, number, number, number][]; green?: [number, number, number][] };
   Scene: ComponentType; // static: its transforms are frozen after the first frame
   Live?: ComponentType; // moving parts of the room (workshop hammer, etc.)
 }

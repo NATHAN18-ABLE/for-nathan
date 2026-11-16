@@ -1,26 +1,40 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { LANTERN_COLORS, RACK, lanternSpot } from "@/lib/metaverse/lanterns.ts";
+import { LANTERN_COLORS, RACK, lanternSpot, ropeY } from "@/lib/metaverse/lanterns.ts";
 import type { Lantern } from "@/lib/metaverse/realtime.ts";
 
 /** Paper lanterns on the wall rack; a newly hung one rises into place and lights up. */
 export function LanternRack({ lanterns, fresh }: { lanterns: Lantern[]; fresh: number }) {
   return (
     <group>
-      {/* ropes */}
       {Array.from({ length: RACK.rows }, (_, r) => (
-        <mesh key={r} position={[RACK.x, RACK.yTop - r * RACK.rowGap, (RACK.z0 + RACK.z1) / 2]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.022, 0.022, RACK.z1 - RACK.z0 + 0.6, 6]} />
-          <meshStandardMaterial color="#5b4636" />
-        </mesh>
+        <Rope key={r} row={r} />
       ))}
       {lanterns.map((l, i) => (
         <PaperLantern key={i} index={i} color={LANTERN_COLORS[l.color] ?? LANTERN_COLORS[0]} isNew={i === fresh} />
       ))}
     </group>
+  );
+}
+
+/** A rope that sags between the posts. */
+function Rope({ row }: { row: number }) {
+  const geom = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    const [z0, , z1] = [RACK.posts[0], RACK.posts[1], RACK.posts[RACK.posts.length - 1]];
+    for (let i = 0; i <= 80; i++) {
+      const z = z0 + ((z1 - z0) * i) / 80;
+      pts.push(new THREE.Vector3(RACK.x, ropeY(row, z), z));
+    }
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.018, 5, false);
+  }, [row]);
+  return (
+    <mesh geometry={geom}>
+      <meshStandardMaterial color="#6b5240" roughness={0.9} />
+    </mesh>
   );
 }
 
@@ -43,20 +57,20 @@ function PaperLantern({ index, color, isNew }: { index: number; color: string; i
   });
   return (
     <group ref={g} position={[spot.x, spot.y, spot.z]}>
-      <mesh position={[0, 0.22, 0]}>
-        <cylinderGeometry args={[0.005, 0.005, 0.12, 4]} />
+      <mesh position={[0, 0.27, 0]}>
+        <cylinderGeometry args={[0.006, 0.006, 0.16, 4]} />
         <meshStandardMaterial color="#5b4636" />
       </mesh>
       <mesh scale={[1, 1.15, 1]}>
-        <sphereGeometry args={[0.13, 14, 10]} />
+        <sphereGeometry args={[0.17, 16, 12]} />
         <meshStandardMaterial ref={body} color={color} emissive="#ffb36b" emissiveIntensity={1.2} roughness={0.85} />
       </mesh>
-      <mesh position={[0, 0.15, 0]}>
-        <cylinderGeometry args={[0.06, 0.08, 0.04, 10]} />
+      <mesh position={[0, 0.2, 0]}>
+        <cylinderGeometry args={[0.07, 0.1, 0.05, 10]} />
         <meshStandardMaterial color="#2f2a26" />
       </mesh>
-      <mesh position={[0, -0.16, 0]}>
-        <cylinderGeometry args={[0.07, 0.05, 0.04, 10]} />
+      <mesh position={[0, -0.21, 0]}>
+        <cylinderGeometry args={[0.09, 0.06, 0.05, 10]} />
         <meshStandardMaterial color="#2f2a26" />
       </mesh>
     </group>

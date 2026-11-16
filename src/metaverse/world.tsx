@@ -223,6 +223,13 @@ export function Hanok({ position, rotation = 0, width = 9, depth = 6, glow = 0.3
       <TexBox size={[width + 0.6, 0.6, depth + 0.6]} position={[0, 0.3, 0]} name="granite" tile={1.2} tint="#d8d4cc" />
       {/* walls */}
       <mesh position={[0, 0.6 + wallH / 2, -0.2]} material={plaster} castShadow receiveShadow userData={{ solid: true }} geometry={useMemo(() => worldBox(width - 0.3, wallH, depth - 0.8), [width, depth])} />
+      {/* a stone footing around the walls, and a small window on each side */}
+      <TexBox size={[width - 0.22, 0.85, depth - 0.72]} position={[0, 0.6 + 0.425, -0.2]} name="stonewall" tile={1.3} tint="#ece5d9" />
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * ((width - 0.3) / 2 + 0.03), 0.6 + 1.2, -0.2]} rotation={[0, (side * Math.PI) / 2, 0]}>
+          <LatticeDoor position={[0, 0, 0]} width={0.95} height={0.8} glow={glow * 0.6} />
+        </group>
+      ))}
       {/* posts and beam */}
       {Array.from({ length: bays + 1 }, (_, i) => (
         <mesh key={i} position={[-width / 2 + i * bayW, 0.6 + wallH / 2, depth / 2 - 0.35]} material={wood} castShadow>

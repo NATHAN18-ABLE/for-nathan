@@ -9,6 +9,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { asset } from "@/lib/base-path.ts";
+import { prepareFigure } from "./Avatar";
 import { on } from "./bus";
 import { tap } from "./sound";
 import { TexBox } from "./world";
@@ -21,9 +22,7 @@ function Maker() {
   const gltf = useGLTF(asset("/metaverse/chars/traveler-a.glb"));
   const { scene, mixer } = useMemo(() => {
     const scene = cloneSkinned(gltf.scene);
-    scene.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) o.castShadow = true;
-    });
+    prepareFigure(scene);
     const mixer = new THREE.AnimationMixer(scene);
     const sit = gltf.animations.find((c) => c.name === "Chair_Sit_Idle_F");
     if (sit) mixer.clipAction(sit).play();

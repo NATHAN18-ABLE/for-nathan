@@ -6,7 +6,7 @@ import { SiteNav } from "@/components/SiteNav";
 import { Phrases } from "@/components/Phrases";
 import { useLang } from "@/lib/lang.ts";
 import { COPY } from "@/lib/hero/copy.ts";
-import { CAPACITY, ROOMS, nearestRoom } from "@/lib/metaverse/queue.ts";
+import { MAX_INSTANCES, ROOMS, nearestRoom } from "@/lib/metaverse/queue.ts";
 import { matchDistricts, scoreAnswers, type Answer } from "@/lib/match/match.ts";
 import { QUESTIONS } from "@/lib/match/questions.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
@@ -23,18 +23,18 @@ const PLAN: Record<string, { place: { en: string; ko: string }; hour: { en: stri
 
 const TEXT = {
   en: {
-    lede: "Meet travelers who found the same district. Each room holds ten people at a time; when it is full, you wait in line.",
+    lede: "Meet travelers who found the same district. Each room holds thirty people; when it is full, another copy of the room opens.",
     enter: "Enter",
     soon: "Opening soon",
-    here: (n: number) => `${n} of ${CAPACITY} here`,
+    here: (n: number) => (n === 1 ? "1 traveler here" : `${n} travelers here`),
     yours: "Your room",
     near: (d: string) => `Closest room to ${d}`,
   },
   ko: {
-    lede: "같은 구를 고른 여행자들을 만나 보세요. 방마다 한 번에 열 명까지 들어갈 수 있고, 가득 차면 줄을 서서 기다려요.",
+    lede: "같은 구를 고른 여행자들을 만나 보세요. 방마다 서른 명까지 들어갈 수 있고, 가득 차면 같은 방이 하나 더 열려요.",
     enter: "들어가기",
     soon: "곧 열려요",
-    here: (n: number) => `${CAPACITY}명 중 ${n}명`,
+    here: (n: number) => `지금 ${n}명`,
     yours: "나의 방",
     near: (d: string) => `${d}와 가장 가까운 방`,
   },
@@ -60,7 +60,17 @@ export function RoomList() {
   useEffect(() => {
     let stops: (() => void)[] = [];
     import("@/lib/metaverse/realtime.ts").then(({ watchRoom }) => {
-      stops = OPEN_ROOMS.map((slug) => watchRoom(slug, (n) => setCounts((c) => ({ ...c, [slug]: n }))));
+      // Count everyone across the room's copies (01, 02, …).
+      const per: Record<string, number[]> = {};
+      stops = OPEN_ROOMS.flatMap((slug) =>
+        Array.from({ length: MAX_INSTANCES }, (_, i) =>
+          watchRoom(slug, i + 1, (n) => {
+            per[slug] = per[slug] ?? [];
+            per[slug][i] = n;
+            setCounts((c) => ({ ...c, [slug]: per[slug].reduce((a, b) => a + (b ?? 0), 0) }));
+          }),
+        ),
+      );
     });
     return () => stops.forEach((s) => s());
   }, []);
@@ -99,7 +109,7 @@ export function RoomList() {
                 <div className={styles.action}>
                   {built ? (
                     <>
-                      <span className={styles.count}>{t.here(Math.min(CAPACITY, counts[slug] ?? 0))}</span>
+                      <span className={styles.count}>{t.here(counts[slug] ?? 0)}</span>
                       <Link className={isMine ? "btn btn-primary" : "btn"} href={`/metaverse/${slug}`}>
                         {t.enter}
                       </Link>
