@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
@@ -350,6 +351,9 @@ export function HeroScroll() {
       <button type="button" className="btn btn-light" onClick={startTest}>
         {t.start}
       </button>
+      <Link className={styles.walkFirst} href="/metaverse/jongno">
+        {t.walkFirst}
+      </Link>
     </div>
   );
 

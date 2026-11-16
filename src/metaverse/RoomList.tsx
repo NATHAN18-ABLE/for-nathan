@@ -13,9 +13,9 @@ import { DISTRICTS } from "@/lib/match/districts.ts";
 import { OPEN_ROOMS } from "@/lib/metaverse/open.ts";
 import styles from "./RoomList.module.css";
 
-// Planned rooms, in the order of the day: morning to night.
+// Planned rooms, in the order of the day: afternoon to night.
 const PLAN: Record<string, { place: { en: string; ko: string }; hour: { en: string; ko: string }; sky: [string, string] }> = {
-  jongno: { place: { en: "Seosulla-gil, along the Jongmyo wall", ko: "서순라길, 종묘 돌담길" }, hour: { en: "Morning", ko: "오전" }, sky: ["#c9dcee", "#f7f2e8"] },
+  jongno: { place: { en: "Seosulla-gil, along the Jongmyo wall", ko: "서순라길, 종묘 돌담길" }, hour: { en: "Autumn afternoon", ko: "가을 오후" }, sky: ["#a9c4e2", "#f1d3a8"] },
   seodaemun: { place: { en: "Ansan forest boardwalk", ko: "안산 자락길" }, hour: { en: "Afternoon", ko: "오후" }, sky: ["#b9d4ea", "#eef1e6"] },
   yongsan: { place: { en: "Haebangchon hillside stairs", ko: "해방촌 언덕 계단길" }, hour: { en: "Sunset", ko: "해 질 녘" }, sky: ["#8fa6d6", "#f2c9a5"] },
   yeongdeungpo: { place: { en: "Mullae metal-workshop alleys", ko: "문래 철공소 골목" }, hour: { en: "Night", ko: "밤" }, sky: ["#1d2a5a", "#4a4f7a"] },

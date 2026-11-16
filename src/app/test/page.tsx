@@ -11,7 +11,7 @@ import { useLang } from "@/lib/lang.ts";
 import { asset } from "@/lib/base-path.ts";
 import { Phrases } from "@/components/Phrases";
 import { nearestRoom } from "@/lib/metaverse/queue.ts";
-import { roomHref } from "@/lib/metaverse/open.ts";
+import { entryRoom, roomHref } from "@/lib/metaverse/open.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import styles from "./test.module.css";
 
@@ -75,7 +75,8 @@ function Result({ answers, onRestart }: { answers: Answer[]; onRestart: () => vo
   const type = TRAVEL_TYPES[code];
   const { best, runnerUp } = matchDistricts(scoreAnswers(answers));
   const room = nearestRoom(best.slug);
-  const roomName = DISTRICTS.find((d) => d.slug === room)?.nameEn ?? room;
+  const open = entryRoom(room);
+  const nameOf = (slug: string) => DISTRICTS.find((d) => d.slug === slug)?.nameEn ?? slug;
   return (
     <section className={styles.result} aria-live="polite">
       <p className={styles.code}>{code}</p>
@@ -92,10 +93,18 @@ function Result({ answers, onRestart }: { answers: Answer[]; onRestart: () => vo
           Also close to you: {runnerUp.nameEn} <span lang="ko">{runnerUp.nameKo}</span>
         </p>
       </div>
-      <p className={styles.note}>A day course for {best.nameEn} is in preparation.</p>
+      <p className={styles.note}>
+        <Phrases text={`A day course for ${best.nameEn} is in preparation.`} />
+        {open !== room && (
+          <>
+            {" "}
+            <Phrases text={`The ${nameOf(room)} room opens soon. Until then, travelers meet in ${nameOf(open)}.`} />
+          </>
+        )}
+      </p>
       <div className={styles.actions}>
         <Link className="btn btn-light" href={roomHref(room)}>
-          Meet travelers in {roomName}
+          Meet travelers in {nameOf(open)}
         </Link>
         <button type="button" className={styles.again} onClick={onRestart}>
           Take the test again

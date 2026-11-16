@@ -228,3 +228,20 @@
     bottom: calc(48px + env(safe-area-inset-bottom));
   }
 }
+
+/* A quiet second way in: walk the Jongno room before taking the test. */
+.walkFirst {
+  margin-top: -6px;
+  padding: 8px 4px;
+  font-size: 15px;
+  color: rgb(251 251 249 / 0.85);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  text-shadow: 0 2px 14px rgb(6 12 34 / 0.5);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .walkFirst:hover {
+    color: var(--white);
+  }
+}
