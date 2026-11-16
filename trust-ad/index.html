@@ -294,7 +294,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
 .tabs { display: flex; background: var(--fill); border-radius: 12px; padding: 4px; gap: 4px; }
 .tabs button { flex: 1; height: 38px; border-radius: 9px; font-size: 14.5px; font-weight: 700; color: var(--ink-3); text-align: center; transition: background-color 160ms ease, color 160ms ease; }
 .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(25,31,40,0.08); }
-.tabpanel { min-height: 236px; padding-top: 6px; }
+.tabpanel { min-height: 196px; padding-top: 6px; }
 .tl { list-style: none; margin: 8px 0 0; padding: 0; }
 .tl li { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: start; padding: 9px 0; position: relative; }
 .tl li .dotc { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 13px; position: relative; z-index: 1; }
@@ -327,7 +327,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
 /* product (step 13) */
 .prod-scroll { position: absolute; inset: 0; }
 .prod-img { width: 390px; height: 210px; }
-.prod-back { position: absolute; left: 12px; top: 10px; z-index: 6; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.9); display: grid; place-items: center; font-size: 22px; box-shadow: 0 2px 8px rgba(25,31,40,0.12); }
+
 .prod-info { padding: 14px 20px 0; }
 .prod-info .brandn { font-size: 14px; color: var(--ink-3); font-weight: 700; }
 .prod-info h3 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
@@ -515,6 +515,148 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
 .cert .c-sign { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 18px; font-size: 17px; font-weight: 800; color: var(--gov); }
 .cert .seal { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; color: var(--like); box-shadow: inset 0 0 0 2.5px var(--like), inset 0 0 0 5px var(--surface), inset 0 0 0 6.5px var(--like); transform: rotate(-8deg); }
 
+/* ---------- Added: hit areas, fallbacks, extras ---------- */
+.badge, .score-chip, .chips.sm .chip, .helpful, .rv-h button { position: relative; }
+.badge::after, .score-chip::after, .chips.sm .chip::after, .helpful::after, .rv-h button::after { content: ""; position: absolute; inset: -7px -3px; }
+.ph.ini { background: var(--accent-soft); }
+.ph.sm .ph-label b.ini-t { display: block; }
+.ph.ini.gov-ini { background: var(--gov-soft); }
+.ph.ini.corp-ini { background: var(--fill-2); }
+.ph-label .ini-t { font-size: 15px; font-weight: 800; color: var(--accent-ink); }
+.gov-ini .ph-label .ini-t { color: var(--gov); }
+.corp-ini .ph-label .ini-t { color: var(--ink-2); }
+.reaction .ph-label .ini-t { font-size: 24px; }
+.person .ph-label .ini-t { font-size: 18px; }
+.ph.post-fallback { background: linear-gradient(160deg, #e7eef7, #d9e4f1); }
+.post-card { font-size: 26px; font-weight: 800; line-height: 1.35; letter-spacing: -0.03em; color: var(--brand-ondo); text-align: left; align-self: stretch; padding: 0 30px; }
+.post-card small { display: block; margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+.extras { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.extras > span { font-size: 14px; font-weight: 700; color: var(--ink-3); margin-right: 2px; }
+.ex-btn { height: 38px; padding: 0 14px; border-radius: 10px; background: var(--surface); font-size: 14.5px; font-weight: 700; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; box-shadow: inset 0 0 0 1px var(--line); transition: background-color 160ms ease, color 160ms ease, transform 120ms var(--ease-out); }
+.ex-btn:active { transform: scale(0.97); }
+.ex-btn[aria-pressed="true"] { background: var(--accent); color: #fff; box-shadow: none; }
+@media (hover: hover) and (pointer: fine) { .ex-btn[aria-pressed="false"]:hover { background: var(--fill); } }
+body.clean .extras { display: none; }
+.law { display: block; margin-top: 6px; font-size: 12.5px; color: var(--ink-3); }
+
+/* score mix (step 10) */
+.mix { margin: -4px 0 16px; }
+.mix-bar { display: flex; gap: 2px; height: 10px; }
+.mix-bar span { border-radius: 2px; }
+.mix-bar span:first-child { border-radius: 4px 2px 2px 4px; }
+.mix-bar span:last-child { border-radius: 2px 4px 4px 2px; }
+.mix .m1 { background: var(--accent); } .mix .m2 { background: #4f8ded; } .mix .m3 { background: #86b0f2; } .mix .m4 { background: #b9d2f8; }
+.mix .m0 { background: repeating-linear-gradient(135deg, var(--fill-2) 0 3px, #d5dae0 3px 5px); }
+.mix-legend { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.mix-legend li { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2); }
+.mix-legend i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.mix-legend b { margin-left: auto; font-weight: 700; color: var(--ink); }
+.mix-legend .lost { grid-column: 1 / -1; color: var(--ink-3); }
+.mix-legend .lost b { color: var(--ink-2); }
+.report-link { width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; height: 44px; font-size: 14px; font-weight: 700; color: var(--ink-3); }
+.report-link .ic { font-size: 17px; }
+
+/* evidence detail */
+.sub-h { display: flex; align-items: center; gap: 4px; margin: 0 0 12px -8px; }
+.sub-h h3 { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; flex: 1; }
+.ev-meta { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13.5px; background: var(--fill); border-radius: 14px; padding: 12px 14px; }
+.ev-meta dt { color: var(--ink-3); }
+.ev-meta dd { margin: 0; font-weight: 600; }
+.ev-chart { margin-top: 14px; }
+.ev-chart h4 { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; }
+.ev-chart h4 small { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.bars { display: flex; align-items: flex-end; justify-content: space-around; height: 130px; margin-top: 10px; border-bottom: 1px solid var(--line); padding: 0 10px; }
+.bars div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; width: 56px; }
+.bars i { display: block; width: 26px; background: var(--accent); border-radius: 4px 4px 0 0; }
+.bars i.base { background: #b9d2f8; }
+.bars b { font-size: 12.5px; font-weight: 700; }
+.bars-x { display: flex; justify-content: space-around; padding: 6px 10px 0; font-size: 12px; color: var(--ink-3); }
+.bars-x span { width: 56px; text-align: center; }
+.ev-result { margin-top: 12px; display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
+.ev-result .ic { font-size: 18px; color: var(--accent); margin-top: 2px; }
+.ing { list-style: none; margin: 12px 0 0; padding: 0; }
+.ing li { display: flex; justify-content: space-between; padding: 9px 0; font-size: 14px; }
+.ing li + li { border-top: 1px solid var(--line); }
+.ing li b { font-weight: 700; }
+
+/* report form */
+.q { font-size: 14px; font-weight: 700; margin: 14px 0 8px; }
+.radio { width: 100%; display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 12px; background: var(--fill); font-size: 14.5px; font-weight: 600; }
+.radio + .radio { margin-top: 6px; }
+.radio .ic { font-size: 20px; color: var(--ink-4); }
+.radio[aria-checked="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+.radio[aria-checked="true"] .ic { color: var(--accent); }
+.field label { display: block; font-size: 14px; font-weight: 700; margin: 14px 0 6px; }
+.field textarea { width: 100%; height: 72px; resize: none; border: 0; border-radius: 12px; background: var(--fill); padding: 10px 12px; font: inherit; font-size: 16px; color: var(--ink); }
+.field textarea::placeholder { color: var(--ink-3); }
+.field textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.steps-next { list-style: none; margin: 14px 0 0; padding: 0; counter-reset: s; }
+.steps-next li { counter-increment: s; display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; font-size: 14px; text-align: left; }
+.steps-next li::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 800; display: grid; place-items: center; flex: none; }
+.steps-next li b { display: block; font-weight: 700; }
+.steps-next li span { font-size: 13px; color: var(--ink-3); }
+.done .rno { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); background: var(--fill); padding: 3px 9px; border-radius: 8px; }
+
+/* notification (step 12) */
+.n-dot { position: relative; }
+.n-dot::after { content: ""; position: absolute; top: 9px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--like); box-shadow: 0 0 0 2px var(--surface); }
+.banner { position: absolute; left: 10px; right: 10px; top: 52px; z-index: 30; display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 12px 14px; border-radius: 18px; background: rgba(255,255,255,0.97); box-shadow: 0 12px 30px -8px rgba(25,31,40,0.3); }
+.banner .brand-mark { width: 34px; height: 34px; border-radius: 10px; font-size: 20px; }
+.banner .bt { flex: 1; line-height: 1.4; }
+.banner .bt b { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--ink-3); }
+.banner .bt b small { font-weight: 500; font-size: 12px; }
+.banner .bt span { display: block; font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+.switch-row { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: var(--fill); font-size: 14.5px; font-weight: 700; }
+.switch { width: 46px; height: 28px; border-radius: 14px; background: var(--fill-2); position: relative; transition: background-color 200ms ease; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px rgba(25,31,40,0.2); transition: transform 200ms var(--ease-out); }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(18px); }
+.tl li .dotc.wait { background: var(--fill-2); color: var(--ink-3); }
+
+/* impact report console */
+.r-head { display: flex; align-items: center; gap: 10px; }
+.r-head h3 { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; flex: 1; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi { background: var(--surface); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(25,31,40,0.05); }
+.kpi span { font-size: 13px; color: var(--ink-3); font-weight: 600; }
+.kpi b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+.kpi small { font-size: 12.5px; color: var(--ink-3); }
+.kpi small em { font-style: normal; font-weight: 700; color: var(--accent-ink); }
+.lc { position: relative; flex: 1; min-height: 0; }
+.lc svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.lc .grid line { stroke: var(--line); stroke-width: 1; }
+.lc .axis text { font-size: 11.5px; fill: var(--ink-3); font-family: var(--font); }
+.lc .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.lc .pt { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.lc .mark-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 4 4; }
+.lc .mark-t { font-size: 12px; font-weight: 700; fill: var(--ink-2); font-family: var(--font); }
+.lc .end-t { font-size: 13px; font-weight: 800; fill: var(--ink); font-family: var(--font); }
+.lc .hit { fill: transparent; cursor: crosshair; }
+.lc .cross { stroke: var(--ink-4); stroke-width: 1; opacity: 0; }
+.lc .cross.on { opacity: 1; }
+.lc-tip { position: absolute; top: 0; transform: translateX(-50%); background: var(--ink); color: #fff; border-radius: 8px; padding: 6px 9px; font-size: 12.5px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 120ms ease; }
+.lc-tip.on { opacity: 1; }
+.feedback { list-style: none; margin: 0; padding: 0; }
+.feedback li { padding: 12px 0; }
+.feedback li + li { border-top: 1px solid var(--line); }
+.feedback b { display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 700; }
+.feedback p { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.5; }
+.feedback .c-cta { height: 36px; margin-top: 8px; font-size: 13.5px; width: auto; display: inline-flex; padding: 0 14px; }
+
+/* product top bar (step 13) */
+.prod-top { position: absolute; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 4px; padding: 0 8px; z-index: 6; transition: background-color 160ms ease, box-shadow 160ms ease; }
+.prod-top .t { flex: 1; font-size: 16px; font-weight: 700; opacity: 0; transition: opacity 160ms ease; }
+.prod-top .icon-btn { font-size: 22px; background: rgba(255,255,255,0.9); border-radius: 50%; box-shadow: 0 2px 8px rgba(25,31,40,0.12); transition: background-color 160ms ease, box-shadow 160ms ease; }
+.solid .prod-top { background: var(--surface); box-shadow: 0 1px 0 var(--line); }
+.solid .prod-top .t { opacity: 1; }
+.solid .prod-top .icon-btn { background: transparent; box-shadow: none; }
+.filtered-btn { width: 100%; display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--fill); font-size: 13.5px; font-weight: 600; color: var(--ink-2); text-align: left; }
+.filtered-btn .ic { font-size: 18px; color: var(--accent); }
+.filtered-btn .ic:last-child { margin-left: auto; color: var(--ink-4); transition: transform 200ms var(--ease-out); }
+.filtered-btn[aria-expanded="true"] .ic:last-child { transform: rotate(90deg); }
+.review.out p, .review.out .stars, .review.out .nm { opacity: 0.55; }
+.out-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: var(--ink-2); background: var(--fill); padding: 2px 7px; border-radius: 6px; }
+
 /* ---------- Motion (authored moments) ---------- */
 @media (prefers-reduced-motion: no-preference) {
   .play .sheet, .sheet.enter { animation: sheet-in 420ms var(--ease-drawer) both; }
@@ -528,6 +670,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
   .cert-layer.enter { animation: fade-in 200ms ease both; }
   .cert-layer.enter .cert { animation: pop 260ms var(--ease-out) both; }
   .done > .ic { animation: pop 320ms var(--ease-out) both; }
+  .banner.enter { animation: banner-in 360ms var(--ease-out) both; }
 }
 @media (prefers-reduced-motion: reduce) {
   .swap, .swap.out { transform: none; filter: none; }
@@ -538,6 +681,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
 @keyframes tap { 0% { opacity: 0; transform: scale(1.4); } 40% { opacity: 1; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 @keyframes stamp { 0% { opacity: 0; transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes banner-in { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes toast-in { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
 
 /* ---------- Narrow screens ---------- */
@@ -672,14 +816,16 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
   const LOADED = new Set();
   const IMG = {
     'product': ['product.jpg', '1024×1024', '온도랩 수분 앰플 제품 사진'],
-    'feed-post': ['feed-post.png', '1024×1024', '피드의 일반 게시물 사진'],
-    'consumer': ['consumer.png', '1024×1024', '소비자 프로필 사진'],
-    'reviewer': ['reviewer.png', '1024×1024', '국가 인증 기관 연구원 프로필 사진'],
-    'marketer': ['marketer.png', '1024×1024', '마케팅 담당자 프로필 사진'],
+    'feed-post': ['feed-post.png', '1024×1024', '피드의 일반 게시물 사진', { fb: 'post-fallback', html: '<span class="post-card">주말 아침,<br>창가 자리에서<br>책 한 권.<small>하루기록</small></span>' }],
+    'consumer': ['consumer.png', '1024×1024', '소비자 프로필 사진', { ini: '하', fb: 'ini' }],
+    'reviewer': ['reviewer.png', '1024×1024', '국가 인증 기관 연구원 프로필 사진', { ini: '서', fb: 'ini gov-ini' }],
+    'marketer': ['marketer.png', '1024×1024', '마케팅 담당자 프로필 사진', { ini: '윤', fb: 'ini corp-ini' }],
   };
   const img = (key, cls = '') => {
-    const [file, size, alt] = IMG[key];
-    return `<span class="ph ${cls}" role="img" aria-label="${alt}"><span class="ph-label">${ic('image')}<b>${file}</b><small>${size}</small></span><img src="img/${file}" alt=""${LOADED.has(file) ? ' class="loaded"' : ''}></span>`;
+    const [file, size, alt, f] = IMG[key];
+    // 사진이 아직 없으면 빗금 대신 이니셜이나 글 카드를 보여 준다. 같은 이름의 파일을 img/에 넣으면 사진이 덮는다.
+    const label = f ? (f.ini ? `<b class="ini-t">${f.ini}</b>` : f.html) : `${ic('image')}<b>${file}</b><small>${size}</small>`;
+    return `<span class="ph ${cls} ${f ? f.fb : ''}" role="img" aria-label="${alt}"><span class="ph-label">${label}</span><img src="img/${file}" alt=""${LOADED.has(file) ? ' class="loaded"' : ''}></span>`;
   };
   const mono = (t, color) => `<span class="avatar mono" style="background:var(--brand-${color})">${t}</span>`;
   const btn = (attrs, inner, cls = 'icon-btn') => `<button type="button" class="${cls}" ${attrs}>${inner}</button>`;
@@ -692,10 +838,13 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     tab: 'src', rankCat: 'ampoule',
     reviewFilter: 'all', helpful: {},
     wish: false, order: null, orderFresh: false, qty: 1, paying: false,
+    sheet10: 'main', evidence: null, report: null,
+    banner: false, bannerFresh: false, notif: false, alerts: true,
+    extra: null, consoleView: 'verify', showFiltered: false,
   };
   // 단계를 옮길 때마다 진행 중인 상태는 처음으로 돌린다. 캡처할 때 매번 같은 화면이 나오게 하기 위해서다.
   function resetTransient() {
-    Object.assign(state, { approving: false, sentBack: false, cert: false, publishing: false, order: null, orderFresh: false, qty: 1, paying: false, checks: [true, true, true], tab: 'src' });
+    Object.assign(state, { approving: false, sentBack: false, cert: false, publishing: false, order: null, orderFresh: false, qty: 1, paying: false, checks: [true, true, true], tab: 'src', sheet10: 'main', evidence: null, report: null, banner: false, notif: false, extra: null, consoleView: 'verify', showFiltered: false });
   }
 
   /* ---------- phone parts ---------- */
@@ -715,16 +864,16 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     ${btn('data-go="13" aria-label="쇼핑"', ic('storefront'))}
   </nav>`;
 
+  // 9·12단계 배지: 이름을 하나로 맞추고, 8단계 국가기관 인증이 소비자에게도 보이게 한다.
+  const BADGES = [['check-circle-f', '근거 확인'], ['user-check', '담당자 검수'], ['seal-check-f', '국가기관 인증']];
+  const trustBadges = (anim) => `<button type="button" class="score-chip press ${anim ? 'pop' : ''}" style="--i:0" data-go="10">${ic('shield-check-f')}신뢰도 <b ${anim ? 'data-count="91"' : ''}>91</b></button>`
+    + BADGES.map(([i, l], k) => `<button type="button" class="badge press ${anim ? 'pop' : ''}" style="--i:${k + 1}" data-go="10">${ic(i)}${l}</button>`).join('');
   const adPost = (o = {}) => {
     let trust;
     if (o.trust === 'score') {
-      trust = `<button type="button" class="score-chip pop press" style="--i:0" data-go="10">${ic('shield-check-f')}신뢰도 <b data-count="91">91</b></button>
-        <button type="button" class="badge pop press" style="--i:1" data-go="10">${ic('check-circle-f')}검증 완료</button>
-        <button type="button" class="badge pop press" style="--i:2" data-go="10">${ic('user-check')}담당자 검수</button>`;
+      trust = trustBadges(true);
     } else if (o.trust === 'badges') {
-      trust = `<button type="button" class="score-chip press" data-go="10">${ic('shield-check-f')}신뢰도 <b>91</b></button>
-        <button type="button" class="badge press" data-go="10">${ic('check-circle-f')}근거 확인</button>
-        <button type="button" class="badge press" data-go="10">${ic('user-check')}담당자 검수</button>`;
+      trust = trustBadges(false);
     } else {
       trust = `<button type="button" class="trust-btn press ${o.tap ? 'hot' : ''}" data-go="4">${ic('info')}광고 신뢰 정보${o.tap ? '<span class="ring"></span>' : ''}</button>${o.tap ? '<span class="tap"></span>' : ''}`;
     }
@@ -763,7 +912,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     </article>`;
   const feed = (o = {}) => `
     <div class="view">
-      <div class="appbar"><span class="logo">피드</span><span class="acts">${btn('data-toast="새 알림이 없어요" aria-label="알림"', ic('heart'))}${btn('data-toast="메시지는 시연에서 지원하지 않아요" aria-label="메시지"', ic('paper-plane-tilt'))}</span></div>
+      <div class="appbar"><span class="logo">피드</span><span class="acts">${o.notif ? btn('data-act="notif" aria-label="알림 1개"', ic('heart'), 'icon-btn n-dot') : btn('data-toast="새 알림이 없어요" aria-label="알림"', ic('heart'))}${btn('data-toast="메시지는 시연에서 지원하지 않아요" aria-label="메시지"', ic('paper-plane-tilt'))}</span></div>
       <div class="feed-clip scroll" data-scroll="feed" data-start="${o.offset ?? 0}">${normalPost()}${adPost(o)}</div>
       ${tabbar()}
     </div>`;
@@ -780,7 +929,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     <div class="sheet" role="dialog" aria-label="AI 광고 정보">
       <div class="grabber"></div>
       <div class="sheet-h"><h3>AI 광고 정보</h3>${btn('data-go="3" aria-label="닫기"', ic('x'))}</div>
-      <div class="notice">${ic('info')}<div><b>AI 활용 광고</b><span>이 광고의 이미지와 문구는 AI로 만들었어요.</span></div></div>
+      <div class="notice">${ic('info')}<div><b>AI 활용 광고</b><span>이 광고의 이미지와 문구는 AI로 만들었어요.</span><small class="law">「인공지능 기본법」의 생성형 AI 표시 의무에 따라 알려 드려요.</small></div></div>
       <p class="sec-t">제작 방식</p>
       <div class="rows">
         ${accRow('image', '이미지 생성', '실제 제품 사진을 바탕으로 AI가 배경 생성', '제품 병과 라벨은 실제 촬영본이고, 배경과 조명만 AI로 만들었어요.', '<span class="rv">AI</span>')}
@@ -819,23 +968,66 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
   }).join('');
   const navItem = (icon, label, on, extra = '') => `<button type="button" class="c-nav ${on ? 'on' : ''}" ${on ? 'aria-current="page"' : 'data-toast="시연에서는 이 메뉴를 열 수 없어요"'}>${ic(icon)}${label}${extra}</button>`;
 
-  const corpConsole = (cur, body) => `<div class="console">
+  const corpConsole = (cur, body, reportView = false) => `<div class="console">
       <aside class="c-side">
         <div class="c-logo"><span class="brand-mark">${ic('seal-check-f')}</span>확인필 <small>기업</small></div>
         ${navItem('chart-bar', '대시보드')}
-        ${navItem('list-checks', '광고 검증', true, '<span class="cnt">3</span>')}
+        ${reportView ? `<button type="button" class="c-nav" data-act="cview" data-v="verify">${ic('list-checks')}광고 검증<span class="cnt">3</span></button>` : navItem('list-checks', '광고 검증', true, '<span class="cnt">3</span>')}
         ${navItem('file-text', '근거 자료')}
         ${navItem('certificate', '인증 현황')}
-        ${navItem('ranking', '신뢰도 리포트')}
+        ${reportView ? navItem('ranking', '신뢰도 리포트', true) : `<button type="button" class="c-nav" data-act="cview" data-v="report">${ic('ranking')}신뢰도 리포트</button>`}
         ${navItem('gear', '설정')}
       </aside>
       <div class="c-main">
-        <div class="c-top"><span class="c-crumb">광고 검증 / <b>온도랩 수분 앰플 7일 캠페인</b></span><span class="c-user">${img('marketer', 'sm')}윤서하</span></div>
-        <div class="c-body"><div class="stepper">${stepper(cur)}</div>${body}</div>
+        <div class="c-top"><span class="c-crumb">${reportView ? '신뢰도 리포트' : '광고 검증'} / <b>온도랩 수분 앰플 7일 캠페인</b></span><span class="c-user">${img('marketer', 'sm')}윤서하</span></div>
+        <div class="c-body">${reportView ? '' : `<div class="stepper">${stepper(cur)}</div>`}${body}</div>
       </div>
     </div>`;
 
-  S[6] = () => corpConsole(0, `
+  /* 기업 효과 리포트: 배지 게재 전후 클릭률. 수치는 예시. */
+  const WEEKS = [['9.22', 2.0], ['9.29', 2.2], ['10.6', 2.1], ['10.13', 2.0], ['10.20', 2.2], ['10.27', 2.4], ['11.3', 3.2], ['11.10', 3.4]];
+  const lineChart = () => {
+    const W = 560, H = 250, L = 40, R = 520, T = 16, B = 220, max = 4;
+    const x = (i) => L + (R - L) * i / (WEEKS.length - 1);
+    const y = (v) => B - (B - T) * v / max;
+    const pts = WEEKS.map(([, v], i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const mx = x(5 + 4 / 7);
+    return `<div class="lc" data-lc>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="주간 광고 클릭률. 신뢰 배지 게재 전 2.0~2.4%, 게재 후 3.2%, 3.4%">
+        <g class="grid">${[0, 1, 2, 3, 4].map((v) => `<line x1="${L}" x2="${R}" y1="${y(v)}" y2="${y(v)}"/>`).join('')}</g>
+        <g class="axis">${[0, 1, 2, 3, 4].map((v) => `<text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`).join('')}
+          ${WEEKS.map(([d], i) => `<text x="${x(i)}" y="${B + 20}" text-anchor="middle">${d}</text>`).join('')}</g>
+        <line class="mark-line" x1="${mx}" x2="${mx}" y1="${T}" y2="${B}"/>
+        <text class="mark-t" x="${mx + 6}" y="${T + 12}">신뢰 배지 게재 10.31</text>
+        <line class="cross" x1="0" x2="0" y1="${T}" y2="${B}"/>
+        <polyline class="line" points="${pts}"/>
+        ${WEEKS.map(([, v], i) => `<circle class="pt" cx="${x(i)}" cy="${y(v)}" r="4"/>`).join('')}
+        <text class="end-t" x="${R + 8}" y="${y(3.4) + 4}">3.4%</text>
+        ${WEEKS.map(([d, v], i) => `<rect class="hit" x="${x(i) - (R - L) / 14}" y="${T}" width="${(R - L) / 7}" height="${B - T}" data-i="${i}" data-x="${(x(i) / W * 100).toFixed(2)}" data-label="${d} 주: 클릭률 ${v.toFixed(1)}%"/>`).join('')}
+      </svg>
+      <div class="lc-tip" role="status"></div>
+    </div>`;
+  };
+  const impactView = () => corpConsole(0, `
+    <div class="r-head"><h3>신뢰 배지 게재 효과</h3><span class="pill gray">예시 수치</span><span class="pill">${ic('seal-check-f')}10월 31일 게재</span></div>
+    <div class="kpis">
+      <div class="kpi"><span>광고 클릭률</span><b>3.4%</b><small>게재 전 2.1% <em>+1.3%p</em></small></div>
+      <div class="kpi"><span>구매 전환율</span><b>1.9%</b><small>게재 전 1.2% <em>+0.7%p</em></small></div>
+      <div class="kpi"><span>신뢰 정보 열람</span><b>38%</b><small>광고를 본 사람 중</small></div>
+      <div class="kpi"><span>광고 신고</span><b>3건</b><small>게재 전 4주 14건</small></div>
+    </div>
+    <div class="c-grid" style="grid-template-columns:1.75fr 1fr">
+      <div class="panel"><div class="panel-h">${ic('chart-bar')}<h3>주간 광고 클릭률</h3></div>${lineChart()}</div>
+      <div class="panel">
+        <div class="panel-h">${ic('chat-circle')}<h3>소비자 반응</h3></div>
+        <ul class="feedback">
+          <li><b>${ic('info')}이의 제기 1건 처리 중</b><p>‘피부 수분 48시간 지속’에 대해 접수. 답변 기한 11월 23일.</p><button type="button" class="c-cta ghost press" data-toast="답변 작성은 시연에서 지원하지 않아요">답변 작성</button></li>
+          <li><b>${ic('arrows-clockwise')}근거 재검증 중</b><p>‘7일 안에 피부 변화’ 추가 시험 자료를 11월 12일 제출. ${GOV}이 확인하고 있어요.</p></li>
+        </ul>
+      </div>
+    </div>`, true);
+
+  S[6] = () => state.consoleView === 'report' ? impactView() : corpConsole(0, `
     <div class="c-grid">
       <div class="panel">
         <div class="panel-h">${ic('robot')}<h3>AI 근거 수집·분석</h3><span class="pill">${ic('check')}분석 완료</span></div>
@@ -870,6 +1062,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     ['표현 수정·보완', '<q>7일 안에 피부 변화</q>는 근거가 없어 소비자 화면에 ‘근거 부족’ 표시를 붙였습니다.'],
   ];
   S[7] = () => {
+    if (state.consoleView === 'report') return impactView();
     const all = state.checks.every(Boolean);
     return corpConsole(1, `
     <div class="c-grid" style="grid-template-columns:1.1fr 1fr">
@@ -930,7 +1123,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     </div>`;
 
   S[8] = () => govConsole(`
-    <div class="gov-strip">${ic('seal-check-f')}국가 지정 광고검증기관 제12호<span>화장품효능검증센터</span></div>
+    <div class="gov-strip">${ic('seal-check-f')}광고 검증 전담 공공기관<span>화장품효능검증센터</span></div>
     <div class="c-grid" style="grid-template-columns:1fr 1.25fr">
       <div class="panel">
         <div class="panel-h">${ic('tray')}<h3>심사 대상</h3><span class="pill gray">접수 10월 27일</span></div>
@@ -955,9 +1148,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
 
   const TABS = {
     src: () => `<div class="rows">
-        ${accRow('file-text', '피부과 논문 (2024)', '피부 장벽 강화 근거', `4주 사용 뒤 장벽 지표가 개선됐다는 결과예요. ${GOV}이 표현 범위를 확인했어요.`)}
-        ${accRow('flask', '임상 시험 결과 (48시간)', '32명 대상, 4주 사용', '바르고 48시간이 지나도 피부 수분량이 유지됐어요.')}
-        ${accRow('globe-simple', '공식 성분 자료', '전성분과 함량 공개', '히알루론산 등 보습 성분의 함량을 제조사가 공시했어요.')}
+        ${EVIDENCE_LIST.map(([k, i, t, sub]) => `<button type="button" class="row" data-act="ev" data-v="${k}"><span class="ri">${ic(i)}</span><span class="rt"><b>${t}</b><span>${sub}</span></span>${ic('caret-right')}</button>`).join('')}
       </div>`,
     log: () => `<ol class="tl">
         <li><span class="dotc">${ic('robot')}</span><div><b>AI 근거 수집</b><span>자료 55건 수집, 8건 제외</span></div><time>10.24</time></li>
@@ -968,20 +1159,85 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     corp: () => `<div class="rows">
         <div class="row"><span class="ri">${ic('user-check')}</span><span class="rt"><b>책임 부서</b><span>온도랩 마케팅팀</span></span></div>
         <div class="row"><span class="ri">${ic('arrows-clockwise')}</span><span class="rt"><b>근거가 바뀌면</b><span>7일 안에 점수와 배지를 다시 매겨요</span></span></div>
-        <div class="row"><span class="ri">${ic('headset')}</span><span class="rt"><b>광고 문의</b><span>080-000-0000 (예시)</span></span></div>
+        <div class="row"><span class="ri">${ic('chat-circle')}</span><span class="rt"><b>이의 제기에 답하는 기한</b><span>접수 후 7일, ${GOV}이 함께 확인해요</span></span></div>
       </div>`,
   };
-  S[10] = () => phone(feed({ offset: 404, trust: 'badges' }) + `
-    <button type="button" class="dim" data-go="9" aria-label="닫기"></button>
-    <div class="sheet" role="dialog" aria-label="신뢰도 상세 정보">
-      <div class="grabber"></div>
-      <div class="sheet-h"><h3>신뢰도 상세 정보</h3>${btn('data-go="9" aria-label="닫기"', ic('x'))}</div>
-      <div class="score-h"><span class="score-big">91<small>점</small></span><p>근거 공개, 담당자 검수, 국가기관 인증을 합쳐 매긴 점수예요.</p></div>
+  const EVIDENCE_LIST = [
+    ['trial', 'flask', '임상 시험 결과 (48시간)', '32명 대상, 4주 사용'],
+    ['paper', 'file-text', '피부과 논문 (2024)', '피부 장벽 강화 근거'],
+    ['ing', 'globe-simple', '공식 성분 자료', '전성분과 함량 공개'],
+  ];
+  const barChart = (title, unit, rows) => {
+    const max = Math.max(...rows.map((r) => r[1]));
+    return `<div class="ev-chart"><h4>${title}<small>${unit}</small></h4>
+      <div class="bars" role="img" aria-label="${title}: ${rows.map(([l, v]) => `${l} ${v}`).join(', ')}">
+        ${rows.map(([l, v, base]) => `<div title="${l}: ${v}"><b>${v}</b><i class="${base ? 'base' : ''}" style="height:${Math.round(v / max * 100)}px"></i></div>`).join('')}
+      </div>
+      <div class="bars-x">${rows.map(([l]) => `<span>${l}</span>`).join('')}</div></div>`;
+  };
+  const EVIDENCE = {
+    trial: () => `<dl class="ev-meta"><dt>시험 기관</dt><dd>한빛피부임상센터</dd><dt>대상</dt><dd>20~40대 32명 (건성·복합성)</dd><dt>기간</dt><dd>4주 매일 사용</dd><dt>측정</dt><dd>피부 수분 측정기</dd></dl>
+      ${barChart('피부 수분량', '측정값, 예시', [['바르기 전', 42, true], ['직후', 68], ['24시간', 61], ['48시간', 57]])}
+      <p class="ev-result">${ic('check-circle-f')}<span>48시간 뒤에도 바르기 전보다 36% 높게 유지됐어요. ${GOV}이 시험 방법을 확인했어요.</span></p>`,
+    paper: () => `<dl class="ev-meta"><dt>학술지</dt><dd>피부장벽연구 (2024)</dd><dt>대상</dt><dd>성인 40명</dd><dt>기간</dt><dd>4주</dd><dt>지표</dt><dd>경피 수분 손실량 (낮을수록 좋아요)</dd></dl>
+      ${barChart('경피 수분 손실량', 'g/m²h, 예시', [['사용 전', 14.2, true], ['4주 후', 11.6]])}
+      <p class="ev-result">${ic('check-circle-f')}<span>4주 뒤 수분 손실이 18% 줄었어요. ‘피부 장벽 강화’는 이 결과 범위 안의 표현이에요.</span></p>`,
+    ing: () => `<dl class="ev-meta"><dt>공시 주체</dt><dd>온도랩 주식회사</dd><dt>공개 범위</dt><dd>전성분 23종과 주요 성분 함량</dd></dl>
+      <ul class="ing"><li><span>글리세린</span><b>6.0%</b></li><li><span>히알루론산</span><b>1.2%</b></li><li><span>판테놀</span><b>0.8%</b></li><li><span>세라마이드엔피</span><b>0.3%</b></li></ul>
+      <p class="ev-result">${ic('check-circle-f')}<span>보습 주장에 쓰인 성분과 함량이 실제 표시와 같아요.</span></p>`,
+  };
+  const MIX = [['m1', '근거 공개', 31, 40], ['m2', '담당자 검수', 20, 20], ['m3', '국가기관 인증', 30, 30], ['m4', '구매 리뷰 신뢰', 10, 10]];
+  const scoreMix = () => `<div class="mix">
+      <div class="mix-bar" role="img" aria-label="신뢰도 91점 구성: ${MIX.map(([, l, v, m]) => `${l} ${v}/${m}`).join(', ')}, 근거 부족 감점 9">
+        ${MIX.map(([c, l, v, m]) => `<span class="${c}" style="flex:${v}" title="${l} ${v}/${m}"></span>`).join('')}<span class="m0" style="flex:9" title="근거 부족 1건 -9"></span>
+      </div>
+      <ul class="mix-legend">
+        ${MIX.map(([c, l, v, m]) => `<li><i class="${c}"></i>${l}<b>${v}/${m}</b></li>`).join('')}
+        <li class="lost"><i class="m0"></i>근거 부족 주장 1건 (7일 안에 피부 변화)<b>-9</b></li>
+      </ul>
+    </div>`;
+  const CLAIM_NAMES = ['피부 수분 48시간 지속', '피부 장벽 강화', '7일 안에 피부 변화'];
+  const REASONS = ['근거가 틀렸어요', '써 보니 효과가 달랐어요', '표현이 과장됐어요'];
+  const sheet10 = () => {
+    if (state.sheet10 === 'evidence') {
+      const [, , t] = EVIDENCE_LIST.find(([k]) => k === state.evidence);
+      return `<div class="sub-h">${btn('data-act="ev-back" aria-label="뒤로"', ic('caret-left'))}<h3>${t}</h3>${btn('data-go="9" aria-label="닫기"', ic('x'))}</div>
+        ${EVIDENCE[state.evidence]()}
+        <button type="button" class="cta ghost press" data-toast="원문은 시연에서 열 수 없어요">원문 보기</button>`;
+    }
+    if (state.sheet10 === 'report') {
+      const r = state.report;
+      if (r.status === 'done') return `<div class="done">${ic('check-circle-f')}<h3>이의 제기가 접수됐어요</h3><span class="rno">접수번호 R-1116-0427</span></div>
+        <ol class="steps-next">
+          <li><div><b>기업 답변</b><span>온도랩이 7일 안에 근거와 함께 답해요</span></div></li>
+          <li><div><b>${GOV} 재검토</b><span>답변이 부족하면 기관이 다시 검증해요</span></div></li>
+          <li><div><b>점수와 배지 갱신</b><span>결과가 나오면 알림으로 알려 드려요</span></div></li>
+        </ol>
+        <button type="button" class="cta press" data-act="rp-close">확인</button>`;
+      const ready = r.claim !== null && r.reason !== null;
+      return `<div class="sub-h">${btn('data-act="rp-close" aria-label="뒤로"', ic('caret-left'))}<h3>이의 제기</h3>${btn('data-go="9" aria-label="닫기"', ic('x'))}</div>
+        <p class="q">어떤 주장이 사실과 다른가요?</p>
+        <div role="radiogroup" aria-label="주장 선택">${CLAIM_NAMES.map((c, i) => `<button type="button" class="radio" role="radio" aria-checked="${r.claim === i}" data-act="rp-claim" data-i="${i}" ${r.status === 'sending' ? 'disabled' : ''}>${ic(r.claim === i ? 'check-circle-f' : 'circle')}${c}</button>`).join('')}</div>
+        <p class="q">이유</p>
+        <div class="chips sm" role="radiogroup" aria-label="이유">${REASONS.map((x) => `<button type="button" class="chip" role="radio" aria-checked="${r.reason === x}" aria-pressed="${r.reason === x}" data-act="rp-reason" data-v="${x}" ${r.status === 'sending' ? 'disabled' : ''}>${x}</button>`).join('')}</div>
+        <div class="field"><label for="rp-text">자세한 내용 (선택)</label><textarea id="rp-text" name="rp-text" placeholder="예: 4주 써 봤는데 48시간 보습이 느껴지지 않았어요" ${r.status === 'sending' ? 'disabled' : ''}></textarea></div>
+        <button type="button" class="cta press" data-act="rp-send" ${!ready || r.status === 'sending' ? 'disabled' : ''}>${r.status === 'sending' ? '보내는 중…' : ready ? '이의 제기 보내기' : '주장과 이유를 골라 주세요'}</button>`;
+    }
+    return `<div class="sheet-h"><h3>신뢰도 상세 정보</h3>${btn('data-go="9" aria-label="닫기"', ic('x'))}</div>
+      <div class="score-h"><span class="score-big">91<small>점</small></span><p>근거 공개, 담당자 검수, 국가기관 인증, 구매 리뷰를 합쳐 매긴 점수예요.</p></div>
+      ${scoreMix()}
       <div class="tabs" role="tablist">
         ${[['src', '출처/근거'], ['log', '검수 내역'], ['corp', '기업 책임']].map(([k, l]) => `<button type="button" role="tab" aria-selected="${state.tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}
       </div>
       <div class="tabpanel" role="tabpanel">${TABS[state.tab]()}</div>
       <button type="button" class="link-row press" data-go="11">수분 앰플 브랜드 신뢰도 비교${ic('caret-right')}</button>
+      <button type="button" class="report-link" data-act="report-open">${ic('chat-circle')}정보가 사실과 다르면 이의 제기하기</button>`;
+  };
+  S[10] = () => phone(feed({ offset: 404, trust: 'badges' }) + `
+    <button type="button" class="dim" data-go="9" aria-label="닫기"></button>
+    <div class="sheet" role="dialog" aria-label="신뢰도 상세 정보">
+      <div class="grabber"></div>
+      ${sheet10()}
     </div>`);
 
   const RANKS = {
@@ -1017,13 +1273,35 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     </div>`);
   };
 
-  S[12] = () => phone(feed({ offset: 404, trust: 'badges' }));
+  const notifSheet = () => `<button type="button" class="dim ${state.notifFresh ? 'enter' : ''}" data-act="notif-close" aria-label="닫기"></button>
+    <div class="sheet ${state.notifFresh ? 'enter' : ''}" role="dialog" aria-label="근거 갱신 내역">
+      <div class="grabber"></div>
+      <div class="sheet-h"><h3>근거 갱신 내역</h3>${btn('data-act="notif-close" aria-label="닫기"', ic('x'))}</div>
+      <p class="score-h" style="margin:0 0 6px"><span style="font-size:14px;color:var(--ink-2)">‘7일 안에 피부 변화’ 주장에 새 근거가 제출됐어요. 결과가 나올 때까지 지금 표시(근거 부족)를 유지해요.</span></p>
+      <ol class="tl">
+        <li><span class="dotc">${ic('question')}</span><div><b>근거 부족으로 게재</b><span>소비자 화면에 그대로 공개</span></div><time>10.31</time></li>
+        <li><span class="dotc">${ic('file-text')}</span><div><b>추가 시험 자료 제출</b><span>40명, 4주 시험 결과</span></div><time>11.12</time></li>
+        <li><span class="dotc">${ic('seal-check')}</span><div><b>${GOV} 재검증 시작</b><span>결과 발표 예정 11월 21일</span></div><time>11.14</time></li>
+        <li><span class="dotc wait">${ic('arrows-clockwise')}</span><div><b>점수와 배지 갱신</b><span>검증되면 ‘근거 확인’으로 바뀌어요</span></div><time>예정</time></li>
+      </ol>
+      <div class="switch-row">이 광고의 근거가 바뀌면 알림 받기<button type="button" class="switch" role="switch" aria-checked="${state.alerts}" aria-label="근거 갱신 알림" data-act="alerts"></button></div>
+    </div>`;
+  const banner = () => `<button type="button" class="banner ${state.bannerFresh ? 'enter' : ''}" data-act="notif">
+      <span class="brand-mark">${ic('seal-check-f')}</span>
+      <span class="bt"><b>확인필<small>지금</small></b><span>온도랩 ‘7일 안에 피부 변화’에 새 근거가 제출돼 ${GOV}이 다시 검증하고 있어요</span></span>
+    </button>`;
+  S[12] = () => state.extra === 'impact' ? impactView()
+    : phone(feed({ offset: 404, trust: 'badges', notif: true }) + (state.banner ? banner() : '') + (state.notif ? notifSheet() : ''));
 
   const REVIEWS = [
     { id: 'r1', n: '지*은', skin: '건성', weeks: 4, star: 5, help: 37, t: '아침까지 당김이 덜해요. 7일 만에 확 달라지진 않았지만 꾸준히 쓰니 확실히 촉촉해졌어요.' },
     { id: 'r2', n: '박*현', skin: '복합성', weeks: 2, star: 4, help: 21, t: '끈적임 없이 흡수가 빨라요. 근거 자료가 공개돼 있어서 믿고 샀어요.' },
     { id: 'r3', n: '이*나', skin: '민감성', weeks: 6, star: 5, help: 18, t: '민감한 편인데 6주 동안 트러블이 없었어요. 성분이 그대로 공개돼 있어 안심돼요.' },
     { id: 'r4', n: '최*우', skin: '지성', weeks: 1, star: 4, help: 6, t: '가볍게 발려서 여름에도 괜찮을 것 같아요. 효과는 더 써 봐야 알겠어요.' },
+  ];
+  const FILTERED = [
+    { n: '뷰*러', why: '체험단 제공', t: '인생 앰플 찾았어요!! 7일 만에 피부가 완전히 달라졌어요 강력 추천합니다' },
+    { n: '코*맘', why: '같은 문장 반복', t: '피부 변화 7일! 더 맑고 더 탄력있게! 정말 최고예요 최고' },
   ];
   const FILTERS = { all: ['전체', () => true], long: ['4주 이상 사용', (r) => r.weeks >= 4], five: ['별점 5점', (r) => r.star === 5] };
   const stars = (n) => `<span class="stars" aria-label="별점 ${n}점">${[1, 2, 3, 4, 5].map((i) => ic('star-f', i <= n ? '' : 'off')).join('')}</span>`;
@@ -1045,8 +1323,8 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
   S[13] = () => {
     const list = REVIEWS.filter(FILTERS[state.reviewFilter][1]);
     return phone(`
-    <div class="view">
-      ${btn('data-go="12" aria-label="뒤로"', ic('caret-left'), 'prod-back press')}
+    <div class="view prod-view">
+      <div class="prod-top">${btn('data-go="12" aria-label="뒤로"', ic('caret-left'))}<span class="t">온도랩 수분 앰플 30ml</span>${btn('data-toast="공유 링크를 복사했어요" aria-label="공유"', ic('paper-plane-tilt'))}</div>
       <div class="prod-scroll scroll" data-scroll="product">
         ${img('product', 'prod-img')}
         <div class="prod-info">
@@ -1060,7 +1338,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
         </div>
         <section class="reviews" aria-label="구매자 리뷰">
           <div class="rv-h"><h4>구매자 리뷰</h4><span class="rv-score">${ic('star-f')}4.6<small>(1,284)</small></span><button type="button" data-toast="시연에서는 리뷰 4개만 보여 드려요">전체 보기</button></div>
-          <p class="rv-note">실제 구매한 사람의 리뷰만 모았어요</p>
+          <p class="rv-note">실제 구매한 사람의 리뷰만 평점에 넣었어요</p>
           <div class="chips sm" role="group" aria-label="리뷰 필터">
             ${Object.entries(FILTERS).map(([k, [l]]) => `<button type="button" class="chip" data-act="rfilter" data-v="${k}" aria-pressed="${state.reviewFilter === k}">${l}</button>`).join('')}
           </div>
@@ -1073,6 +1351,10 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
               <button type="button" class="helpful press" data-act="helpful" data-id="${r.id}" aria-pressed="${on}">${ic(on ? 'thumbs-up-f' : 'thumbs-up')}도움돼요 ${r.help + (on ? 1 : 0)}</button>
             </article>`;
           }).join('') : `<p class="empty">조건에 맞는 리뷰가 없어요</p>`}
+          <button type="button" class="filtered-btn" data-act="filtered" aria-expanded="${state.showFiltered}">${ic('funnel')}AI가 걸러낸 체험단·광고성 리뷰 214건${ic('caret-right')}</button>
+          ${state.showFiltered ? FILTERED.map((r) => `<article class="review out">
+              <div class="rv-top"><span class="avatar mono">${r.n[0]}</span><span class="nm"><b>${r.n}</b><span>평점에서 제외</span></span><span class="out-tag">${ic('funnel')}${r.why}</span></div>
+              ${stars(5)}<p>${r.t}</p></article>`).join('') : ''}
         </section>
       </div>
       <div class="buy">
@@ -1094,16 +1376,16 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     1: { short: '광고 노출', title: '스크롤하다 AI로 만든 스킨케어 광고를 본다', desc: '피드에 ‘피부 변화 7일!’ 광고가 나타납니다. 광고에는 AI 생성 표시와 ‘광고 신뢰 정보’ 버튼이 함께 붙어 있습니다.' },
     2: { short: '의심', title: '광고를 보고 의심이 든다', desc: '7일 만에 피부가 달라진다는 말, 근거가 있을까요? AI로 만든 광고가 늘수록 소비자는 문구를 그대로 믿기 어렵습니다.', reaction: '진짜일까?' },
     3: { short: '신뢰 정보 탭', title: '‘광고 신뢰 정보’ 버튼을 누른다', desc: '광고를 떠나지 않고, 광고 바로 아래 버튼 하나로 근거를 확인합니다.' },
-    4: { short: 'AI 활용 고지', title: 'AI 활용 여부와 제작 방식을 확인한다', desc: '어떤 부분을 AI가 만들었고 어디에 사람이 손댔는지 먼저 알려 줍니다.' },
+    4: { short: 'AI 활용 고지', title: 'AI 활용 여부와 제작 방식을 확인한다', desc: '어떤 부분을 AI가 만들었고 어디에 사람이 손댔는지 먼저 알려 줍니다. 생성형 AI 결과물을 표시하도록 한 「인공지능 기본법」 취지에 맞춘 화면입니다.' },
     5: { short: '주장 검증 결과', title: '제품의 주장을 검증 완료와 근거 부족으로 나눠 본다', desc: '광고 속 주장마다 검증 상태를 보여 줍니다. 근거가 없는 주장도 숨기지 않고 같은 자리에 표시합니다.', point: '근거 부족도 정보입니다. 확인된 것과 아닌 것을 함께 보여 줍니다.' },
     6: { short: 'AI 근거 수집', title: 'AI가 먼저 여러 출처에서 근거를 모은다', desc: '5단계의 검증 결과는 광고 게재 전에 만들어집니다. AI가 논문, 시험 결과, 전문 기관, 공식 자료를 모아 주장과 연결하고 허위·과장 자료를 걸러냅니다.' },
     7: { short: '담당자 검토', title: '마케팅 담당자가 먼저 검토하고 승인한다', desc: 'AI가 정리한 주장과 근거를 담당자가 직접 확인합니다. 표현을 고친 뒤 승인하면 국가 인증 기관에 인증을 요청합니다.' },
-    8: { short: '국가기관 인증', title: '국가 인증 기관이 근거를 최종 검증한다', desc: '국가 지정 광고검증기관이 근거의 타당성, 효과·표현, 과장 여부를 확인하고 인증서를 발급합니다. 인증을 받은 광고만 게재됩니다.', point: 'AI, 담당자, 국가 인증 기관. 세 단계를 거친 광고만 신뢰도와 배지를 받습니다.' },
-    9: { short: '신뢰도 표시', title: '검증을 마친 광고에 신뢰도가 표시된다', desc: '광고 아래에 신뢰도 점수와 ‘검증 완료’, ‘담당자 검수’ 배지가 붙습니다.' },
-    10: { short: '출처·검수 내역', title: '점수를 누르면 출처와 검수 내역이 보인다', desc: '출처와 근거, 언제 누가 검수하고 인증했는지, 문제가 생기면 기업이 어떻게 책임지는지까지 탭으로 나눠 보여 줍니다.' },
+    8: { short: '국가기관 인증', title: '국가 인증 기관이 근거를 최종 검증한다', desc: '광고 검증 전담 공공기관인 국가광고검증원이 근거의 타당성, 효과·표현, 과장 여부를 확인하고 인증서를 발급합니다. 인증을 받은 광고만 게재됩니다.', point: 'AI, 담당자, 국가 인증 기관. 세 단계를 거친 광고만 신뢰도와 배지를 받습니다.' },
+    9: { short: '신뢰도 표시', title: '검증을 마친 광고에 신뢰도가 표시된다', desc: '광고 아래에 신뢰도 점수와 ‘근거 확인’, ‘담당자 검수’, ‘국가기관 인증’ 배지가 붙습니다.' },
+    10: { short: '출처·검수 내역', title: '점수를 누르면 출처와 검수 내역이 보인다', desc: '점수가 어떻게 매겨졌는지, 출처와 근거, 언제 누가 검수하고 인증했는지까지 보여 줍니다. 정보가 사실과 다르면 소비자가 바로 이의를 제기할 수 있습니다.', extras: [['근거 원문 요약', 'ev', 'trial'], ['이의 제기', 'report-open']] },
     11: { short: '브랜드 랭킹', title: '브랜드별 신뢰도를 비교한다', desc: '인기순이 아니라 근거를 얼마나 투명하게 공개했는지로 브랜드를 비교합니다.' },
-    12: { short: '배지로 확인', title: '배지를 보고 광고를 믿게 된다', desc: '다음에 광고를 볼 때는 배지만 봐도 근거가 확인됐고 담당자가 검수했다는 것을 알 수 있습니다.', reaction: '확실히 믿을 수 있네!' },
-    13: { short: '안심 구매', title: '정보를 바탕으로 안심하고 구매한다', desc: '신뢰 정보와 실제 구매자 리뷰를 함께 보고 결정합니다. 기업은 먼저 검증하고, 소비자는 편리하게 선택합니다.', reaction: '이제 믿고 사도 되겠다!' },
+    12: { short: '배지로 확인', title: '배지를 보고 광고를 믿게 된다', desc: '다음에 광고를 볼 때는 배지만 봐도 근거, 담당자 검수, 국가기관 인증을 확인할 수 있습니다. 근거가 바뀌면 알림으로 알려 줍니다.', reaction: '확실히 믿을 수 있네!', extras: [['근거 갱신 알림', 'notif-banner'], ['기업 효과 리포트', 'impact']] },
+    13: { short: '안심 구매', title: '정보를 바탕으로 안심하고 구매한다', desc: '신뢰 정보와 실제 구매자 리뷰를 함께 보고 결정합니다. 체험단·광고성 리뷰는 AI가 걸러 냅니다. 기업은 먼저 검증하고, 소비자는 편리하게 선택합니다.', reaction: '이제 믿고 사도 되겠다!', extras: [['걸러낸 리뷰', 'filtered']] },
   };
   const TOTAL = 13;
   const isConsole = (n) => n >= 6 && n <= 8;
@@ -1135,6 +1417,7 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
       ${s.point ? `<p class="point">${ic('seal-check-f')}<span>${s.point}</span></p>` : ''}
       ${s.reaction ? `<div class="reaction">${img('consumer', 'sm')}<span class="bubble">${s.reaction}</span></div>` : ''}
       <p class="hint">${ic('hand-pointing')}시연 화면의 버튼을 직접 눌러 볼 수 있어요.</p>
+      ${s.extras ? `<div class="extras"><span>함께 볼 화면</span>${s.extras.map(([l, a, v]) => `<button type="button" class="ex-btn" data-ex="${a}" ${v ? `data-v="${v}"` : ''} aria-pressed="false">${l}</button>`).join('')}</div>` : ''}
       <p class="clean-note">확인필 시연 화면. 브랜드, 기관, 인물, 수치, 리뷰는 가상 예시입니다.</p>`;
   }
 
@@ -1171,9 +1454,25 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     deviceEl.innerHTML = S[n]();
     deviceEl.classList.remove('play'); void deviceEl.offsetWidth; deviceEl.classList.add('play');
     deviceEl.querySelectorAll('[data-start]').forEach((el) => { el.scrollTop = +el.dataset.start; });
-    mainEl.classList.toggle('is-console', isConsole(n));
-    fit();
+    after();
     countUp(deviceEl);
+  }
+  // 그린 뒤 공통 처리: 휴대폰/콘솔 배치, 크기 맞춤, 상품 상단 바, 함께 볼 화면 버튼 상태.
+  const EX_ON = {
+    ev: () => state.sheet10 === 'evidence', 'report-open': () => state.sheet10 === 'report',
+    'notif-banner': () => state.banner || state.notif, impact: () => state.extra === 'impact', filtered: () => state.showFiltered,
+  };
+  function after() {
+    mainEl.classList.toggle('is-console', !!deviceEl.querySelector('.console'));
+    fit();
+    syncProductBar();
+    copyEl.querySelectorAll('[data-ex]').forEach((b) => b.setAttribute('aria-pressed', !!(EX_ON[b.dataset.ex] && EX_ON[b.dataset.ex]())));
+    const ta = deviceEl.querySelector('#rp-text');
+    if (ta && state.report) ta.value = state.report.text;
+  }
+  function syncProductBar() {
+    const sc = deviceEl.querySelector('[data-scroll="product"]');
+    if (sc) sc.closest('.view').classList.toggle('solid', sc.scrollTop > 150);
   }
 
   // 같은 단계 안에서 상태가 바뀔 때: 등장 모션 없이 다시 그리고, 스크롤 위치와 펼친 항목을 그대로 둔다.
@@ -1188,6 +1487,9 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     open.forEach((i) => accs[i] && setAcc(accs[i], true));
     state.orderFresh = false;
     state.certFresh = false;
+    state.bannerFresh = false;
+    state.notifFresh = false;
+    after();
   }
 
   function go(n, { push = true } = {}) {
@@ -1278,6 +1580,30 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
       later(13, 900, () => { if (state.order) { state.paying = false; state.order = 'done'; refresh(); } });
     },
     'order-close'() { state.order = null; refresh(); },
+    ev(el) { state.sheet10 = state.sheet10 === 'evidence' && !el.closest('#device') ? 'main' : 'evidence'; state.evidence = el.dataset.v; refresh(); },
+    'ev-back'() { state.sheet10 = 'main'; refresh(); },
+    'report-open'(el) {
+      if (state.sheet10 === 'report' && el && !el.closest('#device')) { state.sheet10 = 'main'; refresh(); return; }
+      state.sheet10 = 'report'; state.report = { claim: null, reason: null, text: '', status: 'form' }; refresh();
+    },
+    'rp-claim'(el) { state.report.claim = +el.dataset.i; refresh(); },
+    'rp-reason'(el) { state.report.reason = el.dataset.v; refresh(); },
+    'rp-send'() { state.report.status = 'sending'; refresh(); later(10, 900, () => { if (state.report) { state.report.status = 'done'; refresh(); } }); },
+    'rp-close'() { state.sheet10 = 'main'; state.report = null; refresh(); },
+    'notif-banner'() {
+      if (state.banner || state.notif) { state.banner = false; state.notif = false; refresh(); return; }
+      state.extra = null; state.banner = true; state.bannerFresh = true; refresh();
+    },
+    notif() { state.banner = false; state.notif = true; state.notifFresh = true; refresh(); },
+    'notif-close'() { state.notif = false; refresh(); },
+    alerts() { state.alerts = !state.alerts; refresh(); toast(state.alerts ? '근거가 바뀌면 알려 드릴게요' : '알림을 껐어요'); },
+    impact() { state.extra = state.extra === 'impact' ? null : 'impact'; state.banner = false; state.notif = false; refresh(); },
+    cview(el) {
+      if (current === 12) { state.extra = el.dataset.v === 'report' ? 'impact' : null; }
+      else state.consoleView = el.dataset.v;
+      refresh();
+    },
+    filtered() { state.showFiltered = !state.showFiltered; refresh(); },
   };
 
   /* ---------- events ---------- */
@@ -1295,6 +1621,8 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     else if (e.key === 'c' || e.key === 'C') setClean(!clean);
     else if (e.key === 'Escape') {
       if (state.cert) ACTIONS['cert-close']();
+      else if (state.notif) ACTIONS['notif-close']();
+      else if (state.sheet10 !== 'main' && state.report?.status !== 'sending') ACTIONS['ev-back']();
       else if (state.order === 'sheet' && !state.paying) ACTIONS['order-close']();
       else if (clean) setClean(false);
     }
@@ -1309,6 +1637,26 @@ body.clean .clean-exit:focus-visible { opacity: 1; }
     if (t.dataset.act && ACTIONS[t.dataset.act]) ACTIONS[t.dataset.act](t);
     if (t.dataset.go) go(+t.dataset.go);
     if (t.dataset.toast) toast(t.dataset.toast);
+  });
+  copyEl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ex]');
+    if (b && ACTIONS[b.dataset.ex]) ACTIONS[b.dataset.ex](b);
+  });
+  deviceEl.addEventListener('input', (e) => { if (e.target.id === 'rp-text' && state.report) state.report.text = e.target.value; });
+  deviceEl.addEventListener('scroll', (e) => { if (e.target.dataset && e.target.dataset.scroll === 'product') syncProductBar(); }, true);
+  // 리포트 차트: 가장 가까운 주를 가리키면 세로선과 값 표시.
+  deviceEl.addEventListener('pointerover', (e) => {
+    const h = e.target.closest && e.target.closest('.lc .hit');
+    if (!h) return;
+    const lc = h.closest('.lc'), tip = lc.querySelector('.lc-tip'), cross = lc.querySelector('.cross');
+    const cx = +h.getAttribute('x') + +h.getAttribute('width') / 2;
+    cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.classList.add('on');
+    tip.textContent = h.dataset.label; tip.style.left = h.dataset.x + '%'; tip.classList.add('on');
+  });
+  deviceEl.addEventListener('pointerout', (e) => {
+    const lc = e.target.closest && e.target.closest('.lc');
+    if (!lc || (e.relatedTarget && lc.contains(e.relatedTarget) && e.relatedTarget.closest('.hit'))) return;
+    lc.querySelector('.lc-tip').classList.remove('on'); lc.querySelector('.cross').classList.remove('on');
   });
   document.addEventListener('load', (e) => {
     if (e.target.tagName === 'IMG' && e.target.closest('.ph')) { e.target.classList.add('loaded'); LOADED.add(e.target.getAttribute('src').slice(4)); }
