@@ -35,6 +35,28 @@ body {
   line-height: 1.55;
   font-weight: 380;
   -webkit-font-smoothing: antialiased;
+  /* Break lines between words, never inside one. Korean otherwise splits a word
+     between any two syllables (동/네); keep-all makes it wrap at spaces like English. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* A short phrase that should stay on one line; lines break between phrases. */
+.phrase {
+  white-space: nowrap;
 }
 
 ::selection {

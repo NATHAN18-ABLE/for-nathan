@@ -10,6 +10,7 @@ import { COPY } from "@/lib/hero/copy.ts";
 import { useLang } from "@/lib/lang.ts";
 import { asset } from "@/lib/base-path.ts";
 import { SiteNav } from "./SiteNav";
+import { Phrases } from "./Phrases";
 import styles from "./HeroScroll.module.css";
 
 // Scroll map (share of the pinned track, 960svh tall).
@@ -335,13 +336,17 @@ export function HeroScroll() {
   const intro = (
     <div ref={introRef} className={styles.intro}>
       <h1 className={styles.headline}>{t.headline}</h1>
-      <p className={styles.sub}>{t.sub}</p>
+      <p className={styles.sub}>
+        <Phrases text={t.sub} />
+      </p>
     </div>
   );
 
   const startBlock = (
     <div ref={startRef} className={styles.start}>
-      <p className={styles.startLine}>{t.startLine}</p>
+      <p className={styles.startLine}>
+        <Phrases text={t.startLine} />
+      </p>
       <button type="button" className="btn btn-light" onClick={startTest}>
         {t.start}
       </button>
