@@ -5,7 +5,7 @@
 
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { useLoader } from "@react-three/fiber";
+import { useFrame, useLoader } from "@react-three/fiber";
 import { asset } from "@/lib/base-path.ts";
 
 type V3 = [number, number, number];
@@ -76,7 +76,7 @@ export function worldBox(w: number, h: number, d: number) {
 export function TexBox({ size, position, rotation = 0, name, tile, tint, gain, cast = true }: { size: V3; position: V3; rotation?: number; name: TexName; tile: number; tint?: string; gain?: number; cast?: boolean }) {
   const mat = useSurface(name, tile, tint, gain);
   const geom = useMemo(() => worldBox(...size), [size[0], size[1], size[2]]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <mesh geometry={geom} material={mat} position={position} rotation={[0, rotation, 0]} castShadow={cast} receiveShadow />;
+  return <mesh geometry={geom} material={mat} position={position} rotation={[0, rotation, 0]} castShadow={cast} receiveShadow userData={{ solid: true }} />;
 }
 
 /* ---------- terrain ---------- */
@@ -221,7 +221,7 @@ export function Hanok({ position, rotation = 0, width = 9, depth = 6, glow = 0.3
     <group position={position} rotation={[0, rotation, 0]}>
       <TexBox size={[width + 0.6, 0.6, depth + 0.6]} position={[0, 0.3, 0]} name="granite" tile={1.2} tint="#d8d4cc" />
       {/* walls */}
-      <mesh position={[0, 0.6 + wallH / 2, -0.2]} material={plaster} castShadow receiveShadow geometry={useMemo(() => worldBox(width - 0.3, wallH, depth - 0.8), [width, depth])} />
+      <mesh position={[0, 0.6 + wallH / 2, -0.2]} material={plaster} castShadow receiveShadow userData={{ solid: true }} geometry={useMemo(() => worldBox(width - 0.3, wallH, depth - 0.8), [width, depth])} />
       {/* posts and beam */}
       {Array.from({ length: bays + 1 }, (_, i) => (
         <mesh key={i} position={[-width / 2 + i * bayW, 0.6 + wallH / 2, depth / 2 - 0.35]} material={wood} castShadow>
@@ -303,10 +303,16 @@ export interface TreeSpot {
   x: number;
   z: number;
   s: number;
-  kind?: "green" | "ginkgo" | "pine" | "persimmon";
+  kind?: "green" | "ginkgo" | "pine" | "persimmon" | "maple";
 }
 
-const TREE_COLORS = { green: ["#6f9a5b", "#88ad6a", "#5d8a4e"], ginkgo: ["#d9b84a", "#e6c95c", "#c9a63c"], pine: ["#3f6b4a", "#4d7a55", "#365e40"], persimmon: ["#7f9c58", "#93ab63", "#6c8a4c"] };
+const TREE_COLORS = {
+  green: ["#8a9a52", "#9aa65a", "#7d8f4c"], // late-autumn green, already turning
+  ginkgo: ["#e2b53c", "#ecc650", "#d6a632"],
+  pine: ["#3f6b4a", "#4d7a55", "#365e40"],
+  persimmon: ["#b8823c", "#c9933f", "#a8742f"],
+  maple: ["#c8402a", "#dc5a2c", "#b33326", "#e27a34"],
+};
 
 /** Many trees in four draw calls: trunks and three layers of soft canopy. */
 export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hills?: Hill[]; seed?: number }) {
@@ -405,5 +411,32 @@ export function Mountains({ seed = 7, radius = 170 }: { seed?: number; radius?: 
     <mesh geometry={geom}>
       <meshStandardMaterial color="#7f9a86" roughness={1} side={THREE.BackSide} />
     </mesh>
+  );
+}
+
+/** A street lamp with a paper shade. Travelers light it; it fades on as it warms up. */
+export function LampPost({ position, lit, hills = [] }: { position: [number, number]; lit: boolean; hills?: Hill[] }) {
+  const shade = useRef<THREE.MeshStandardMaterial>(null);
+  const glow = useRef(lit ? 1 : 0);
+  useFrame((_, dt) => {
+    glow.current += ((lit ? 1 : 0) - glow.current) * (1 - Math.exp(-dt * 2.5));
+    if (shade.current) shade.current.emissiveIntensity = 0.08 + glow.current * 2.6;
+  });
+  const y = heightAt(position[0], position[1], hills);
+  return (
+    <group position={[position[0], y, position[1]]}>
+      <mesh position={[0, 1.4, 0]} castShadow>
+        <cylinderGeometry args={[0.06, 0.08, 2.8, 8]} />
+        <meshStandardMaterial color="#2c2f35" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 2.95, 0]}>
+        <boxGeometry args={[0.42, 0.5, 0.42]} />
+        <meshStandardMaterial ref={shade} color="#fff4de" emissive="#ffb866" emissiveIntensity={0.08} roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 3.3, 0]}>
+        <coneGeometry args={[0.36, 0.22, 4]} />
+        <meshStandardMaterial color="#2c2f35" roughness={0.6} />
+      </mesh>
+    </group>
   );
 }

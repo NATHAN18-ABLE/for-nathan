@@ -6,7 +6,9 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
 import { findPath, isWalkable, nearestWalkable, type P } from "@/lib/metaverse/path.ts";
-import { joinRoom, type Presence, type RoomConnection, type RoomEvent } from "@/lib/metaverse/realtime.ts";
+import { fetchLanterns, hangLantern, joinRoom, type Lantern, type Presence, type RoomConnection, type RoomEvent } from "@/lib/metaverse/realtime.ts";
+import { LANTERN_COLORS, WISHES, type WishId } from "@/lib/metaverse/lanterns.ts";
+import { ITEMS, SCARF_COLORS, defaultLook, sanitizeLook, toggleItem, type ItemId, type Look } from "@/lib/metaverse/look.ts";
 import { CAPACITY, isIdle, seatMembers, statusOf } from "@/lib/metaverse/queue.ts";
 import { EMOTES, PHRASES, phraseText } from "@/lib/metaverse/phrases.ts";
 import { autoName } from "@/lib/metaverse/names.ts";
@@ -15,8 +17,11 @@ import { QUESTIONS } from "@/lib/match/questions.ts";
 import { useLang } from "@/lib/lang.ts";
 import { Phrases } from "@/components/Phrases";
 import { Avatar, WALK_SPEED, newMotion, type Motion } from "./Avatar";
-import { OUTFITS } from "./glaze";
-import { heightAt } from "./world";
+import { heightAt, LampPost } from "./world";
+import { LanternRack } from "./Lanterns";
+import { FallingLeaves } from "./autumn";
+import { Effects } from "./Effects";
+import { chime, setSound, stopSound, tap } from "./sound";
 import { asset } from "@/lib/base-path.ts";
 import type { Poi, RoomConfig } from "./types";
 import styles from "./Metaverse.module.css";
@@ -28,7 +33,24 @@ const UI = {
     say: "Say",
     actions: "Actions",
     outfit: "Outfit",
-    hint: "Tap the ground to walk",
+    dress: "Dress up",
+    soundOn: "Sound on",
+    soundOff: "Sound off",
+    hangLantern: "Hang a wish lantern",
+    hangTitle: "Hang a wish lantern",
+    hangBody: "Choose a wish and a colour. Your lantern stays lit on the wall for a day, for everyone in this room.",
+    wish: "Wish",
+    color: "Colour",
+    hang: "Hang it",
+    hung: "Your lantern is lit.",
+    lightLamp: "Light the lamp",
+    sit: "Sit on the pyeongsang",
+    watch: "Watch the craftsperson",
+    dressTitle: "Dress up",
+    dressBody: "Tap an item to wear it, tap again to take it off. One item per spot.",
+    scarfColor: "Scarf colour",
+    done: "Done",
+    hint: "Tap the ground to walk. Drag to look around.",
     connecting: "Finding other travelers…",
     offline: "Couldn't reach other travelers right now. You can still look around.",
     fullTitle: "This room is full",
@@ -46,7 +68,24 @@ const UI = {
     say: "말하기",
     actions: "동작",
     outfit: "옷 바꾸기",
-    hint: "바닥을 누르면 걸어가요",
+    dress: "꾸미기",
+    soundOn: "소리 켜기",
+    soundOff: "소리 끄기",
+    hangLantern: "소원 등 달기",
+    hangTitle: "소원 등 달기",
+    hangBody: "소원과 색을 골라 주세요. 등은 하루 동안 담장에 켜져 있고, 이 방의 모두에게 보여요.",
+    wish: "소원",
+    color: "색",
+    hang: "달기",
+    hung: "소원 등에 불이 켜졌어요.",
+    lightLamp: "등불 켜기",
+    sit: "평상에 앉기",
+    watch: "공방 구경하기",
+    dressTitle: "꾸미기",
+    dressBody: "소품을 누르면 착용하고, 다시 누르면 벗어요. 한 부위에 하나씩이에요.",
+    scarfColor: "목도리 색",
+    done: "완료",
+    hint: "바닥을 누르면 걸어가요. 드래그하면 둘러볼 수 있어요.",
     connecting: "다른 여행자를 찾는 중…",
     offline: "지금은 다른 여행자와 연결되지 않아요. 혼자 둘러볼 수는 있어요.",
     fullTitle: "방이 가득 찼어요",
@@ -104,16 +143,29 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const [actsOpen, setActsOpen] = useState(false);
   const [away, setAway] = useState(false);
   const [hint, setHint] = useState(true);
-  const [look, setLook] = useState({ body: 0, hat: 0 });
+  const [look, setLook] = useState<Look>(defaultLook());
+  const [dressOpen, setDressOpen] = useState(false);
+  const [hangOpen, setHangOpen] = useState(false);
+  const [wish, setWish] = useState<WishId>("journey");
+  const [paper, setPaper] = useState(0);
+  const [lanterns, setLanterns] = useState<Lantern[]>([]);
+  const [fresh, setFresh] = useState(-1);
+  const [lit, setLit] = useState<Record<number, boolean>>({});
+  const [nearLamp, setNearLamp] = useState<number | null>(null);
+  const [sound, setSoundOn] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const pending = useRef<(() => void) | null>(null);
 
   const me = useRef<{ id: string; type: string | null; name: string }>({ id: "", type: null, name: "" });
   const motions = useRef(new Map<string, Motion>());
   const conn = useRef<RoomConnection | null>(null);
   const lastInput = useRef(Date.now());
-  const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.3, dist: 5.6, touchedAt: 0 });
+  const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.2, dist: 5.2, touchedAt: 0 });
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef(0);
   const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0), [room]);
+  // Phones get lighter effects; iPads and computers the full set.
+  const lowPower = typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 600;
 
   // Drag to look around, wheel or pinch to come closer.
   const onPointerDown = (e: React.PointerEvent) => {
@@ -131,7 +183,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       pinch.current = d;
     } else {
       v.yaw -= (e.clientX - prev.x) * 0.006;
-      v.pitch = Math.min(1.2, Math.max(0.08, v.pitch + (e.clientY - prev.y) * 0.004));
+      v.pitch = Math.min(1.1, Math.max(-0.08, v.pitch + (e.clientY - prev.y) * 0.005));
     }
     v.touchedAt = performance.now();
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -150,13 +202,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   useEffect(() => {
     const id = myId();
     me.current = { id, type: myType(), name: autoName(id) };
-    let body = parseInt(id.replace(/\D/g, "").slice(0, 3) || "0", 10) % OUTFITS.length;
-    let hat = 0;
     try {
-      const saved = JSON.parse(localStorage.getItem("seoul.mv.look") ?? "null");
-      if (saved && typeof saved.body === "number") ({ body, hat } = saved);
+      setLook(sanitizeLook(JSON.parse(localStorage.getItem("seoul.mv.look2") ?? "null")));
     } catch {}
-    setLook({ body, hat });
     setWebgl(hasWebgl());
     setReady(true);
   }, []);
@@ -181,7 +229,12 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   useEffect(() => {
     if (!ready || !webgl) return;
     const { id, type, name } = me.current;
-    const spawn = { x: room.spawn.x + (Math.random() - 0.5) * 3, z: room.spawn.z + (Math.random() - 0.5) * 1.5 };
+    // ?at=x,z starts somewhere else (for checking a spot); the point is snapped onto the walkable area.
+    const at = new URLSearchParams(location.search).get("at")?.split(",").map(Number);
+    const spawn =
+      at && at.length === 2 && at.every(Number.isFinite)
+        ? nearestWalkable({ x: at[0], z: at[1] }, room.walk)
+        : { x: room.spawn.x + (Math.random() - 0.5) * 3, z: room.spawn.z + (Math.random() - 0.5) * 1.5 };
     motions.current.set(id, newMotion(spawn.x, spawn.z, room.spawnHeading ?? 0));
     const presence: Presence = { id, joinedAt: Date.now(), name, type, look, x: spawn.x, z: spawn.z, heading: 0 };
     lastInput.current = Date.now();
@@ -198,8 +251,17 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       } else if (e.kind === "emote" && m) {
         m.emote = e.emote;
         m.emoteAt = performance.now();
+      } else if (e.kind === "lantern") {
+        setLanterns((list) => {
+          setFresh(list.length);
+          return [...list, e.lantern];
+        });
+        chime(1.2);
+      } else if (e.kind === "lamp" && Number.isInteger(e.lamp)) {
+        setLit((l) => ({ ...l, [e.lamp]: true }));
       }
     };
+    if (room.lanterns) fetchLanterns(room.slug).then(setLanterns);
     const c = joinRoom(room.slug, presence, {
       onMembers: (list) => {
         for (const p of list) if (!motions.current.has(p.id)) motions.current.set(p.id, newMotion(p.x, p.z, p.heading));
@@ -267,7 +329,80 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const arrived = useCallback(() => {
     const m = motions.current.get(me.current.id);
     if (m) conn.current?.update({ x: m.x, z: m.z, heading: m.heading });
+    const next = pending.current;
+    pending.current = null;
+    next?.();
   }, []);
+
+  const flash = (text: string) => {
+    setToast(text);
+    setTimeout(() => setToast((x) => (x === text ? null : x)), 2600);
+  };
+
+  const toggleSound = () => {
+    const on = !sound;
+    setSoundOn(on);
+    setSound(on);
+  };
+  useEffect(() => () => stopSound(), []);
+
+  const doHang = async () => {
+    touch();
+    setHangOpen(false);
+    const l: Lantern = { wish, color: paper, name: me.current.name };
+    setLanterns((list) => {
+      setFresh(list.length);
+      return [...list, l];
+    });
+    chime(1);
+    emote("bow");
+    flash(t.hung);
+    conn.current?.send({ kind: "lantern", id: me.current.id, lantern: l });
+    await hangLantern(room.slug, l);
+  };
+
+  const lightLamp = (i: number) => {
+    touch();
+    setLit((l) => ({ ...l, [i]: true }));
+    chime(1.5);
+    conn.current?.send({ kind: "lamp", id: me.current.id, lamp: i });
+  };
+
+  const sitHere = (poi: Poi) => {
+    if (!poi.seat) return;
+    const seat = poi.seat;
+    pending.current = () => {
+      const m = motions.current.get(me.current.id);
+      if (!m) return;
+      m.heading = seat.heading;
+      emote("sit");
+    };
+    walkTo({ x: seat.x, z: seat.z });
+  };
+
+  const watch = () => {
+    touch();
+    for (let i = 0; i < 8; i++) setTimeout(tap, i * 420 + Math.random() * 60);
+  };
+
+  const wear = (id: ItemId) => {
+    touch();
+    const next = toggleItem(look, id);
+    setLook(next);
+    try {
+      localStorage.setItem("seoul.mv.look2", JSON.stringify(next));
+    } catch {}
+    conn.current?.update({ look: next });
+  };
+
+  const scarf = (i: number) => {
+    const next = { ...look, scarf: i };
+    setLook(next);
+    try {
+      localStorage.setItem("seoul.mv.look2", JSON.stringify(next));
+    } catch {}
+    conn.current?.update({ look: next });
+  };
 
   const say = (phrase: string) => {
     touch();
@@ -285,16 +420,6 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       m.emoteAt = performance.now();
     }
     conn.current?.send({ kind: "emote", id: me.current.id, emote: id });
-  };
-
-  const changeOutfit = () => {
-    touch();
-    const next = { body: (look.body + 1) % OUTFITS.length, hat: look.body % 2 === 1 ? 1 - look.hat : look.hat };
-    setLook(next);
-    try {
-      localStorage.setItem("seoul.mv.look", JSON.stringify(next));
-    } catch {}
-    conn.current?.update({ look: next });
   };
 
   // Keep bubbles in the reader's language when they switch.
@@ -349,13 +474,16 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           <Lights room={room} motions={motions} meId={me.current.id} />
           <Walkable room={room} onPick={walkTo}>
             <room.Scene />
+            {room.lamps?.map((pos, i) => <LampPost key={i} position={pos} lit={!!lit[i]} hills={room.world?.hills} />)}
+            {room.lanterns && <LanternRack lanterns={lanterns} fresh={fresh} />}
           </Walkable>
+          {room.world && <FallingLeaves motions={motions} meId={me.current.id} />}
+          {room.world && <Effects low={lowPower} />}
           {inside && me.current.id && (
             <Avatar
               key="me"
               motion={motions.current.get(me.current.id) ?? newMotion(room.spawn.x, room.spawn.z)}
-              outfit={look.body}
-              hat={look.hat}
+              look={look}
               name={me.current.name}
               type={me.current.type}
               sameType={false}
@@ -372,8 +500,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               <Avatar
                 key={p.id}
                 motion={m}
-                outfit={p.look?.body ?? 0}
-                hat={p.look?.hat ?? 0}
+                look={sanitizeLook(p.look)}
                 name={p.name}
                 type={p.type}
                 sameType={!!p.type && p.type === me.current.type}
@@ -386,7 +513,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           })}
           {room.world ? <Rig room={room} motions={motions} meId={me.current.id} view={view} /> : <TopRig room={room} motions={motions} meId={me.current.id} />}
           <Keys room={room} motions={motions} meId={me.current.id} conn={conn} enabled={inside} onInput={touch} onArrive={arrived} view={view} />
-          <PoiWatch room={room} motions={motions} meId={me.current.id} onNear={setNear} />
+          <PoiWatch room={room} motions={motions} meId={me.current.id} onNear={setNear} onNearLamp={setNearLamp} />
         </Canvas>
       )}
 
@@ -404,6 +531,19 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           <span className={styles.count} aria-live="polite">
             {status === "connecting" ? t.connecting : t.here(count)}
           </span>
+          <button type="button" className={styles.iconButton} aria-pressed={sound} aria-label={sound ? t.soundOff : t.soundOn} title={sound ? t.soundOff : t.soundOn} onClick={toggleSound}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
+              {sound ? (
+                <>
+                  <path d="M15.5 9.2a4 4 0 0 1 0 5.6" />
+                  <path d="M18 6.8a7.5 7.5 0 0 1 0 10.4" />
+                </>
+              ) : (
+                <path d="M16 9.5l5 5M21 9.5l-5 5" />
+              )}
+            </svg>
+          </button>
           <div className={styles.lang} role="group" aria-label="Language">
             <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>
               EN
@@ -425,6 +565,80 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             <Phrases text={near.line[lang]} />
           </p>
         </aside>
+      )}
+
+      {toast && <p className={styles.notice}>{toast}</p>}
+
+      {inside && !sayOpen && !actsOpen && !dressOpen && !hangOpen && (
+        <ContextAction
+          poi={near}
+          lamp={nearLamp !== null && !lit[nearLamp] ? nearLamp : null}
+          labels={t}
+          onLantern={() => (touch(), setHangOpen(true))}
+          onSit={() => near && sitHere(near)}
+          onWatch={watch}
+          onLamp={lightLamp}
+        />
+      )}
+
+      {inside && hangOpen && (
+        <div className={styles.sheet} role="dialog" aria-label={t.hangTitle}>
+          <h2>{t.hangTitle}</h2>
+          <p>
+            <Phrases text={t.hangBody} />
+          </p>
+          <fieldset className={styles.choices}>
+            <legend>{t.wish}</legend>
+            {WISHES.map((w) => (
+              <button key={w.id} type="button" aria-pressed={wish === w.id} onClick={() => setWish(w.id)}>
+                {w[lang]}
+              </button>
+            ))}
+          </fieldset>
+          <fieldset className={styles.swatches}>
+            <legend>{t.color}</legend>
+            {LANTERN_COLORS.map((c, i) => (
+              <button key={c} type="button" aria-pressed={paper === i} aria-label={`${t.color} ${i + 1}`} style={{ background: c }} onClick={() => setPaper(i)} />
+            ))}
+          </fieldset>
+          <div className={styles.sheetActions}>
+            <button type="button" className={styles.ghost} onClick={() => setHangOpen(false)}>
+              {t.close}
+            </button>
+            <button type="button" className="btn btn-primary" onClick={doHang}>
+              {t.hang}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {inside && dressOpen && (
+        <div className={styles.sheet} role="dialog" aria-label={t.dressTitle}>
+          <h2>{t.dressTitle}</h2>
+          <p>
+            <Phrases text={t.dressBody} />
+          </p>
+          <div className={styles.choices}>
+            {ITEMS.map((it) => (
+              <button key={it.id} type="button" aria-pressed={look.items.includes(it.id)} onClick={() => wear(it.id)}>
+                {it[lang]}
+              </button>
+            ))}
+          </div>
+          {look.items.includes("scarf") && (
+            <fieldset className={styles.swatches}>
+              <legend>{t.scarfColor}</legend>
+              {SCARF_COLORS.map((c, i) => (
+                <button key={c} type="button" aria-pressed={look.scarf === i} aria-label={`${t.scarfColor} ${i + 1}`} style={{ background: c }} onClick={() => scarf(i)} />
+              ))}
+            </fieldset>
+          )}
+          <div className={styles.sheetActions}>
+            <button type="button" className="btn btn-primary" onClick={() => setDressOpen(false)}>
+              {t.done}
+            </button>
+          </div>
+        </div>
       )}
 
       {inside && actsOpen && (
@@ -465,6 +679,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             onClick={() => (setSayOpen(false), setActsOpen((v) => !v))}
           >
             {actsOpen ? t.close : t.actions}
+          </button>
+          <button type="button" className={styles.dockButton} onClick={() => (setSayOpen(false), setActsOpen(false), setDressOpen(true))}>
+            {t.dress}
           </button>
         </nav>
       )}
@@ -585,13 +802,21 @@ function Walkable({ room, onPick, children }: { room: RoomConfig; onPick: (p: P)
 function Rig({ room, motions, meId, view }: { room: RoomConfig; motions: React.RefObject<Map<string, Motion>>; meId: string; view: React.RefObject<View> }) {
   const { camera } = useThree();
   const look = useRef(new THREE.Vector3(room.spawn.x, 1, room.spawn.z));
+  const aim = useRef(new THREE.Vector3());
   const ground = (x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0);
+  // Walls, buildings and posts the camera should not pass through.
+  const { scene } = useThree();
+  const solids = useRef<THREE.Object3D[]>([]);
+  const ray = useMemo(() => new THREE.Raycaster(), []);
+  const dir = useMemo(() => new THREE.Vector3(), []);
+  const fit = useRef(v0(view));
+  const frame = useRef(0);
   useFrame((_, dt) => {
     const m = motions.current?.get(meId);
     const v = view.current;
     if (!m || !v) return;
     const k = 1 - Math.exp(-dt * 6);
-    const ty = ground(m.x, m.z) + 0.95;
+    const ty = ground(m.x, m.z) + 1.25; // pivot at head height
     look.current.x += (m.x - look.current.x) * k;
     look.current.y += (ty - look.current.y) * k;
     look.current.z += (m.z - look.current.z) * k;
@@ -600,17 +825,34 @@ function Rig({ room, motions, meId, view }: { room: RoomConfig; motions: React.R
       v.yaw += Math.atan2(Math.sin(behind - v.yaw), Math.cos(behind - v.yaw)) * (1 - Math.exp(-dt * 1.2));
     }
     const c = Math.cos(v.pitch);
-    camera.position.set(
-      look.current.x + Math.sin(v.yaw) * c * v.dist,
-      look.current.y + Math.sin(v.pitch) * v.dist,
-      look.current.z + Math.cos(v.yaw) * c * v.dist,
-    );
-    const floor = ground(camera.position.x, camera.position.z) + 0.6;
+    // Pull the camera in when something stands between it and the traveler.
+    dir.set(Math.sin(v.yaw) * c, Math.sin(v.pitch), Math.cos(v.yaw) * c).normalize();
+    if (frame.current++ % 3 === 0) {
+      if (!solids.current.length) scene.traverse((o) => o.userData.solid && solids.current.push(o));
+      ray.set(look.current, dir);
+      ray.far = v.dist;
+      const hit = ray.intersectObjects(solids.current, false)[0];
+      const want = hit ? Math.max(1.2, hit.distance - 0.35) : v.dist;
+      fit.current = want < fit.current ? want : fit.current + (want - fit.current) * 0.25;
+    }
+    const d = Math.min(v.dist, fit.current);
+    camera.position.set(look.current.x + dir.x * d, look.current.y + dir.y * d, look.current.z + dir.z * d);
+    const floor = ground(camera.position.x, camera.position.z) + 0.5;
     if (camera.position.y < floor) camera.position.y = floor;
-    camera.lookAt(look.current);
+    // Look past the traveler toward the street ahead, so the view shows the lane and the
+    // sky rather than the ground. Higher pitch tilts the gaze down more, like a person would.
+    const ahead = Math.max(2, d * (1.1 - v.pitch * 0.8));
+    aim.current.set(
+      look.current.x - Math.sin(v.yaw) * ahead,
+      look.current.y - Math.max(0, v.pitch - 0.15) * v.dist * 0.6,
+      look.current.z - Math.cos(v.yaw) * ahead,
+    );
+    camera.lookAt(aim.current);
   });
   return null;
 }
+
+const v0 = (view: React.RefObject<View>) => view.current?.dist ?? 5;
 
 /** The old top-down follow, kept for rooms without a world (none now, but cheap to keep). */
 function TopRig({ room, motions, meId }: { room: RoomConfig; motions: React.RefObject<Map<string, Motion>>; meId: string }) {
@@ -717,13 +959,16 @@ function PoiWatch({
   motions,
   meId,
   onNear,
+  onNearLamp,
 }: {
   room: RoomConfig;
   motions: React.RefObject<Map<string, Motion>>;
   meId: string;
   onNear: (p: Poi | null) => void;
+  onNearLamp: (i: number | null) => void;
 }) {
   const last = useRef<string | null>(null);
+  const lastLamp = useRef<number | null>(null);
   const tick = useRef(0);
   useFrame((_, dt) => {
     tick.current += dt;
@@ -736,6 +981,48 @@ function PoiWatch({
       last.current = hit?.id ?? null;
       onNear(hit);
     }
+    let lamp: number | null = null;
+    room.lamps?.forEach(([x, z], i) => {
+      if (Math.hypot(x - m.x, z - m.z) < 2.2) lamp = i;
+    });
+    if (lamp !== lastLamp.current) {
+      lastLamp.current = lamp;
+      onNearLamp(lamp);
+    }
   });
   return null;
+}
+
+type Labels = (typeof UI)[keyof typeof UI];
+
+/** One clear thing to do where the traveler stands. */
+function ContextAction({
+  poi,
+  lamp,
+  labels,
+  onLantern,
+  onSit,
+  onWatch,
+  onLamp,
+}: {
+  poi: Poi | null;
+  lamp: number | null;
+  labels: Labels;
+  onLantern: () => void;
+  onSit: () => void;
+  onWatch: () => void;
+  onLamp: (i: number) => void;
+}) {
+  let label: string | null = null;
+  let run: (() => void) | null = null;
+  if (poi?.action === "lantern") (label = labels.hangLantern), (run = onLantern);
+  else if (poi?.action === "sit") (label = labels.sit), (run = onSit);
+  else if (poi?.action === "watch") (label = labels.watch), (run = onWatch);
+  else if (lamp !== null) (label = labels.lightLamp), (run = () => onLamp(lamp));
+  if (!label || !run) return null;
+  return (
+    <button type="button" className={styles.contextAction} onClick={run}>
+      {label}
+    </button>
+  );
 }

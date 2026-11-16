@@ -7,6 +7,8 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { positionAt, type P } from "@/lib/metaverse/path.ts";
 import { asset } from "@/lib/base-path.ts";
+import { Wearables } from "./Wearables";
+import type { Look } from "@/lib/metaverse/look.ts";
 import styles from "./Metaverse.module.css";
 
 export const WALK_SPEED = 1.8; // metres per second, matched to the walk cycle below
@@ -37,8 +39,7 @@ export function newMotion(x: number, z: number, heading = 0): Motion {
 
 type Props = {
   motion: Motion;
-  outfit: number;
-  hat: number;
+  look: Look;
   name: string;
   type: string | null;
   sameType: boolean;
@@ -55,7 +56,7 @@ const shortestAngle = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math
 type Pose = "walk" | "idle" | "wave" | "bow" | "sit";
 
 /** The rigged traveler figure, with its own copy of the skeleton and a mixer. */
-function Figure({ pose, hop }: { pose: React.RefObject<Pose>; hop: React.RefObject<number> }) {
+function Figure({ pose, hop, look }: { pose: React.RefObject<Pose>; hop: React.RefObject<number>; look: Look }) {
   const gltf = useGLTF(asset(MODEL));
   const { scene, mixer, actions } = useMemo(() => {
     const scene = cloneSkinned(gltf.scene);
@@ -106,11 +107,12 @@ function Figure({ pose, hop }: { pose: React.RefObject<Pose>; hop: React.RefObje
   return (
     <group ref={holder}>
       <primitive object={scene} />
+      <Wearables scene={scene} look={look} />
     </group>
   );
 }
 
-export function Avatar({ motion, name, type, sameType, isMe, bubble, rest, onArrive, ground }: Props) {
+export function Avatar({ motion, look, name, type, sameType, isMe, bubble, rest, onArrive, ground }: Props) {
   const root = useRef<THREE.Group>(null);
   const facing = useRef(motion.heading);
   const pose = useRef<Pose>("idle");
@@ -169,10 +171,10 @@ export function Avatar({ motion, name, type, sameType, isMe, bubble, rest, onArr
   return (
     <group ref={root}>
       <Suspense fallback={null}>
-        <Figure pose={pose} hop={hop} />
+        <Figure pose={pose} hop={hop} look={look} />
       </Suspense>
       {labels && (
-        <Html position={[0, 1.5, 0]} center distanceFactor={7} pointerEvents="none" zIndexRange={[20, 0]}>
+        <Html position={[0, 1.5, 0]} center distanceFactor={7} pointerEvents="none" zIndexRange={[6, 1]}>
           <div className={styles.tag} data-me={isMe} data-same={sameType}>
             <span>{name}</span>
             {type && <span className={styles.tagType}>{type}</span>}
@@ -180,7 +182,7 @@ export function Avatar({ motion, name, type, sameType, isMe, bubble, rest, onArr
         </Html>
       )}
       {labels && bubble && (
-        <Html position={[0, 1.95, 0]} center distanceFactor={7} pointerEvents="none" zIndexRange={[30, 21]}>
+        <Html position={[0, 1.95, 0]} center distanceFactor={7} pointerEvents="none" zIndexRange={[8, 7]}>
           <div className={styles.bubble}>{bubble}</div>
         </Html>
       )}

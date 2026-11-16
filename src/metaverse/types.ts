@@ -8,6 +8,9 @@ export interface Poi {
   radius: number;
   title: { en: string; ko: string };
   line: { en: string; ko: string };
+  // What the traveler can do here: hang a wish lantern, sit down, or watch a craftsperson.
+  action?: "lantern" | "sit" | "watch";
+  seat?: { x: number; z: number; heading: number };
 }
 
 export interface RoomConfig {
@@ -26,5 +29,7 @@ export interface RoomConfig {
   sun: { position: [number, number, number]; color: string; intensity: number };
   ambient: { sky: string; ground: string; intensity: number };
   pois: Poi[];
+  lamps?: [number, number][]; // street lamps travelers can light
+  lanterns?: boolean; // this room has the wish-lantern rack
   Scene: ComponentType;
 }

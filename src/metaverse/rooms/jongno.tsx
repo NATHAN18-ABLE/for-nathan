@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Forest, GableRoof, Hanok, Mountains, Pavement, TexBox, Terrain, TiledWall, heightAt, rand, type Hill, type TreeSpot } from "../world";
+import { LeafLitter } from "../autumn";
 import type { RoomConfig } from "../types";
 
 // Seosulla-gil and its neighbourhood, about 90 m x 80 m.
@@ -24,21 +25,25 @@ function useTrees(): TreeSpot[] {
       const x = 23 + r() * 24;
       const z = -42 + r() * 80;
       if (x > 28 && x < 44 && z > -34 && z < 18) continue; // keep the hall's courtyard open
-      out.push({ x, z, s: 1 + r() * 0.5, kind: r() > 0.85 ? "pine" : "green" });
+      const k = r();
+      out.push({ x, z, s: 1 + r() * 0.5, kind: k < 0.38 ? "maple" : k < 0.55 ? "ginkgo" : k < 0.78 ? "green" : "pine" });
     }
     // pines on the hill
     for (let i = 0; i < 46; i++) {
       const a = r() * Math.PI * 2;
       const d = 4 + r() * 10;
-      out.push({ x: -37 + Math.cos(a) * d, z: -12 + Math.sin(a) * d, s: 0.8 + r() * 0.4, kind: r() > 0.3 ? "pine" : "green" });
+      out.push({ x: -37 + Math.cos(a) * d, z: -12 + Math.sin(a) * d, s: 0.8 + r() * 0.4, kind: r() > 0.5 ? "pine" : "maple" });
     }
     // ginkgo along the plaza and west road
     for (const [x, z] of [[-34, 33], [-24, 36.5], [-12, 36.5], [0, 36.5], [-31, 24], [-31, 5], [-27, -26]] as const) out.push({ x, z, s: 0.95, kind: "ginkgo" });
     out.push({ x: 8.2, z: 4.6, s: 0.8, kind: "persimmon" });
+    // maples along the lane, between the workshops
+    for (const z of [-36.5, -26.8, -13.9, 14, 24.3, 31.2]) out.push({ x: 9.3, z, s: 0.75, kind: "maple" });
     // a far ring of trees so the town does not end at a cliff
     for (let i = 0; i < 70; i++) {
       const a = (i / 70) * Math.PI * 2;
-      out.push({ x: Math.cos(a) * (52 + r() * 6), z: Math.sin(a) * (48 + r() * 6), s: 1.1 + r() * 0.4, kind: r() > 0.6 ? "pine" : "green" });
+      const k = r();
+      out.push({ x: Math.cos(a) * (52 + r() * 6), z: Math.sin(a) * (48 + r() * 6), s: 1.1 + r() * 0.4, kind: k < 0.35 ? "maple" : k < 0.5 ? "ginkgo" : k < 0.7 ? "green" : "pine" });
     }
     return out;
   }, []);
@@ -92,41 +97,15 @@ function Pyeongsang({ position, rotation = 0 }: { position: [number, number, num
   );
 }
 
-function Lamp({ position }: { position: [number, number, number] }) {
-  return (
-    <group position={position}>
-      <mesh position={[0, 1.4, 0]} castShadow>
-        <cylinderGeometry args={[0.06, 0.08, 2.8, 8]} />
-        <meshStandardMaterial color="#2c2f35" roughness={0.6} />
-      </mesh>
-      <mesh position={[0, 2.95, 0]}>
-        <boxGeometry args={[0.42, 0.5, 0.42]} />
-        <meshStandardMaterial color="#fff4de" emissive="#ffd08a" emissiveIntensity={0.6} roughness={0.8} />
-      </mesh>
-      <mesh position={[0, 3.3, 0]}>
-        <coneGeometry args={[0.36, 0.22, 4]} />
-        <meshStandardMaterial color="#2c2f35" roughness={0.6} />
-      </mesh>
-    </group>
-  );
-}
-
 /** A wooden rack on the wall where travelers hang wish lanterns. */
 function WishRack() {
+  // Posts and a top beam; the ropes and lanterns are drawn by the room (shared, live).
   return (
-    <group position={[19.1, 0, 3]}>
-      {[-5, 0, 5].map((z) => (
-        <TexBox key={z} size={[0.2, 2.6, 0.2]} position={[0, 1.3, z]} name="wood" tile={1} />
+    <group position={[19.15, 0, 3]}>
+      {[-11, 0, 11].map((z) => (
+        <TexBox key={z} size={[0.2, 2.9, 0.2]} position={[0, 1.45, z]} name="wood" tile={1} />
       ))}
-      <TexBox size={[0.16, 0.16, 10.4]} position={[0, 2.5, 0]} name="wood" tile={1} />
-      {Array.from({ length: 9 }, (_, i) => (
-        <group key={i} position={[-0.05, 2.05, -4.4 + i * 1.1]}>
-          <mesh>
-            <cylinderGeometry args={[0.2, 0.2, 0.42, 12]} />
-            <meshStandardMaterial color={["#e8a0a0", "#f1d38a", "#a8c8b6", "#a9b9e6"][i % 4]} emissive="#ffcf8a" emissiveIntensity={0.25} roughness={0.8} />
-          </mesh>
-        </group>
-      ))}
+      <TexBox size={[0.16, 0.16, 22.6]} position={[0, 2.8, 0]} name="wood" tile={1} />
     </group>
   );
 }
@@ -190,9 +169,16 @@ function Scene() {
       <WishRack />
       <Pavilion />
       <Benches />
-      {[-36, -24, -12, -2, 14, 14, 14, 14, 14, 14].map((v, i) =>
-        i < 4 ? <Lamp key={i} position={[v, 0, 30.6]} /> : <Lamp key={i} position={[18.9, 0, -34 + (i - 4) * 11.5]} />,
-      )}
+      <LeafLitter
+        hills={HILLS}
+        spots={[
+          ...[-34, -24, -14, -4, 6, 16, 26].map((z) => ({ x: 18.6, z, r: 1.6, n: 34 })),
+          ...[-36.5, -26.8, -13.9, 14, 24.3, 31.2].map((z) => ({ x: 10.4, z, r: 1.8, n: 40 })),
+          { x: 6, z: 3, r: 3, n: 70 },
+          { x: -37, z: -12, r: 9, n: 160 },
+          { x: -10, z: 34, r: 6, n: 90 },
+        ]}
+      />
       <Forest trees={trees} hills={HILLS} />
     </group>
   );
@@ -202,7 +188,7 @@ export const jongno: RoomConfig = {
   slug: "jongno",
   name: { en: "Jongno", ko: "종로" },
   place: { en: "Seosulla-gil, along the Jongmyo wall", ko: "서순라길, 종묘 돌담길" },
-  hour: { en: "Morning", ko: "오전" },
+  hour: { en: "Autumn afternoon", ko: "가을 오후" },
   walk: {
     cell: 0.5,
     rects: [
@@ -219,14 +205,28 @@ export const jongno: RoomConfig = {
   },
   spawn: { x: 13, z: 35 },
   spawnHeading: Math.PI,
-  sky: { top: "#bcd3ea", bottom: "#eef1f0" },
-  sun: { position: [-30, 42, 22], color: "#fff1dc", intensity: 2.6 },
-  ambient: { sky: "#dfe9f4", ground: "#b9ab8f", intensity: 0.7 },
+  sky: { top: "#d9c4a8", bottom: "#f2e3cc" },
+  // A low, warm sun from the south-west: late afternoon in October.
+  sun: { position: [-42, 22, 34], color: "#ffc98c", intensity: 3.1 },
+  ambient: { sky: "#f0d8b8", ground: "#6d5843", intensity: 0.6 },
   world: {
     hills: HILLS,
-    hdr: "/metaverse/tex/sky_morning.hdr",
-    fog: ["#dfe6ea", 45, 190],
+    hdr: "/metaverse/tex/sky_autumn.hdr",
+    fog: ["#e6cfb2", 40, 175],
   },
+  lanterns: true,
+  lamps: [
+    [-36, 30.6],
+    [-24, 30.6],
+    [-12, 30.6],
+    [-2, 30.6],
+    [18.9, -34],
+    [18.9, -22.5],
+    [18.9, -11],
+    [18.9, 17.5],
+    [18.9, 29],
+    [9.9, 6.8],
+  ],
   pois: [
     {
       id: "entrance",
@@ -241,17 +241,19 @@ export const jongno: RoomConfig = {
     {
       id: "wall",
       at: { x: 17.5, z: 3 },
-      radius: 3.2,
+      radius: 5.5,
+      action: "lantern",
       title: { en: "The wish wall", ko: "소원 담장" },
       line: {
-        en: "Travelers hang small lanterns on the wall here. Behind it stands Jongmyo, the shrine of the Joseon kings.",
-        ko: "여행자들이 이곳 담장에 작은 등을 걸어요. 담 너머에는 조선 왕실의 사당, 종묘가 있어요.",
+        en: "Travelers hang a wish lantern on the wall here. It stays lit for a day. Behind the wall stands Jongmyo, the shrine of the Joseon kings.",
+        ko: "여행자들이 이곳 담장에 소원 등을 달아요. 등은 하루 동안 켜져 있어요. 담 너머에는 조선 왕실의 사당, 종묘가 있어요.",
       },
     },
     {
       id: "workshop",
       at: { x: 11, z: -26 },
       radius: 3.5,
+      action: "watch",
       title: { en: "Jewelry workshops", ko: "귀금속 공방" },
       line: {
         en: "Craftspeople work in narrow hanok shops along this lane. Some leave the doors open so you can watch.",
@@ -262,10 +264,12 @@ export const jongno: RoomConfig = {
       id: "courtyard",
       at: { x: 6, z: 1 },
       radius: 3.2,
+      action: "sit",
+      seat: { x: 5.3, z: 1, heading: Math.PI / 2 },
       title: { en: "A courtyard and a pyeongsang", ko: "마당과 평상" },
       line: {
-        en: "Neighbors rest on a wooden platform under the persimmon tree. Try the Sit gesture.",
-        ko: "이웃들이 감나무 아래 나무 평상에서 쉬어 가요. 앉기 동작을 해 보세요.",
+        en: "Neighbors rest on a wooden platform under the persimmon tree. Sit down for a while.",
+        ko: "이웃들이 감나무 아래 나무 평상에서 쉬어 가요. 잠시 앉아 쉬어 보세요.",
       },
     },
     {
