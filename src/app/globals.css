@@ -54,9 +54,11 @@ h3 {
   text-wrap: balance;
 }
 
-/* A short phrase that should stay on one line; lines break between phrases. */
+/* A sentence or clause kept together: it moves to the next line whole when it fits,
+   and wraps between its own words only when it is wider than the line. */
 .phrase {
-  white-space: nowrap;
+  display: inline-block;
+  max-width: 100%;
 }
 
 ::selection {

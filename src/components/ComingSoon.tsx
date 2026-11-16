@@ -4,6 +4,7 @@ import Link from "next/link";
 import { COPY } from "@/lib/hero/copy.ts";
 import { useLang } from "@/lib/lang.ts";
 import { SiteNav } from "./SiteNav";
+import { Phrases } from "./Phrases";
 import styles from "./ComingSoon.module.css";
 
 export type PageKey = "districts" | "story" | "metaverse" | "about";
@@ -54,7 +55,7 @@ export function ComingSoon({ page }: { page: PageKey }) {
       <SiteNav lang={lang} onLang={chooseLang} tone="dark" />
       <main className={styles.main}>
         <h1 className={styles.title}>{COPY[lang].nav[page]}</h1>
-        <p className={styles.lede}>{body.lede}</p>
+        <p className={styles.lede}><Phrases text={body.lede} /></p>
         {"list" in body && (
           <ul className={styles.list}>
             {body.list.map((name) => (
@@ -72,7 +73,9 @@ export function ComingSoon({ page }: { page: PageKey }) {
         </div>
       </main>
       <footer className="site-footer">
-        <p>{COPY[lang].proposal}</p>
+        <p>
+          <Phrases text={COPY[lang].proposal} />
+        </p>
       </footer>
     </div>
   );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { COPY, type Lang } from "@/lib/hero/copy.ts";
 import { asset } from "@/lib/base-path.ts";
+import { Phrases } from "./Phrases";
 import styles from "./SiteNav.module.css";
 
 type Props = {
@@ -129,7 +130,7 @@ export function SiteNav({ lang, onLang, tone = "light" }: Props) {
               >
                 <span className={styles.sheetText}>
                   <span className={styles.sheetLabel}>{t[key]}</span>
-                  <span className={styles.sheetHint}>{t.hints[key]}</span>
+                  <span className={styles.sheetHint}><Phrases text={t.hints[key]} /></span>
                 </span>
                 <img className={styles.thumb} src={image(key)} alt="" loading="lazy" decoding="async" />
               </Link>

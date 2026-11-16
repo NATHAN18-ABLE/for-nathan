@@ -8,6 +8,7 @@ import { QuestionCard } from "@/components/QuestionCard";
 import { SiteNav } from "@/components/SiteNav";
 import { useLang } from "@/lib/lang.ts";
 import { asset } from "@/lib/base-path.ts";
+import { Phrases } from "@/components/Phrases";
 import styles from "./test.module.css";
 
 const KEY = "seoul.answers";
@@ -73,12 +74,14 @@ function Result({ answers, onRestart }: { answers: Answer[]; onRestart: () => vo
     <section className={styles.result} aria-live="polite">
       <p className={styles.code}>{code}</p>
       <h1 className={styles.typeName}>{type.name}</h1>
-      <p className={styles.typeLine}>{type.line}</p>
+      <p className={styles.typeLine}><Phrases text={type.line} /></p>
       <div className={styles.district}>
         <h2>
           Your Seoul is {best.nameEn} <span lang="ko">{best.nameKo}</span>
         </h2>
-        <p>{best.line}.</p>
+        <p>
+          <Phrases text={`${best.line}.`} />
+        </p>
         <p className={styles.runner}>
           Also close to you: {runnerUp.nameEn} <span lang="ko">{runnerUp.nameKo}</span>
         </p>

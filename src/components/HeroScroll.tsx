@@ -419,8 +419,12 @@ export function HeroScroll() {
 function Footer({ t }: { t: (typeof COPY)[keyof typeof COPY] }) {
   return (
     <footer className="site-footer" id="about">
-      <p>{t.proposal}</p>
-      <p>{t.sceneNote}</p>
+      <p>
+        <Phrases text={t.proposal} />
+      </p>
+      <p>
+        <Phrases text={t.sceneNote} />
+      </p>
     </footer>
   );
 }
