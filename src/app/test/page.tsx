@@ -5,10 +5,14 @@ import { QUESTIONS } from "@/lib/match/questions.ts";
 import { TRAVEL_TYPES } from "@/lib/match/travel-types.ts";
 import { matchDistricts, scoreAnswers, typeCode, type Answer } from "@/lib/match/match.ts";
 import { QuestionCard } from "@/components/QuestionCard";
+import Link from "next/link";
 import { SiteNav } from "@/components/SiteNav";
 import { useLang } from "@/lib/lang.ts";
 import { asset } from "@/lib/base-path.ts";
 import { Phrases } from "@/components/Phrases";
+import { nearestRoom } from "@/lib/metaverse/queue.ts";
+import { roomHref } from "@/lib/metaverse/open.ts";
+import { DISTRICTS } from "@/lib/match/districts.ts";
 import styles from "./test.module.css";
 
 const KEY = "seoul.answers";
@@ -70,6 +74,8 @@ function Result({ answers, onRestart }: { answers: Answer[]; onRestart: () => vo
   const code = typeCode(answers);
   const type = TRAVEL_TYPES[code];
   const { best, runnerUp } = matchDistricts(scoreAnswers(answers));
+  const room = nearestRoom(best.slug);
+  const roomName = DISTRICTS.find((d) => d.slug === room)?.nameEn ?? room;
   return (
     <section className={styles.result} aria-live="polite">
       <p className={styles.code}>{code}</p>
@@ -87,9 +93,14 @@ function Result({ answers, onRestart }: { answers: Answer[]; onRestart: () => vo
         </p>
       </div>
       <p className={styles.note}>A day course for {best.nameEn} is in preparation.</p>
-      <button type="button" className="btn btn-light" onClick={onRestart}>
-        Take the test again
-      </button>
+      <div className={styles.actions}>
+        <Link className="btn btn-light" href={roomHref(room)}>
+          Meet travelers in {roomName}
+        </Link>
+        <button type="button" className={styles.again} onClick={onRestart}>
+          Take the test again
+        </button>
+      </div>
     </section>
   );
 }

@@ -101,3 +101,19 @@
   color: rgb(251 251 249 / 0.7);
   font-size: 15px;
 }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+}
+
+.again {
+  padding: 8px 0;
+  background: none;
+  border: 0;
+  color: rgb(251 251 249 / 0.82);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
