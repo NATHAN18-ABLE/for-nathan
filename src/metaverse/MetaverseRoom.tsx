@@ -16,6 +16,8 @@ import { useLang } from "@/lib/lang.ts";
 import { Phrases } from "@/components/Phrases";
 import { Avatar, WALK_SPEED, newMotion, type Motion } from "./Avatar";
 import { OUTFITS } from "./glaze";
+import { heightAt } from "./world";
+import { asset } from "@/lib/base-path.ts";
 import type { Poi, RoomConfig } from "./types";
 import styles from "./Metaverse.module.css";
 
@@ -108,6 +110,40 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const motions = useRef(new Map<string, Motion>());
   const conn = useRef<RoomConnection | null>(null);
   const lastInput = useRef(Date.now());
+  const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.3, dist: 5.6, touchedAt: 0 });
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef(0);
+  const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0), [room]);
+
+  // Drag to look around, wheel or pinch to come closer.
+  const onPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("button, a, [role=menu]")) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const prev = pointers.current.get(e.pointerId);
+    if (!prev || !room.world) return;
+    const v = view.current;
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinch.current) v.dist = Math.min(14, Math.max(2.8, v.dist * (pinch.current / Math.max(1, d))));
+      pinch.current = d;
+    } else {
+      v.yaw -= (e.clientX - prev.x) * 0.006;
+      v.pitch = Math.min(1.2, Math.max(0.08, v.pitch + (e.clientY - prev.y) * 0.004));
+    }
+    v.touchedAt = performance.now();
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinch.current = 0;
+  };
+  const onWheel = (e: React.WheelEvent) => {
+    if (!room.world) return;
+    view.current.dist = Math.min(14, Math.max(2.8, view.current.dist * Math.exp(e.deltaY * 0.0012)));
+  };
   const bubbleTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   // Identity, look and capability checks happen in the browser only.
@@ -146,7 +182,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     if (!ready || !webgl) return;
     const { id, type, name } = me.current;
     const spawn = { x: room.spawn.x + (Math.random() - 0.5) * 3, z: room.spawn.z + (Math.random() - 0.5) * 1.5 };
-    motions.current.set(id, newMotion(spawn.x, spawn.z));
+    motions.current.set(id, newMotion(spawn.x, spawn.z, room.spawnHeading ?? 0));
     const presence: Presence = { id, joinedAt: Date.now(), name, type, look, x: spawn.x, z: spawn.z, heading: 0 };
     lastInput.current = Date.now();
     setAway(false);
@@ -289,22 +325,31 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const others = members.filter((p) => p.id !== me.current.id && seated.has(p.id));
 
   return (
-    <div className={styles.room} style={{ "--sky-top": room.sky.top, "--sky-bottom": room.sky.bottom } as React.CSSProperties}>
+    <div
+      className={styles.room}
+      style={{ "--sky-top": room.sky.top, "--sky-bottom": room.sky.bottom } as React.CSSProperties}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onWheel={onWheel}
+    >
       {ready && (
         <Canvas
           className={styles.canvas}
           shadows
           dpr={[1, 1.5]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-          camera={{ fov: 34, near: 0.5, far: 120, position: [0, 12, 14] }}
+          camera={{ fov: room.world ? 50 : 34, near: 0.3, far: 600, position: [0, 12, 14] }}
           onCreated={({ gl }) => {
             gl.toneMapping = THREE.NeutralToneMapping;
             gl.toneMappingExposure = 1.08;
           }}
         >
-          <Lights room={room} />
-          <room.Scene />
-          <Ground room={room} onPick={walkTo} />
+          <Lights room={room} motions={motions} meId={me.current.id} />
+          <Walkable room={room} onPick={walkTo}>
+            <room.Scene />
+          </Walkable>
           {inside && me.current.id && (
             <Avatar
               key="me"
@@ -317,6 +362,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               isMe
               bubble={bubbles[me.current.id] ?? null}
               onArrive={arrived}
+              ground={ground}
             />
           )}
           {others.map((p) => {
@@ -334,11 +380,12 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
                 isMe={false}
                 bubble={bubbles[p.id] ?? null}
                 rest={{ x: p.x, z: p.z }}
+                ground={ground}
               />
             );
           })}
-          <Rig room={room} motions={motions} meId={me.current.id} />
-          <Keys room={room} motions={motions} meId={me.current.id} conn={conn} enabled={inside} onInput={touch} onArrive={arrived} />
+          {room.world ? <Rig room={room} motions={motions} meId={me.current.id} view={view} /> : <TopRig room={room} motions={motions} meId={me.current.id} />}
+          <Keys room={room} motions={motions} meId={me.current.id} conn={conn} enabled={inside} onInput={touch} onArrive={arrived} view={view} />
           <PoiWatch room={room} motions={motions} meId={me.current.id} onNear={setNear} />
         </Canvas>
       )}
@@ -419,9 +466,6 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           >
             {actsOpen ? t.close : t.actions}
           </button>
-          <button type="button" className={styles.dockButton} onClick={changeOutfit}>
-            {t.outfit}
-          </button>
         </nav>
       )}
 
@@ -456,70 +500,129 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   );
 }
 
-function Lights({ room }: { room: RoomConfig }) {
+/** Where the camera looks from: yaw around the traveler, pitch above the ground, distance. */
+export interface View {
+  yaw: number;
+  pitch: number;
+  dist: number;
+  touchedAt: number; // last time the person turned the camera themselves
+}
+
+function Lights({ room, motions, meId }: { room: RoomConfig; motions: React.RefObject<Map<string, Motion>>; meId: string }) {
+  const sun = useRef<THREE.DirectionalLight>(null);
+  const { scene } = useThree();
+  // The sun's shadow box follows the traveler, so a large map keeps crisp shadows nearby.
+  useFrame(() => {
+    const l = sun.current;
+    const m = motions.current?.get(meId);
+    if (!l || !m || !room.world) return;
+    const [sx, sy, sz] = room.sun.position;
+    l.position.set(m.x + sx, sy, m.z + sz);
+    l.target.position.set(m.x, 0, m.z);
+    l.target.updateMatrixWorld();
+  });
+  useEffect(() => {
+    if (sun.current && !sun.current.target.parent) scene.add(sun.current.target);
+  }, [scene]);
+  const wide = !!room.world;
   return (
     <>
       <hemisphereLight args={[room.ambient.sky, room.ambient.ground, room.ambient.intensity]} />
       <directionalLight
+        ref={sun}
         position={room.sun.position}
         color={room.sun.color}
         intensity={room.sun.intensity}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
-        shadow-normalBias={0.03}
-        shadow-camera-left={-18}
-        shadow-camera-right={18}
-        shadow-camera-top={14}
-        shadow-camera-bottom={-14}
-        shadow-camera-far={60}
+        shadow-normalBias={0.04}
+        shadow-camera-left={wide ? -26 : -18}
+        shadow-camera-right={wide ? 26 : 18}
+        shadow-camera-top={wide ? 26 : 14}
+        shadow-camera-bottom={wide ? -26 : -14}
+        shadow-camera-far={wide ? 140 : 60}
         shadow-radius={4}
       />
-      {/* Soft studio panels only for reflections in the glaze; no downloaded maps. */}
-      <Environment resolution={256} frames={1}>
-        <Lightformer form="rect" intensity={2.2} position={[0, 6, 6]} scale={[14, 4, 1]} color="#ffffff" />
-        <Lightformer form="rect" intensity={1.2} position={[-8, 4, -4]} rotation-y={Math.PI / 2} scale={[10, 3, 1]} color={room.sky.top} />
-        <Lightformer form="ring" intensity={1.5} position={[6, 7, -2]} scale={3} color={room.sun.color} />
-      </Environment>
+      {room.world ? (
+        <>
+          <Environment files={asset(room.world.hdr)} background environmentIntensity={0.9} backgroundIntensity={1} />
+          <fog attach="fog" args={room.world.fog} />
+        </>
+      ) : (
+        <Environment resolution={256} frames={1}>
+          <Lightformer form="rect" intensity={2.2} position={[0, 6, 6]} scale={[14, 4, 1]} color="#ffffff" />
+          <Lightformer form="rect" intensity={1.2} position={[-8, 4, -4]} rotation-y={Math.PI / 2} scale={[10, 3, 1]} color={room.sky.top} />
+          <Lightformer form="ring" intensity={1.5} position={[6, 7, -2]} scale={3} color={room.sun.color} />
+        </Environment>
+      )}
     </>
   );
 }
 
-/** An invisible floor that turns taps into walk targets (taps, not drags). */
-function Ground({ room, onPick }: { room: RoomConfig; onPick: (p: P) => void }) {
+/** Wraps the scene so a tap on any surface becomes a walk target (taps, not drags). */
+function Walkable({ room, onPick, children }: { room: RoomConfig; onPick: (p: P) => void; children: React.ReactNode }) {
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 8) return;
     e.stopPropagation();
     onPick(nearestWalkable({ x: e.point.x, z: e.point.z }, room.walk));
   };
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} onClick={onClick}>
-      <planeGeometry args={[80, 80]} />
-      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-    </mesh>
+    <group onClick={onClick}>
+      {children}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
+        <planeGeometry args={[400, 400]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
   );
 }
 
-/** The camera follows from above and behind, staying over the tray. */
-function Rig({ room, motions, meId }: { room: RoomConfig; motions: React.RefObject<Map<string, Motion>>; meId: string }) {
-  const { camera, size } = useThree();
-  const look = useRef(new THREE.Vector3(room.spawn.x, 0.6, room.spawn.z));
-  const bounds = useMemo(() => {
-    const xs = room.walk.rects.flatMap((r) => [r.x0, r.x1]);
-    const zs = room.walk.rects.flatMap((r) => [r.z0, r.z1]);
-    return { x0: Math.min(...xs), x1: Math.max(...xs), z0: Math.min(...zs), z1: Math.max(...zs) };
-  }, [room]);
+/**
+ * Third-person camera at eye level behind the traveler. Drag to look around, pinch or
+ * scroll to come closer. While walking, it drifts back behind the traveler on its own.
+ */
+function Rig({ room, motions, meId, view }: { room: RoomConfig; motions: React.RefObject<Map<string, Motion>>; meId: string; view: React.RefObject<View> }) {
+  const { camera } = useThree();
+  const look = useRef(new THREE.Vector3(room.spawn.x, 1, room.spawn.z));
+  const ground = (x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0);
   useFrame((_, dt) => {
     const m = motions.current?.get(meId);
-    const portrait = size.height > size.width;
-    const tx = m ? Math.min(bounds.x1 - 3, Math.max(bounds.x0 + 3, m.x)) : room.spawn.x;
-    const tz = m ? Math.min(bounds.z1, Math.max(bounds.z0, m.z)) : room.spawn.z;
+    const v = view.current;
+    if (!m || !v) return;
+    const k = 1 - Math.exp(-dt * 6);
+    const ty = ground(m.x, m.z) + 0.95;
+    look.current.x += (m.x - look.current.x) * k;
+    look.current.y += (ty - look.current.y) * k;
+    look.current.z += (m.z - look.current.z) * k;
+    if (m.path && performance.now() - v.touchedAt > 1500) {
+      const behind = m.heading + Math.PI;
+      v.yaw += Math.atan2(Math.sin(behind - v.yaw), Math.cos(behind - v.yaw)) * (1 - Math.exp(-dt * 1.2));
+    }
+    const c = Math.cos(v.pitch);
+    camera.position.set(
+      look.current.x + Math.sin(v.yaw) * c * v.dist,
+      look.current.y + Math.sin(v.pitch) * v.dist,
+      look.current.z + Math.cos(v.yaw) * c * v.dist,
+    );
+    const floor = ground(camera.position.x, camera.position.z) + 0.6;
+    if (camera.position.y < floor) camera.position.y = floor;
+    camera.lookAt(look.current);
+  });
+  return null;
+}
+
+/** The old top-down follow, kept for rooms without a world (none now, but cheap to keep). */
+function TopRig({ room, motions, meId }: { room: RoomConfig; motions: React.RefObject<Map<string, Motion>>; meId: string }) {
+  const { camera } = useThree();
+  const look = useRef(new THREE.Vector3(room.spawn.x, 0.6, room.spawn.z));
+  useFrame((_, dt) => {
+    const m = motions.current?.get(meId);
+    if (!m) return;
     const k = 1 - Math.exp(-dt * 3);
-    look.current.x += (tx - look.current.x) * k;
-    look.current.z += (tz - look.current.z) * k;
-    // Far enough back to read as a diorama on a tray, close enough to see faces.
-    const dist = portrait ? 1.2 : 1;
-    camera.position.set(look.current.x, 0.6 + 16.5 * dist, look.current.z + 18 * dist);
+    look.current.x += (m.x - look.current.x) * k;
+    look.current.z += (m.z - look.current.z) * k;
+    camera.position.set(look.current.x, 16, look.current.z + 18);
     camera.lookAt(look.current);
   });
   return null;
@@ -534,6 +637,7 @@ function Keys({
   enabled,
   onInput,
   onArrive,
+  view,
 }: {
   room: RoomConfig;
   motions: React.RefObject<Map<string, Motion>>;
@@ -542,6 +646,7 @@ function Keys({
   enabled: boolean;
   onInput: () => void;
   onArrive: () => void;
+  view: React.RefObject<View>;
 }) {
   const keys = useRef(new Set<string>());
   const lastSend = useRef(0);
@@ -581,18 +686,26 @@ function Keys({
     moving.current = true;
     m.path = null;
     m.sitting = false;
-    const len = Math.hypot(dx, dz);
+    // Forward is away from the camera.
+    const yaw = view.current?.yaw ?? 0;
+    const fx = -Math.sin(yaw);
+    const fz = -Math.cos(yaw);
+    const rx = -fz;
+    const rz = fx;
+    const wx = fx * -dz + rx * dx;
+    const wz = fz * -dz + rz * dx;
+    const len = Math.hypot(wx, wz) || 1;
     const step = WALK_SPEED * Math.min(dt, 0.05);
-    const nx = m.x + (dx / len) * step;
-    const nz = m.z + (dz / len) * step;
+    const nx = m.x + (wx / len) * step;
+    const nz = m.z + (wz / len) * step;
     if (isWalkable({ x: nx, z: nz }, room.walk)) (m.x = nx), (m.z = nz);
     else if (isWalkable({ x: nx, z: m.z }, room.walk)) m.x = nx;
     else if (isWalkable({ x: m.x, z: nz }, room.walk)) m.z = nz;
-    m.heading = Math.atan2(dx, dz);
+    m.heading = Math.atan2(wx, wz);
     const now = performance.now();
     if (now - lastSend.current > 250) {
       lastSend.current = now;
-      const ahead = nearestWalkable({ x: m.x + (dx / len) * WALK_SPEED * 0.3, z: m.z + (dz / len) * WALK_SPEED * 0.3 }, room.walk);
+      const ahead = nearestWalkable({ x: m.x + (wx / len) * WALK_SPEED * 0.3, z: m.z + (wz / len) * WALK_SPEED * 0.3 }, room.walk);
       conn.current?.send({ kind: "move", id: meId, path: [{ x: m.x, z: m.z }, ahead] });
     }
   });

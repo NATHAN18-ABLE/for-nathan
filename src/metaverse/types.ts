@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { P, Walkable } from "@/lib/metaverse/path.ts";
+import type { Hill } from "./world";
 
 export interface Poi {
   id: string;
@@ -16,6 +17,9 @@ export interface RoomConfig {
   hour: { en: string; ko: string };
   walk: Walkable;
   spawn: P;
+  spawnHeading?: number; // radians, 0 faces +z
+  // v2 rooms: terrain hills, sky image and fog [color, near, far]
+  world?: { hills: Hill[]; hdr: string; fog: [string, number, number] };
   // Where seated sit emotes look natural (a platform or bench). Optional.
   seats?: P[];
   sky: { top: string; bottom: string };

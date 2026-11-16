@@ -1,0 +1,3 @@
+traveler-a.glb: generated for this project with Higgsfield (Meshy 6 text-to-3D, auto-rigging and
+animation library: Casual_Walk, Idle, Big_Wave_Hello, Formal_Bow, Chair_Sit_Idle_F), 2026-11-16.
+Texture reduced to 1024 px and the five motion files merged into one by the project.

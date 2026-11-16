@@ -90,42 +90,80 @@ export function findPath(from: P, to: P, w: Walkable): P[] {
   if (!s || !g) return [a, b];
 
   // A* over 8-connected cells; diagonals only when both sides are open (no corner cutting).
-  const open = new Map<number, [number, number]>([[key(...s), s]]);
-  const gScore = new Map<number, number>([[key(...s), 0]]);
-  const came = new Map<number, number>();
-  const h = (c: number, r: number) => Math.hypot(c - g[0], r - g[1]);
-  const f = new Map<number, number>([[key(...s), h(...s)]]);
-  while (open.size) {
-    let curK = -1;
-    let cur: [number, number] = s;
-    let bestF = Infinity;
-    for (const [k, v] of open) {
-      const fv = f.get(k) ?? Infinity;
-      if (fv < bestF) (bestF = fv), (curK = k), (cur = v);
+  // Walkability is cached per cell and the open set is a binary heap, so large maps stay fast.
+  const open = new Uint8Array(cols * rows);
+  const walk = new Int8Array(cols * rows); // 0 unknown, 1 walkable, -1 blocked
+  const okc = (c: number, r: number) => {
+    if (c < 0 || r < 0 || c >= cols || r >= rows) return false;
+    const k = key(c, r);
+    if (!walk[k]) walk[k] = ok(c, r) ? 1 : -1;
+    return walk[k] === 1;
+  };
+  const gScore = new Float64Array(cols * rows).fill(Infinity);
+  const came = new Int32Array(cols * rows).fill(-1);
+  const heap: [number, number][] = []; // [f, key]
+  const push = (f: number, k: number) => {
+    heap.push([f, k]);
+    for (let i = heap.length - 1; i > 0; ) {
+      const p = (i - 1) >> 1;
+      if (heap[p][0] <= heap[i][0]) break;
+      [heap[p], heap[i]] = [heap[i], heap[p]];
+      i = p;
     }
-    if (cur[0] === g[0] && cur[1] === g[1]) break;
-    open.delete(curK);
+  };
+  const pop = () => {
+    const top = heap[0];
+    const last = heap.pop()!;
+    if (heap.length) {
+      heap[0] = last;
+      for (let i = 0; ; ) {
+        const l = i * 2 + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+        if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+        if (m === i) break;
+        [heap[m], heap[i]] = [heap[i], heap[m]];
+        i = m;
+      }
+    }
+    return top;
+  };
+  const h = (c: number, r: number) => Math.hypot(c - g[0], r - g[1]);
+  const sk = key(...s);
+  const gk0 = key(...g);
+  gScore[sk] = 0;
+  push(h(...s), sk);
+  open[sk] = 1;
+  while (heap.length) {
+    const [, curK] = pop();
+    if (curK === gk0) break;
+    if (open[curK] === 2) continue;
+    open[curK] = 2;
+    const cc = curK % cols;
+    const cr = Math.floor(curK / cols);
     for (let dc = -1; dc <= 1; dc++)
       for (let dr = -1; dr <= 1; dr++) {
         if (!dc && !dr) continue;
-        const nc = cur[0] + dc;
-        const nr = cur[1] + dr;
-        if (!ok(nc, nr)) continue;
-        if (dc && dr && (!ok(cur[0] + dc, cur[1]) || !ok(cur[0], cur[1] + dr))) continue;
+        const nc = cc + dc;
+        const nr = cr + dr;
+        if (!okc(nc, nr)) continue;
+        if (dc && dr && (!okc(cc + dc, cr) || !okc(cc, cr + dr))) continue;
         const nk = key(nc, nr);
-        const tentative = (gScore.get(curK) ?? 0) + Math.hypot(dc, dr);
-        if (tentative < (gScore.get(nk) ?? Infinity)) {
-          came.set(nk, curK);
-          gScore.set(nk, tentative);
-          f.set(nk, tentative + h(nc, nr));
-          open.set(nk, [nc, nr]);
+        if (open[nk] === 2) continue;
+        const tentative = gScore[curK] + (dc && dr ? Math.SQRT2 : 1);
+        if (tentative < gScore[nk]) {
+          came[nk] = curK;
+          gScore[nk] = tentative;
+          push(tentative + h(nc, nr), nk);
+          open[nk] = 1;
         }
       }
   }
   const gk = key(...g);
-  if (!came.has(gk) && gk !== key(...s)) return [a, b];
+  if (came[gk] < 0 && gk !== sk) return [a, b];
   const cells: P[] = [];
-  for (let k: number | undefined = gk; k !== undefined; k = came.get(k)) cells.push(at(k % cols, Math.floor(k / cols)));
+  for (let k = gk; k >= 0; k = k === sk ? -1 : came[k]) cells.push(at(k % cols, Math.floor(k / cols)));
   cells.reverse();
 
   // Straighten: from each kept point, jump to the farthest point still in plain sight.

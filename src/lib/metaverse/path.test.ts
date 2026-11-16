@@ -57,3 +57,21 @@ test("walking a path at a steady speed reaches each point on time", () => {
   const start = positionAt(path, 0, 2);
   assert.ok(Math.abs(start.heading - Math.PI / 2) < 1e-9); // facing +x
 });
+
+test("paths across a large neighbourhood are found quickly", () => {
+  // A 100 m x 80 m block with a wall of buildings and two gaps.
+  const town: Walkable = {
+    cell: 0.5,
+    rects: [
+      { x0: -50, z0: 20, x1: 50, z1: 40 },
+      { x0: -50, z0: -40, x1: 50, z1: -20 },
+      { x0: -50, z0: -20, x1: -44, z1: 20 },
+      { x0: 44, z0: -20, x1: 50, z1: 20 },
+    ],
+  };
+  const t0 = performance.now();
+  const path = findPath({ x: -10, z: 35 }, { x: 10, z: -35 }, town);
+  const ms = performance.now() - t0;
+  assert.ok(path.length >= 3, "should route around the block");
+  assert.ok(ms < 120, `took ${ms.toFixed(0)} ms`);
+});

@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
+import { Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { positionAt, type P } from "@/lib/metaverse/path.ts";
-import { GLAZE, OUTFITS, glaze } from "./glaze";
+import { asset } from "@/lib/base-path.ts";
 import styles from "./Metaverse.module.css";
 
-export const WALK_SPEED = 2.2; // metres per second
+export const WALK_SPEED = 1.8; // metres per second, matched to the walk cycle below
+const MODEL = "/metaverse/chars/traveler-a.glb";
+const CLIP = {
+  walk: "Casual_Walk",
+  idle: "Idle",
+  wave: "Big_Wave_Hello",
+  bow: "Formal_Bow",
+  sit: "Chair_Sit_Idle_F",
+} as const;
 
 /** Mutable per-person motion, written by the network and read every frame. */
 export interface Motion {
@@ -38,17 +47,74 @@ type Props = {
   // Where the network last said this person stands; used to settle drift when idle.
   rest?: { x: number; z: number };
   onArrive?: () => void;
+  ground?: (x: number, z: number) => number;
 };
 
 const shortestAngle = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
-export function Avatar({ motion, outfit, hat, name, type, sameType, isMe, bubble, rest, onArrive }: Props) {
+type Pose = "walk" | "idle" | "wave" | "bow" | "sit";
+
+/** The rigged traveler figure, with its own copy of the skeleton and a mixer. */
+function Figure({ pose, hop }: { pose: React.RefObject<Pose>; hop: React.RefObject<number> }) {
+  const gltf = useGLTF(asset(MODEL));
+  const { scene, mixer, actions } = useMemo(() => {
+    const scene = cloneSkinned(gltf.scene);
+    scene.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) {
+        o.castShadow = true;
+        o.receiveShadow = false;
+      }
+    });
+    const mixer = new THREE.AnimationMixer(scene);
+    const actions = Object.fromEntries(
+      (Object.keys(CLIP) as Pose[]).map((k) => {
+        const clip = gltf.animations.find((c) => c.name === CLIP[k]);
+        const a = clip ? mixer.clipAction(clip) : null;
+        if (a && (k === "wave" || k === "bow")) {
+          a.setLoop(THREE.LoopOnce, 1);
+          a.clampWhenFinished = true;
+        }
+        return [k, a];
+      }),
+    ) as Record<Pose, THREE.AnimationAction | null>;
+    return { scene, mixer, actions };
+  }, [gltf]);
+
+  const current = useRef<Pose | null>(null);
+  const holder = useRef<THREE.Group>(null);
+
+  useEffect(() => () => void mixer.stopAllAction(), [mixer]);
+
+  useFrame((_, dt) => {
+    const next = pose.current ?? "idle";
+    if (next !== current.current) {
+      const from = current.current ? actions[current.current] : null;
+      const to = actions[next];
+      if (to) {
+        to.reset();
+        to.setEffectiveWeight(1);
+        to.timeScale = next === "walk" ? 1.35 : 1;
+        to.play();
+        if (from && from !== to) from.crossFadeTo(to, 0.25, false);
+      }
+      current.current = next;
+    }
+    mixer.update(Math.min(dt, 0.05));
+    if (holder.current) holder.current.position.y = hop.current ?? 0;
+  });
+
+  return (
+    <group ref={holder}>
+      <primitive object={scene} />
+    </group>
+  );
+}
+
+export function Avatar({ motion, name, type, sameType, isMe, bubble, rest, onArrive, ground }: Props) {
   const root = useRef<THREE.Group>(null);
-  const body = useRef<THREE.Group>(null);
-  const armR = useRef<THREE.Group>(null);
-  const armL = useRef<THREE.Group>(null);
   const facing = useRef(motion.heading);
-  const walkPhase = useRef(0);
+  const pose = useRef<Pose>("idle");
+  const hop = useRef(0);
   // Labels attach to the canvas's parent, which may not exist on the very first frame.
   const [labels, setLabels] = useState(false);
   useEffect(() => {
@@ -78,115 +144,48 @@ export function Avatar({ motion, outfit, hat, name, type, sameType, isMe, bubble
     }
     if (walking) m.sitting = false;
 
-    const g = root.current;
-    const b = body.current;
-    if (!g || !b) return;
-    g.position.set(m.x, 0, m.z);
-    facing.current += shortestAngle(facing.current, m.heading) * (1 - Math.exp(-dt * 10));
-    g.rotation.y = facing.current;
-
-    // Walking: a small bob and sway; standing: a slow breath.
-    walkPhase.current += dt * (walking ? 11 : 1.6);
-    const ph = walkPhase.current;
-    let y = walking ? Math.abs(Math.sin(ph)) * 0.07 : Math.sin(ph) * 0.008;
-    let tilt = walking ? Math.sin(ph) * 0.05 : 0;
-    let pitch = 0;
-    let rArm = walking ? Math.sin(ph) * 0.5 : 0;
-    let lArm = walking ? -Math.sin(ph) * 0.5 : 0;
-
     const t = (now - m.emoteAt) / 1000;
-    if (m.emote && !walking) {
-      if (m.emote === "wave" && t < 1.8) {
-        rArm = -2.6 + Math.sin(t * 12) * 0.35;
-      } else if (m.emote === "bow" && t < 1.6) {
-        pitch = Math.sin(Math.min(1, t / 1.6) * Math.PI) * 0.55;
-      } else if (m.emote === "hop" && t < 1.1) {
-        y = Math.abs(Math.sin(t * Math.PI * 2)) * 0.35;
-        rArm = lArm = -0.9 * Math.abs(Math.sin(t * Math.PI * 2));
-      } else if (m.emote === "sit") {
+    hop.current = 0;
+    let next: Pose = walking ? "walk" : "idle";
+    if (!walking && m.emote) {
+      if (m.emote === "wave" && t < 2.6) next = "wave";
+      else if (m.emote === "bow" && t < 3) next = "bow";
+      else if (m.emote === "hop" && t < 1.1) hop.current = Math.abs(Math.sin(t * Math.PI * 2)) * 0.32;
+      else if (m.emote === "sit") {
         m.sitting = true;
         m.emote = null;
-      } else if (t > 2) {
-        m.emote = null;
-      }
+      } else if (t > 3) m.emote = null;
     }
-    if (m.sitting) {
-      y = -0.24;
-      rArm = lArm = -0.4;
-    }
-    b.position.y = y;
-    b.rotation.z = tilt;
-    b.rotation.x = pitch;
-    if (armR.current) armR.current.rotation.x = rArm;
-    if (armL.current) armL.current.rotation.x = lArm;
-  });
+    if (m.sitting && !walking) next = "sit";
+    pose.current = next;
 
-  const cloth = glaze(OUTFITS[outfit % OUTFITS.length], { gloss: 0.8 });
-  const skin = glaze(GLAZE.white, { gloss: 0.9 });
-  const dark = glaze(GLAZE.ink, { gloss: 0.9 });
+    const g = root.current;
+    if (!g) return;
+    g.position.set(m.x, ground ? ground(m.x, m.z) : 0, m.z);
+    facing.current += shortestAngle(facing.current, m.heading) * (1 - Math.exp(-dt * 10));
+    g.rotation.y = facing.current;
+  });
 
   return (
     <group ref={root}>
-      <group ref={body}>
-        {/* feet */}
-        <mesh position={[-0.11, 0.07, 0.04]} castShadow material={dark} scale={[1, 0.7, 1.3]}>
-          <sphereGeometry args={[0.09, 14, 10]} />
-        </mesh>
-        <mesh position={[0.11, 0.07, 0.04]} castShadow material={dark} scale={[1, 0.7, 1.3]}>
-          <sphereGeometry args={[0.09, 14, 10]} />
-        </mesh>
-        {/* body: a rounded glazed figure, coloured like a garment */}
-        <mesh position={[0, 0.5, 0]} castShadow material={cloth}>
-          <capsuleGeometry args={[0.27, 0.3, 8, 20]} />
-        </mesh>
-        <mesh position={[0, 0.74, 0]} material={skin}>
-          <torusGeometry args={[0.17, 0.035, 10, 24]} />
-        </mesh>
-        {/* arms hang from the shoulders and swing */}
-        <group ref={armR} position={[0.31, 0.72, 0]}>
-          <mesh position={[0, -0.16, 0]} castShadow material={cloth}>
-            <capsuleGeometry args={[0.065, 0.2, 6, 12]} />
-          </mesh>
-        </group>
-        <group ref={armL} position={[-0.31, 0.72, 0]}>
-          <mesh position={[0, -0.16, 0]} castShadow material={cloth}>
-            <capsuleGeometry args={[0.065, 0.2, 6, 12]} />
-          </mesh>
-        </group>
-        {/* head: white porcelain, two quiet dots for eyes */}
-        <mesh position={[0, 1.08, 0]} castShadow material={skin}>
-          <sphereGeometry args={[0.27, 28, 22]} />
-        </mesh>
-        <mesh position={[-0.085, 1.1, 0.245]} material={dark}>
-          <sphereGeometry args={[0.024, 10, 8]} />
-        </mesh>
-        <mesh position={[0.085, 1.1, 0.245]} material={dark}>
-          <sphereGeometry args={[0.024, 10, 8]} />
-        </mesh>
-        {hat === 1 && (
-          <group position={[0, 1.24, 0]}>
-            <mesh material={cloth} castShadow>
-              <sphereGeometry args={[0.235, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
-            </mesh>
-            <mesh position={[0, 0.01, 0.02]} material={cloth}>
-              <cylinderGeometry args={[0.32, 0.32, 0.025, 24]} />
-            </mesh>
-          </group>
-        )}
-        {labels && (
-        <Html position={[0, 1.62, 0]} center distanceFactor={11} pointerEvents="none" zIndexRange={[20, 0]}>
+      <Suspense fallback={null}>
+        <Figure pose={pose} hop={hop} />
+      </Suspense>
+      {labels && (
+        <Html position={[0, 1.5, 0]} center distanceFactor={7} pointerEvents="none" zIndexRange={[20, 0]}>
           <div className={styles.tag} data-me={isMe} data-same={sameType}>
             <span>{name}</span>
             {type && <span className={styles.tagType}>{type}</span>}
           </div>
         </Html>
-        )}
-        {labels && bubble && (
-          <Html position={[0, 2.05, 0]} center distanceFactor={11} pointerEvents="none" zIndexRange={[30, 21]}>
-            <div className={styles.bubble}>{bubble}</div>
-          </Html>
-        )}
-      </group>
+      )}
+      {labels && bubble && (
+        <Html position={[0, 1.95, 0]} center distanceFactor={7} pointerEvents="none" zIndexRange={[30, 21]}>
+          <div className={styles.bubble}>{bubble}</div>
+        </Html>
+      )}
     </group>
   );
 }
+
+useGLTF.preload(asset(MODEL));
