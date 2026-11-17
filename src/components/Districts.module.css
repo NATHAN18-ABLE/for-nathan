@@ -153,11 +153,44 @@
 
 /* ---------- one course ---------- */
 
+/* Each hour's surface. The bands blend from the previous stop's hour into their own. */
+.page {
+  --morning: #ebe8e1;
+  --day: #efe4d1;
+  --dusk: #dfc6c1;
+  --night: #1c2448;
+}
+
+.page [data-tone="morning"] { --tone: var(--morning); }
+.page [data-tone="day"] { --tone: var(--day); }
+.page [data-tone="dusk"] { --tone: var(--dusk); }
+.page [data-tone="night"] { --tone: var(--night); }
+.page [data-from="morning"] { --from: var(--morning); }
+.page [data-from="day"] { --from: var(--day); }
+.page [data-from="dusk"] { --from: var(--dusk); }
+.page [data-from="night"] { --from: var(--night); }
+
+.courseMain {
+  flex: 1;
+  padding-bottom: clamp(56px, 10svh, 120px);
+}
+
+.container,
+.bandInner {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+.container:first-child {
+  padding-top: clamp(40px, 8svh, 96px);
+}
+
 .back {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  margin-bottom: clamp(16px, 4svh, 40px);
+  margin-bottom: clamp(12px, 3svh, 32px);
   font-size: 15px;
   color: var(--ink-soft);
 }
@@ -171,7 +204,7 @@
 }
 
 .courseLine {
-  margin: 16px 0 0;
+  margin: 14px 0 0;
   font-size: clamp(22px, 2.4vw, 30px);
   line-height: 1.3;
   font-weight: 450;
@@ -180,7 +213,7 @@
 }
 
 .intro {
-  margin: 16px 0 0;
+  margin: 14px 0 0;
   max-width: 58ch;
   font-size: clamp(17px, 1.4vw, 19px);
   line-height: 1.65;
@@ -213,117 +246,320 @@
   font-weight: 500;
 }
 
-/* The day as a timetable: times in a narrow column on a hairline rail. */
-.timeline {
-  --rail: 76px;
+/* ---- route map ---- */
+
+.route {
+  margin: clamp(32px, 5svh, 48px) calc(var(--gutter) * -1) 0;
+  padding: 0 var(--gutter) 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.route ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: min-content;
+}
+
+.route li {
   position: relative;
+}
+
+/* The line between stations. */
+.route li::before {
+  content: "";
+  position: absolute;
+  top: 37px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--cobalt);
+}
+
+.route li:first-child::before {
+  left: 50%;
+}
+
+.route li:last-child::before {
+  right: 50%;
+}
+
+.route a {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 0 6px 6px;
+  text-decoration: none;
+  text-align: center;
+}
+
+.routeTime {
+  font-size: 13px;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.routeDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 0 3px var(--cobalt), 0 0 0 6px var(--porcelain);
+  transition: transform 200ms var(--ease-out);
+}
+
+.routeName {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .route a:hover .routeDot {
+    transform: scale(1.2);
+  }
+  .route a:hover .routeName {
+    color: var(--cobalt);
+  }
+}
+
+/* ---- the day ---- */
+
+.day {
   margin: clamp(40px, 6svh, 64px) 0 0;
   padding: 0;
   list-style: none;
 }
 
-.timeline::before {
-  content: "";
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: calc(var(--rail) - 18px);
-  width: 1px;
-  background: var(--porcelain-shadow);
+.band {
+  --fg: var(--ink);
+  --fg-soft: var(--ink-soft);
+  --accent: var(--cobalt);
+  --rail-line: rgb(30 33 38 / 0.14);
+  --chip: rgb(255 255 255 / 0.55);
+  --panel: rgb(255 255 255 / 0.5);
+  color: var(--fg);
+  background: linear-gradient(to bottom, var(--from) 0%, var(--tone) 140px, var(--tone) 100%);
+  scroll-margin-top: 72px;
 }
 
-.stop + .stop {
-  margin-top: clamp(28px, 4svh, 44px);
+.band[data-tone="night"] {
+  --fg: #f2efe8;
+  --fg-soft: rgb(242 239 232 / 0.74);
+  --accent: #b9c7ff;
+  --rail-line: rgb(242 239 232 / 0.2);
+  --chip: rgb(255 255 255 / 0.1);
+  --panel: rgb(255 255 255 / 0.08);
+}
+
+.band[data-tone="night"] ::selection {
+  background: #b9c7ff;
+  color: var(--night);
+}
+
+.band[data-tone="night"] :focus-visible {
+  outline-color: #b9c7ff;
+}
+
+.bandInner {
+  --rail: 108px;
+  position: relative;
+  padding-block: clamp(28px, 5svh, 48px) clamp(44px, 7svh, 72px);
+}
+
+/* The rail runs through every band, so the day reads as one line. */
+.bandInner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--gutter) + var(--rail) - 22px);
+  width: 2px;
+  background: var(--rail-line);
 }
 
 .way {
-  margin: 0 0 clamp(16px, 2.4svh, 24px) var(--rail);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 0 0 clamp(24px, 4svh, 36px) calc(var(--rail) - 38px);
+  padding: 7px 14px 7px 10px;
+  border-radius: 999px;
+  background: var(--tone);
+  box-shadow: inset 0 0 0 1px var(--rail-line);
   font-size: 14px;
-  color: var(--ink-soft);
+  color: var(--fg-soft);
+  position: relative;
 }
 
-.stopRow {
+.stop {
   display: grid;
-  grid-template-columns: var(--rail) minmax(0, 1fr) 240px;
-  column-gap: clamp(16px, 3vw, 36px);
+  grid-template-columns: var(--rail) minmax(0, 1fr) minmax(0, 300px);
+  column-gap: clamp(20px, 3.4vw, 44px);
   align-items: start;
 }
 
 .time {
   position: relative;
-  padding-top: 3px;
-  font-size: 15px;
-  font-weight: 560;
+  padding-top: 4px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
-  color: var(--cobalt);
+  color: var(--accent);
 }
 
-/* A dot on the rail for each stop. */
+/* The stop's station on the rail. */
 .time::after {
   content: "";
   position: absolute;
-  top: 10px;
-  left: calc(var(--rail) - 22px);
-  width: 9px;
-  height: 9px;
+  top: 12px;
+  left: calc(var(--rail) - 29px);
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--porcelain);
-  box-shadow: inset 0 0 0 2px var(--cobalt);
+  background: var(--tone);
+  box-shadow: inset 0 0 0 3px var(--accent);
 }
 
-.stopBody {
+.stopMain {
   min-width: 0;
-  grid-column: 2;
 }
 
 .stopName {
   margin: 0;
-  font-size: clamp(21px, 2vw, 25px);
-  line-height: 1.25;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-size: clamp(24px, 2.4vw, 30px);
+  line-height: 1.2;
+  font-weight: 560;
+  letter-spacing: -0.02em;
 }
 
-.kind {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: var(--ink-soft);
-}
-
-.text {
-  margin: 12px 0 0;
-  max-width: 60ch;
-  font-size: 17px;
-  line-height: 1.65;
-}
-
-.tip {
+.summary {
   margin: 10px 0 0;
+  max-width: 34ch;
+  font-size: clamp(18px, 1.6vw, 20px);
+  line-height: 1.45;
+  color: var(--fg-soft);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 14px;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.chips svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.chips li[data-note] svg {
+  color: #b4432f;
+}
+
+.band[data-tone="night"] .chips li[data-note] svg {
+  color: #ffb4a3;
+}
+
+.details {
+  margin-top: 16px;
+}
+
+.details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  list-style: none;
+}
+
+.details summary::-webkit-details-marker {
+  display: none;
+}
+
+.details summary svg {
+  transition: transform 200ms var(--ease-out);
+}
+
+.details[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.details p {
+  margin: 6px 0 0;
   max-width: 60ch;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.details .tip {
+  margin-top: 12px;
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgb(255 255 255 / 0.45);
+  background: var(--panel);
   font-size: 15px;
   line-height: 1.55;
-  color: var(--ink-soft);
+  color: var(--fg-soft);
 }
 
-.figure {
-  grid-column: 3;
-  width: 100%;
-  margin: 4px 0 0;
-}
-
-.figure img {
+.media img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 12px;
-  background: var(--porcelain-shadow);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px -14px rgb(10 15 35 / 0.45);
+}
+
+/* Stops without a photo get a tile in the hour's colour with the place type. */
+.tile {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--rail-line);
+  color: var(--accent);
+}
+
+.tile span {
+  font-size: 14px;
+  color: var(--fg-soft);
+}
+
+.dayEnd {
+  height: 120px;
+  background: linear-gradient(to bottom, var(--from), var(--porcelain));
 }
 
 .nearby {
-  margin-top: clamp(48px, 7svh, 72px);
+  margin-top: clamp(24px, 4svh, 40px);
   padding: 20px 22px;
   border-radius: 16px;
   background: rgb(255 255 255 / 0.45);
@@ -386,15 +622,27 @@
   margin-top: clamp(40px, 6svh, 64px);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .routeDot,
+  .details summary svg {
+    transition: none;
+  }
+}
+
 /* ---------- smaller screens ---------- */
 
 @media (max-width: 860px) {
-  .stopRow {
+  .stop {
     grid-template-columns: var(--rail) minmax(0, 1fr);
   }
-  .figure {
+  .media {
     grid-column: 2;
-    margin-top: 14px;
+    margin-top: 20px;
+    max-width: 420px;
+  }
+  .tile {
+    aspect-ratio: 16 / 8;
+    max-width: 360px;
   }
   .others ul {
     grid-template-columns: minmax(0, 1fr);
@@ -413,23 +661,38 @@
   .readyGo {
     grid-column: 2;
   }
-  .soonList {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .readyArea {
     display: block;
     margin: 2px 0 0;
   }
-  .timeline {
-    --rail: 70px;
+  .soonList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bandInner {
+    --rail: 86px;
   }
   .time {
-    font-size: 14px;
+    font-size: 18px;
+  }
+  .time::after {
+    top: 9px;
+    width: 14px;
+    height: 14px;
+    left: calc(var(--rail) - 28px);
   }
   .way {
     font-size: 13px;
+    margin-left: calc(var(--rail) - 38px);
   }
-  .text {
-    font-size: 16px;
+  .summary {
+    font-size: 17px;
+  }
+  .tile {
+    aspect-ratio: 16 / 7;
+  }
+  /* A hint that the route map scrolls sideways. */
+  .route {
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
   }
 }

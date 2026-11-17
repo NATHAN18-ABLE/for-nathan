@@ -13,8 +13,20 @@ export interface Photo {
   alt: Text;
 }
 
+export type Icon =
+  | "park" | "shops" | "shoe" | "cafe" | "food" | "river" | "history"
+  | "view" | "hike" | "temple" | "trail" | "tent" | "museum" | "market";
+export type Mode = "walk" | "metro" | "bus";
+
 export interface Stop {
   time: string; // 24-hour clock, the suggested arrival
+  short: Text; // label on the route map
+  summary: Text; // one line, shown before the details
+  stay: Text;
+  cost?: Text; // a rough range, marked as such
+  note?: Text; // one short caution
+  icon: Icon;
+  mode?: Mode; // how you get here from the previous stop
   name: Text;
   kind: Text;
   body: Text;
@@ -59,6 +71,11 @@ export const COURSES: Course[] = [
     stops: [
       {
         time: "11:00",
+        short: { en: "Seoul Forest", ko: "서울숲" },
+        summary: { en: "A morning walk among ponds and forest paths", ko: "연못과 숲길을 걷는 아침 산책" },
+        stay: { en: "1 hr", ko: "1시간" },
+        cost: { en: "Free", ko: "무료" },
+        icon: "park",
         name: { en: "Seoul Forest", ko: "서울숲" },
         kind: { en: "Park", ko: "공원" },
         body: {
@@ -69,6 +86,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "12:30",
+        short: { en: "Yeonmujang-gil", ko: "연무장길" },
+        summary: { en: "Seongsu's main street of pop-ups and design shops", ko: "팝업스토어와 편집숍이 모인 성수의 중심 거리" },
+        stay: { en: "2 hr", ko: "2시간" },
+        cost: { en: "Lunch ₩15,000–25,000", ko: "점심 1인 약 1.5만~2.5만 원" },
+        icon: "shops",
+        mode: "walk",
         name: { en: "Yeonmujang-gil and Seongsu Yeonbang", ko: "연무장길과 성수연방" },
         kind: { en: "Shops and lunch", ko: "쇼핑과 점심" },
         body: {
@@ -84,6 +107,13 @@ export const COURSES: Course[] = [
       },
       {
         time: "14:30",
+        short: { en: "Shoe Street", ko: "수제화 거리" },
+        summary: { en: "Where shoemakers have worked for decades", ko: "수십 년째 구두를 만드는 장인들의 거리" },
+        stay: { en: "1 hr", ko: "1시간" },
+        cost: { en: "Free to browse", ko: "구경 무료" },
+        note: { en: "Classes are paid", ko: "체험은 유료" },
+        icon: "shoe",
+        mode: "walk",
         name: { en: "Seongsu Handmade Shoe Street", ko: "성수 수제화 거리" },
         kind: { en: "Workshops", ko: "공방" },
         body: {
@@ -98,6 +128,13 @@ export const COURSES: Course[] = [
       },
       {
         time: "15:30",
+        short: { en: "Factory café", ko: "공장 카페" },
+        summary: { en: "A big bakery café in a former factory", ko: "옛 공장을 고친 대형 베이커리 카페" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "₩10,000–20,000", ko: "1인 약 1만~2만 원" },
+        note: { en: "Weekend queues", ko: "주말엔 줄이 김" },
+        icon: "cafe",
+        mode: "walk",
         name: { en: "A café in an old factory", ko: "공장을 고친 카페" },
         kind: { en: "Café", ko: "카페" },
         body: {
@@ -113,6 +150,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "18:00",
+        short: { en: "Galbi alley", ko: "갈비 골목" },
+        summary: { en: "Marinated pork ribs grilled at outdoor tables", ko: "바깥 테이블에서 굽는 양념 돼지갈비" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "₩20,000–30,000", ko: "1인 약 2만~3만 원" },
+        icon: "food",
+        mode: "walk",
         name: { en: "Seongsu pork galbi alley", ko: "성수동 돼지갈비 골목" },
         kind: { en: "Dinner", ko: "저녁" },
         body: {
@@ -123,6 +166,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "19:30",
+        short: { en: "Han River", ko: "한강" },
+        summary: { en: "Walk the river as the bridges light up", ko: "불 켜진 다리를 보며 걷는 한강의 밤" },
+        stay: { en: "1 hr", ko: "1시간" },
+        cost: { en: "Free", ko: "무료" },
+        icon: "river",
+        mode: "bus",
         name: { en: "Ttukseom Hangang Park at night", ko: "뚝섬한강공원 야경" },
         kind: { en: "Riverside", ko: "한강" },
         body: {
@@ -147,6 +196,12 @@ export const COURSES: Course[] = [
     stops: [
       {
         time: "10:00",
+        short: { en: "Mongchontoseong", ko: "몽촌토성" },
+        summary: { en: "Walk the earthen walls of Baekje's first capital", ko: "백제 첫 도읍의 흙 성벽 위를 걷는 아침" },
+        stay: { en: "2 hr", ko: "2시간" },
+        cost: { en: "Free", ko: "상설전 무료" },
+        note: { en: "Museum closed Mondays", ko: "박물관 월요일 휴관" },
+        icon: "history",
         name: { en: "Mongchontoseong and the Hanseong Baekje Museum", ko: "몽촌토성과 한성백제박물관" },
         kind: { en: "History", ko: "역사" },
         body: {
@@ -160,6 +215,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "12:30",
+        short: { en: "Lotte World Mall", ko: "롯데월드몰" },
+        summary: { en: "Lunch in the mall above Jamsil Station", ko: "잠실역과 이어진 쇼핑몰에서 점심" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "Lunch ₩15,000–30,000", ko: "점심 1인 약 1.5만~3만 원" },
+        icon: "shops",
+        mode: "metro",
         name: { en: "Lotte World Mall", ko: "롯데월드몰" },
         kind: { en: "Lunch", ko: "점심" },
         body: {
@@ -170,6 +231,13 @@ export const COURSES: Course[] = [
       },
       {
         time: "14:30",
+        short: { en: "Seokchon Lake", ko: "석촌호수" },
+        summary: { en: "A 2.5 km loop famous for cherry blossoms", ko: "벚꽃길로 유명한 2.5km 호수 한 바퀴" },
+        stay: { en: "1 hr", ko: "1시간" },
+        cost: { en: "Free", ko: "무료" },
+        note: { en: "Blossoms in early April", ko: "4월 초 벚꽃" },
+        icon: "river",
+        mode: "walk",
         name: { en: "Seokchon Lake", ko: "석촌호수" },
         kind: { en: "Walk", ko: "산책" },
         body: {
@@ -181,6 +249,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "15:30",
+        short: { en: "Baekje tombs", ko: "백제 고분" },
+        summary: { en: "Stone tombs of Baekje rulers between apartments", ko: "아파트 사이에 남은 백제 지배층의 돌무덤" },
+        stay: { en: "40 min", ko: "40분" },
+        cost: { en: "Free", ko: "무료" },
+        icon: "history",
+        mode: "walk",
         name: { en: "Seokchon-dong Ancient Tombs", ko: "석촌동 고분군" },
         kind: { en: "History", ko: "역사" },
         body: {
@@ -191,6 +265,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "16:30",
+        short: { en: "Songnidan-gil", ko: "송리단길" },
+        summary: { en: "A lane of small independent cafés", ko: "작은 개인 카페가 모인 골목" },
+        stay: { en: "1 hr", ko: "1시간" },
+        cost: { en: "₩7,000–12,000", ko: "1인 약 7천~1.2만 원" },
+        icon: "cafe",
+        mode: "walk",
         name: { en: "Songnidan-gil", ko: "송리단길" },
         kind: { en: "Café", ko: "카페" },
         body: {
@@ -201,6 +281,13 @@ export const COURSES: Course[] = [
       },
       {
         time: "18:00",
+        short: { en: "Seoul Sky", ko: "서울스카이" },
+        summary: { en: "Sunset and city lights from the 123-floor tower", ko: "123층 타워에서 보는 노을과 야경" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "Paid, see official site", ko: "유료 · 공식 누리집 확인" },
+        note: { en: "Time it to sunset", ko: "노을 시간에 맞추기" },
+        icon: "view",
+        mode: "walk",
         name: { en: "Seoul Sky, Lotte World Tower", ko: "롯데월드타워 서울스카이" },
         kind: { en: "Observatory", ko: "전망대" },
         body: {
@@ -216,6 +303,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "20:00",
+        short: { en: "Bangi food alley", ko: "방이동 먹자골목" },
+        summary: { en: "Barbecue and Korean dinners in a packed food alley", ko: "고기와 한식 가게가 빼곡한 먹자골목" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "₩20,000–30,000", ko: "1인 약 2만~3만 원" },
+        icon: "food",
+        mode: "walk",
         name: { en: "Bangi-dong food alley", ko: "방이동 먹자골목" },
         kind: { en: "Dinner", ko: "저녁" },
         body: {
@@ -240,6 +333,12 @@ export const COURSES: Course[] = [
     stops: [
       {
         time: "09:30",
+        short: { en: "Buramsan", ko: "불암산" },
+        summary: { en: "A 508 m granite peak with all of Seoul below", ko: "서울이 한눈에 보이는 508m 바위산" },
+        stay: { en: "3 hr", ko: "3시간" },
+        cost: { en: "Free", ko: "무료" },
+        note: { en: "Shoes with grip", ko: "미끄럽지 않은 신발" },
+        icon: "hike",
         name: { en: "Buramsan summit", ko: "불암산 정상" },
         kind: { en: "Hike", ko: "등산" },
         body: {
@@ -254,6 +353,11 @@ export const COURSES: Course[] = [
       },
       {
         time: "12:30",
+        short: { en: "Mountain hut", ko: "거북산장" },
+        summary: { en: "Pajeon and a hot bowl halfway up the mountain", ko: "산 중턱에서 먹는 파전과 따끈한 국물" },
+        stay: { en: "1 hr", ko: "1시간" },
+        note: { en: "May close in bad weather", ko: "날씨 따라 휴무" },
+        icon: "food",
         name: { en: "Geobuk Sanjang mountain hut", ko: "거북산장" },
         kind: { en: "Lunch", ko: "점심" },
         body: {
@@ -268,6 +372,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "13:30",
+        short: { en: "Hakdoam", ko: "학도암" },
+        summary: { en: "A hermitage with a 13.4 m Buddha carved in the cliff", ko: "절벽에 새긴 13.4m 관음보살이 있는 암자" },
+        stay: { en: "40 min", ko: "40분" },
+        cost: { en: "Free", ko: "무료" },
+        icon: "temple",
+        mode: "walk",
         name: { en: "Hakdoam Hermitage", ko: "학도암" },
         kind: { en: "Temple", ko: "사찰" },
         body: {
@@ -278,6 +388,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "15:30",
+        short: { en: "Gyeongchun Trail", ko: "경춘선숲길" },
+        summary: { en: "A forest path along an old railway line", ko: "레일이 남아 있는 옛 기찻길 숲길" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "Free", ko: "무료" },
+        icon: "trail",
+        mode: "bus",
         name: { en: "Gyeongchun Line Forest Trail", ko: "경춘선숲길" },
         kind: { en: "Walk", ko: "산책" },
         body: {
@@ -288,6 +404,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "17:30",
+        short: { en: "Seokgye stalls", ko: "석계역 포차" },
+        summary: { en: "Tteokbokki and drinks under street-stall tents", ko: "천막 아래 분식과 안주, 한국의 야외 밤 문화" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "₩10,000–20,000", ko: "1인 약 1만~2만 원" },
+        icon: "tent",
+        mode: "metro",
         name: { en: "Seokgye Station street stalls", ko: "석계역 포장마차 거리" },
         kind: { en: "Dinner", ko: "저녁" },
         body: {
@@ -320,6 +442,11 @@ export const COURSES: Course[] = [
     stops: [
       {
         time: "10:00",
+        short: { en: "Herb museum", ko: "한의약박물관" },
+        summary: { en: "A short primer on Korean medicine before the market", ko: "시장에 들어가기 전 둘러보는 한국 전통 의학" },
+        stay: { en: "40 min", ko: "40분" },
+        cost: { en: "Adults ₩1,000", ko: "어른 1,000원" },
+        icon: "museum",
         name: { en: "Seoul Yangnyeongsi Herb Medicine Museum", ko: "서울약령시 한의약박물관" },
         kind: { en: "Museum", ko: "박물관" },
         body: {
@@ -333,6 +460,13 @@ export const COURSES: Course[] = [
       },
       {
         time: "10:45",
+        short: { en: "Gyeongdong Market", ko: "경동시장" },
+        summary: { en: "Korea's largest herbal medicine market", ko: "인삼과 약초 향이 가득한 한국 최대 약재 시장" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "Free to browse", ko: "구경 무료" },
+        note: { en: "Liveliest in the morning", ko: "오전이 가장 활기참" },
+        icon: "market",
+        mode: "walk",
         name: { en: "Gyeongdong Market and the herb alleys", ko: "경동시장과 약령시 골목" },
         kind: { en: "Market", ko: "시장" },
         body: {
@@ -345,6 +479,13 @@ export const COURSES: Course[] = [
       },
       {
         time: "12:30",
+        short: { en: "Jjukkumi alley", ko: "쭈꾸미 골목" },
+        summary: { en: "Fiery baby octopus, then fried rice in the pan", ko: "매콤한 쭈꾸미볶음과 마무리 볶음밥" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "₩10,000–20,000", ko: "1인 약 1만~2만 원" },
+        note: { en: "Very spicy", ko: "꽤 매움" },
+        icon: "food",
+        mode: "walk",
         name: { en: "Yongdu-dong jjukkumi alley", ko: "용두동 쭈꾸미 골목" },
         kind: { en: "Lunch", ko: "점심" },
         body: {
@@ -356,6 +497,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "14:30",
+        short: { en: "Starbucks 1960", ko: "스타벅스 1960" },
+        summary: { en: "Coffee in the seats of a 1960 movie theater", ko: "1960년 극장 객석에서 마시는 커피" },
+        stay: { en: "1 hr", ko: "1시간" },
+        cost: { en: "Drinks ₩5,000–7,000", ko: "음료 약 5천~7천 원" },
+        icon: "cafe",
+        mode: "walk",
         name: { en: "Starbucks Gyeongdong 1960", ko: "스타벅스 경동1960" },
         kind: { en: "Café", ko: "카페" },
         body: {
@@ -371,6 +518,12 @@ export const COURSES: Course[] = [
       },
       {
         time: "18:00",
+        short: { en: "Pajeon alley", ko: "파전골목" },
+        summary: { en: "Big seafood pajeon with makgeolli", ko: "큼직한 해물파전에 막걸리 한잔" },
+        stay: { en: "1 hr 30 min", ko: "1시간 30분" },
+        cost: { en: "₩10,000–20,000 a pancake", ko: "파전 한 장 약 1만~2만 원" },
+        icon: "food",
+        mode: "metro",
         name: { en: "Hoegi pajeon alley", ko: "회기역 파전골목" },
         kind: { en: "Dinner", ko: "저녁" },
         body: {
