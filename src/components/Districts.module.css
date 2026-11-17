@@ -249,6 +249,7 @@
 /* ---- route map ---- */
 
 .route {
+  --station: 104px;
   margin: clamp(32px, 5svh, 48px) calc(var(--gutter) * -1) 0;
   padding: 0 var(--gutter) 8px;
   overflow-x: auto;
@@ -687,11 +688,15 @@
   .summary {
     font-size: 17px;
   }
+  .routeName {
+    font-size: 13px;
+  }
   .tile {
     aspect-ratio: 16 / 7;
   }
   /* A hint that the route map scrolls sideways. */
   .route {
+    --station: 118px;
     mask-image: linear-gradient(to right, #000 82%, transparent);
     -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
   }

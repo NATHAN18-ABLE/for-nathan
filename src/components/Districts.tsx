@@ -7,7 +7,7 @@ import { asset } from "@/lib/base-path.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import { COURSES, CHECKED, courseFor, type Course, type Stop, type Icon, type Mode } from "@/lib/districts/courses.ts";
 import {
-  Bank, Binoculars, Bus, CaretDown, CastleTurret, Clock, Coffee, CurrencyKrw, ForkKnife, HandsPraying, Info,
+  Bank, BeerStein, Binoculars, Bus, CaretDown, CastleTurret, Church, Clock, Coffee, CurrencyKrw, Flask, PaintBrush, ForkKnife, HandsPraying, Info,
   Mountains, Path, PersonSimpleWalk, ShoppingBag, Sneaker, Storefront, Subway, Tent, Tree, Waves,
   type Icon as PhosphorIcon,
 } from "@phosphor-icons/react";
@@ -18,7 +18,7 @@ import styles from "./Districts.module.css";
 
 const T = {
   en: {
-    lede: "Find your district with the test, then follow its day from morning to night. The first four courses are ready; the rest are on the way.",
+    lede: (n: number) => `Find your district with the test, then follow its day from morning to night. ${n} of the twelve courses are ready; the rest are on the way.`,
     ready: "Courses you can follow now",
     soon: "Coming next",
     open: "See the day",
@@ -28,6 +28,7 @@ const T = {
     start: "Start",
     checked: "Checked",
     nearby: "Just over the line",
+    extra: "If you have more time",
     others: "Other days",
     note: "Prices are rough ranges per person. Opening hours, prices and pop-ups change, so check before you go. Place photos were gathered by the team during research.",
     more: "Details",
@@ -37,7 +38,7 @@ const T = {
     test: "Take the test",
   },
   ko: {
-    lede: "테스트로 나와 맞는 지역을 찾고, 그 지역의 하루를 아침부터 밤까지 따라가 보세요. 네 곳의 코스를 먼저 공개하고, 나머지도 준비하고 있습니다.",
+    lede: (n: number) => `테스트로 나와 맞는 지역을 찾고, 그 지역의 하루를 아침부터 밤까지 따라가 보세요. 12개 지역 중 ${n}곳의 코스를 공개했고, 나머지도 준비하고 있습니다.`,
     ready: "지금 따라갈 수 있는 코스",
     soon: "준비 중인 지역",
     open: "하루 코스 보기",
@@ -47,6 +48,7 @@ const T = {
     start: "출발",
     checked: "정보 확인",
     nearby: "경계 너머 가까운 곳",
+    extra: "시간이 더 있다면",
     others: "다른 지역의 하루",
     note: "가격은 1인 기준 대략적인 범위입니다. 영업시간과 가격, 팝업스토어는 바뀔 수 있으니 방문 전에 확인하세요. 장소 사진은 팀이 조사하며 모은 자료입니다.",
     more: "자세히 보기",
@@ -85,13 +87,13 @@ export function DistrictsIndex() {
       <main className={styles.main}>
         <header className={styles.indexHead}>
           <h1 className={styles.indexTitle}>{COPY[lang].nav.districts}</h1>
-          <p className={styles.lede}><Phrases text={t.lede} /></p>
+          <p className={styles.lede}><Phrases text={t.lede(COURSES.length)} /></p>
         </header>
 
         <section aria-labelledby="ready-heading">
           <h2 id="ready-heading" className={styles.groupLabel}>{t.ready}</h2>
           <ul className={styles.readyList}>
-            {COURSES.map((c) => {
+            {[...COURSES].sort((x, y) => DISTRICTS.findIndex((d) => d.slug === x.slug) - DISTRICTS.findIndex((d) => d.slug === y.slug)).map((c) => {
               const cover = c.stops.find((s) => s.photo)?.photo;
               return (
                 <li key={c.slug}>
@@ -147,7 +149,7 @@ export function DistrictsIndex() {
 const ICONS: Record<Icon, PhosphorIcon> = {
   park: Tree, shops: ShoppingBag, shoe: Sneaker, cafe: Coffee, food: ForkKnife, river: Waves,
   history: CastleTurret, view: Binoculars, hike: Mountains, temple: HandsPraying, trail: Path,
-  tent: Tent, museum: Bank, market: Storefront,
+  tent: Tent, museum: Bank, market: Storefront, church: Church, beer: BeerStein, art: PaintBrush, perfume: Flask,
 };
 const MODES: Record<Mode, PhosphorIcon> = { walk: PersonSimpleWalk, metro: Subway, bus: Bus };
 
@@ -163,7 +165,7 @@ const anchor = (time: string) => `stop-${time.replace(":", "")}`;
 function RouteMap({ stops, lang, label }: { stops: Stop[]; lang: Lang; label: string }) {
   return (
     <nav className={styles.route} aria-label={label}>
-      <ol style={{ gridTemplateColumns: `repeat(${stops.length}, minmax(96px, 1fr))` }}>
+      <ol style={{ gridTemplateColumns: `repeat(${stops.length}, minmax(var(--station), 1fr))` }}>
         {stops.map((s) => (
           <li key={s.time} data-tone={toneAt(s.time)}>
             <a href={`#${anchor(s.time)}`}>
@@ -295,6 +297,12 @@ export function CourseView({ slug }: { slug: string }) {
         <div className={styles.dayEnd} data-from={tones[tones.length - 1]} aria-hidden="true" />
 
         <div className={styles.container}>
+          {course.more && (
+            <aside className={styles.nearby}>
+              <h2 className={styles.nearbyLabel}>{t.extra}</h2>
+              <p><Phrases text={course.more[lang]} /></p>
+            </aside>
+          )}
           {course.nearby && (
             <aside className={styles.nearby}>
               <h2 className={styles.nearbyLabel}>{t.nearby}</h2>
