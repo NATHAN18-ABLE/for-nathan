@@ -59,6 +59,19 @@ export function SiteNav({ lang, onLang, tone = "light" }: Props) {
     if (refocus) menuButton.current?.focus();
   };
 
+  // A small name seal (낙관) beside the name, the way a painter signs a scroll.
+  const mark = (
+    <>
+      <span className={styles.seal} aria-hidden="true">
+        <span>서</span>
+        <span>울</span>
+      </span>
+      <span className={styles.wordText} aria-hidden="true">
+        <span className={styles.wordStrong}>Seoul,</span> Curated
+      </span>
+    </>
+  );
+
   const langToggle = (
     <div className={styles.lang} role="group" aria-label={t.language}>
       <button type="button" aria-pressed={lang === "en"} onClick={() => onLang("en")}>
@@ -74,8 +87,8 @@ export function SiteNav({ lang, onLang, tone = "light" }: Props) {
   return (
     <>
       <header className={styles.nav} data-tone={tone}>
-        <Link className={styles.wordmark} href="/">
-          Seoul, Curated
+        <Link className={styles.wordmark} href="/" aria-label="Seoul, Curated" translate="no">
+          {mark}
         </Link>
         <nav className={styles.links} aria-label={t.main}>
           {ROUTES.map(({ key, href }) => (
@@ -109,8 +122,8 @@ export function SiteNav({ lang, onLang, tone = "light" }: Props) {
       >
         <div className={styles.sheetMain}>
           <div className={styles.sheetTop}>
-            <Link className={styles.wordmark} href="/" onClick={() => close(false)}>
-              Seoul, Curated
+            <Link className={styles.wordmark} href="/" aria-label="Seoul, Curated" translate="no" onClick={() => close(false)}>
+              {mark}
             </Link>
             <button type="button" className={styles.menuButton} onClick={() => close()}>
               {t.close}

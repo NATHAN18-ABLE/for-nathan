@@ -1,10 +1,15 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import type { Answer, Question } from "@/lib/match/match.ts";
+import type { Lang } from "@/lib/hero/copy.ts";
+import { Phrases } from "./Phrases";
 import styles from "./QuestionCard.module.css";
 
 interface Props {
   question: Question;
+  lang: Lang;
   index: number; // 1-based
   total: number;
   label: string; // "1 of 12"
@@ -15,8 +20,14 @@ interface Props {
   headingLevel?: "h2" | "h3";
 }
 
-export function QuestionCard({ question, index, total, label, onAnswer, onBack, backLabel, selected, headingLevel = "h2" }: Props) {
+export function QuestionCard({ question, lang, index, total, label, onAnswer, onBack, backLabel, selected, headingLevel = "h2" }: Props) {
   const Heading = headingLevel;
+  const heading = useRef<HTMLHeadingElement>(null);
+  // After an answer the next card replaces this one; keep keyboard focus on the new question
+  // instead of dropping it to the page. The first question takes focus only from a keyboard user.
+  useEffect(() => {
+    if (index > 1) heading.current?.focus({ preventScroll: true });
+  }, [index]);
   return (
     <div className={styles.card}>
       <div className={styles.progress} aria-label={label}>
@@ -27,7 +38,7 @@ export function QuestionCard({ question, index, total, label, onAnswer, onBack, 
         </ol>
         <span className={styles.count}>{label}</span>
       </div>
-      <Heading className={styles.question}>{question.prompt}</Heading>
+      <Heading ref={heading} tabIndex={-1} className={styles.question}><Phrases text={question.prompt[lang]} /></Heading>
       <div className={styles.options}>
         {(["a", "b"] as const).map((key) => (
           <button
@@ -37,7 +48,7 @@ export function QuestionCard({ question, index, total, label, onAnswer, onBack, 
             aria-pressed={selected === key}
             onClick={() => onAnswer(key)}
           >
-            {question[key]}
+            {question[key][lang]}
           </button>
         ))}
       </div>

@@ -64,6 +64,8 @@
   background: var(--porcelain);
   border: 1px solid var(--porcelain-shadow);
   border-radius: 18px;
+  /* even lines, so an answer never ends on a lone word */
+  text-wrap: balance;
   user-select: none;
   -webkit-user-select: none;
   transition: transform 160ms var(--ease-out), border-color 200ms ease, background-color 200ms ease;
@@ -85,7 +87,8 @@
 }
 
 .back {
-  margin-top: 18px;
+  margin-top: 10px;
+  min-height: 44px;
   padding: 6px 0;
   background: none;
   border: 0;
@@ -102,4 +105,9 @@
   .option {
     min-height: 64px;
   }
+}
+
+/* The heading takes focus only to carry the reader's place to the next question; it is not a control. */
+.question:focus {
+  outline: none;
 }

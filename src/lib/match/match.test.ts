@@ -15,9 +15,9 @@ import { TRAVEL_TYPES } from "./travel-types.ts";
 
 const q = (id: string, weights: Question["weights"], extra: Partial<Question> = {}): Question => ({
   id,
-  prompt: id,
-  a: "a",
-  b: "b",
+  prompt: { en: id, ko: id },
+  a: { en: "a", ko: "a" },
+  b: { en: "b", ko: "b" },
   weights,
   ...extra,
 });
@@ -87,7 +87,7 @@ test("conditions are read from the food and movement questions", () => {
   assert.equal(c.move, moveQ.conditions!.move!.b);
 });
 
-test("every district wins for some answers and none takes more than 16% of all answer sets", () => {
+test("each district is the best match for 6–11% of all answer sets", () => {
   const counts = new Map<string, number>();
   const total = 2 ** QUESTIONS.length;
   for (let mask = 0; mask < total; mask++) {
@@ -97,8 +97,8 @@ test("every district wins for some answers and none takes more than 16% of all a
   }
   for (const d of DISTRICTS) {
     const share = (counts.get(d.slug) ?? 0) / total;
-    assert.ok(share >= 0.03, `${d.slug} wins only ${(share * 100).toFixed(1)}%`);
-    assert.ok(share <= 0.16, `${d.slug} wins ${(share * 100).toFixed(1)}%`);
+    assert.ok(share >= 0.06, `${d.slug} wins only ${(share * 100).toFixed(1)}%`);
+    assert.ok(share <= 0.11, `${d.slug} wins ${(share * 100).toFixed(1)}%`);
   }
 });
 
@@ -106,6 +106,11 @@ test("all sixteen type codes have a name and a line", () => {
   const letters = [["H", "T"], ["A", "O"], ["C", "B"], ["L", "F"]];
   for (const a of letters[0]) for (const b of letters[1]) for (const c of letters[2]) for (const d of letters[3]) {
     const t = TRAVEL_TYPES[`${a}${b}${c}${d}`];
-    assert.ok(t?.name && t?.line, `missing ${a}${b}${c}${d}`);
+    assert.ok(t?.name.en && t?.name.ko && t?.line.en && t?.line.ko, `missing ${a}${b}${c}${d}`);
   }
+});
+
+test("every question and district has both English and Korean copy", () => {
+  for (const qq of QUESTIONS) for (const t of [qq.prompt, qq.a, qq.b]) assert.ok(t.en && t.ko, qq.id);
+  for (const d of DISTRICTS) assert.ok(d.line.en && d.line.ko, d.slug);
 });

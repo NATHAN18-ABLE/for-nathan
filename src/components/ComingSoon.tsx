@@ -7,7 +7,7 @@ import { SiteNav } from "./SiteNav";
 import { Phrases } from "./Phrases";
 import styles from "./ComingSoon.module.css";
 
-export type PageKey = "districts" | "story" | "metaverse" | "about";
+export type PageKey = "districts" | "story" | "metaverse";
 
 const PAGES = {
   en: {
@@ -20,9 +20,6 @@ const PAGES = {
     metaverse: {
       lede: "Walk the streets of Seoul with friends before you go. Four rooms open first.",
       list: ["Jongno", "Seodaemun", "Yongsan", "Yeongdeungpo"],
-    },
-    about: {
-      lede: "Meet the people who want you to discover Seoul. Coming soon.",
     },
     cta: "Take the test",
     home: "Back to the start",
@@ -37,9 +34,6 @@ const PAGES = {
     metaverse: {
       lede: "친구들과 함께 서울의 골목을 먼저 걸어 보세요. 네 개의 방이 먼저 열립니다.",
       list: ["종로", "서대문", "용산", "영등포"],
-    },
-    about: {
-      lede: "당신에게 서울을 만나게 해 주고 싶은 우리를 곧 소개합니다.",
     },
     cta: "테스트 시작하기",
     home: "처음으로",

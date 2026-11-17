@@ -8,6 +8,7 @@ import { QuestionCard } from "@/components/QuestionCard";
 import Link from "next/link";
 import { SiteNav } from "@/components/SiteNav";
 import { useLang } from "@/lib/lang.ts";
+import type { Lang } from "@/lib/hero/copy.ts";
 import { asset } from "@/lib/base-path.ts";
 import { Phrases } from "@/components/Phrases";
 import { nearestRoom } from "@/lib/metaverse/queue.ts";
@@ -16,6 +17,29 @@ import { DISTRICTS } from "@/lib/match/districts.ts";
 import styles from "./test.module.css";
 
 const KEY = "seoul.answers";
+
+const T = {
+  en: {
+    of: (n: number, total: number) => `${n} of ${total}`,
+    back: "Previous question",
+    yourSeoul: "Your Seoul is",
+    also: "Also close to you:",
+    course: (d: string) => `A day course for ${d} is in preparation.`,
+    roomSoon: (room: string, open: string) => `The ${room} room opens soon. Until then, travelers meet in ${open}.`,
+    meet: (open: string) => `Walk ${open} with friends first`,
+    again: "Take the test again",
+  },
+  ko: {
+    of: (n: number, total: number) => `${n} / ${total}`,
+    back: "이전 질문",
+    yourSeoul: "당신의 서울은",
+    also: "이곳도 잘 맞아요:",
+    course: (d: string) => `${d} 하루 코스는 준비 중입니다.`,
+    roomSoon: (room: string, open: string) => `${room} 방은 곧 열립니다. 그동안은 ${open}에서 다른 여행자들을 만날 수 있습니다.`,
+    meet: (open: string) => `친구들과 ${open} 먼저 걸어 보기`,
+    again: "테스트 다시 하기",
+  },
+} as const;
 
 export default function TestPage() {
   const [answers, setAnswers] = useState<Answer[] | null>(null);
@@ -55,59 +79,69 @@ export default function TestPage() {
           <QuestionCard
             key={step}
             question={QUESTIONS[step]}
+            lang={lang}
             index={step + 1}
             total={QUESTIONS.length}
-            label={`${step + 1} of ${QUESTIONS.length}`}
+            label={T[lang].of(step + 1, QUESTIONS.length)}
             onAnswer={(a) => save([...answers, a])}
             onBack={step > 0 ? () => save(answers.slice(0, -1)) : undefined}
-            backLabel="Previous question"
+            backLabel={T[lang].back}
           />
         </section>
       ) : (
-        <Result answers={answers} onRestart={() => save([])} />
+        <Result lang={lang} answers={answers} onRestart={() => save([])} />
       )}
     </main>
   );
 }
 
-function Result({ answers, onRestart }: { answers: Answer[]; onRestart: () => void }) {
+function Result({ lang, answers, onRestart }: { lang: Lang; answers: Answer[]; onRestart: () => void }) {
+  const t = T[lang];
   const code = typeCode(answers);
   const type = TRAVEL_TYPES[code];
   const { best, runnerUp } = matchDistricts(scoreAnswers(answers));
   const room = nearestRoom(best.slug);
   const open = entryRoom(room);
-  const nameOf = (slug: string) => DISTRICTS.find((d) => d.slug === slug)?.nameEn ?? slug;
+  const ko = lang === "ko";
+  const name = (d: { nameEn: string; nameKo: string }) => (ko ? d.nameKo : d.nameEn);
+  // Rooms are named after the area without the "-gu" ending (종로, 서대문).
+  const roomName = (slug: string) => {
+    const d = DISTRICTS.find((x) => x.slug === slug);
+    if (!d) return slug;
+    return ko ? d.nameKo.replace(/구$/, "") || d.nameKo : d.nameEn;
+  };
   return (
     <section className={styles.result} aria-live="polite">
       <p className={styles.code}>{code}</p>
-      <h1 className={styles.typeName}>{type.name}</h1>
-      <p className={styles.typeLine}><Phrases text={type.line} /></p>
+      <h1 className={styles.typeName}>{type.name[lang]}</h1>
+      <p className={styles.typeLine}><Phrases text={type.line[lang]} /></p>
       <div className={styles.district}>
         <h2>
-          Your Seoul is {best.nameEn} <span lang="ko">{best.nameKo}</span>
+          {t.yourSeoul} {name(best)}{" "}
+          <span lang={ko ? "en" : "ko"}>{ko ? best.nameEn : best.nameKo}</span>
         </h2>
         <p>
-          <Phrases text={`${best.line}.`} />
+          <Phrases text={`${best.line[lang]}.`} />
         </p>
         <p className={styles.runner}>
-          Also close to you: {runnerUp.nameEn} <span lang="ko">{runnerUp.nameKo}</span>
+          {t.also} {name(runnerUp)} <span lang={ko ? "en" : "ko"}>{ko ? runnerUp.nameEn : runnerUp.nameKo}</span>
         </p>
       </div>
       <p className={styles.note}>
-        <Phrases text={`A day course for ${best.nameEn} is in preparation.`} />
+        <Phrases text={t.course(name(best))} />
         {open !== room && (
           <>
             {" "}
-            <Phrases text={`The ${nameOf(room)} room opens soon. Until then, travelers meet in ${nameOf(open)}.`} />
+            <Phrases text={t.roomSoon(roomName(room), roomName(open))} />
           </>
         )}
       </p>
       <div className={styles.actions}>
         <Link className="btn btn-light" href={roomHref(room)}>
-          Meet travelers in {nameOf(open)}
+          {t.meet(roomName(open))}
         </Link>
         <button type="button" className={styles.again} onClick={onRestart}>
-          Take the test again
+          {t.again}
         </button>
       </div>
     </section>

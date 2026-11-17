@@ -17,11 +17,14 @@ const LETTERS: Record<Axis, [string, string]> = {
 export type Food = "adventurous" | "easy";
 export type Move = "walk" | "metro";
 
+/** One line of copy in both site languages. */
+export type Text = { en: string; ko: string };
+
 export interface Question {
   id: string;
-  prompt: string;
-  a: string;
-  b: string;
+  prompt: Text;
+  a: Text;
+  b: Text;
   // Choosing B adds the weight to the axis, choosing A subtracts it.
   weights: Partial<Record<Axis, number>>;
   tiebreak?: Axis;

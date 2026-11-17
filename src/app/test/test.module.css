@@ -117,3 +117,8 @@
   text-decoration: underline;
   text-underline-offset: 0.25em;
 }
+
+/* The cobalt ring disappears on the night backdrop; use a white one outside the card. */
+.result :focus-visible {
+  outline-color: var(--white);
+}
