@@ -7,7 +7,7 @@ import { asset } from "@/lib/base-path.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import { COURSES, CHECKED, courseFor, type Course, type Stop, type Icon, type Mode } from "@/lib/districts/courses.ts";
 import {
-  Bank, BeerStein, Binoculars, Bus, CaretDown, CastleTurret, Church, Clock, Coffee, CurrencyKrw, Flask, PaintBrush, ForkKnife, HandsPraying, Info,
+  Bank, BeerStein, Binoculars, Bus, CaretDown, CastleTurret, Church, Clock, Coffee, CurrencyKrw, Flask, GameController, MusicNotes, PaintBrush, HandPalm, ForkKnife, HandsPraying, Info,
   Mountains, Path, PersonSimpleWalk, ShoppingBag, Sneaker, Storefront, Subway, Tent, Tree, Waves,
   type Icon as PhosphorIcon,
 } from "@phosphor-icons/react";
@@ -18,7 +18,7 @@ import styles from "./Districts.module.css";
 
 const T = {
   en: {
-    lede: (n: number) => `Find your district with the test, then follow its day from morning to night. ${n} of the twelve courses are ready; the rest are on the way.`,
+    lede: (n: number) => `Find your district with the test, then follow its day from morning to night. ${n === 12 ? "All twelve courses are ready." : `${n} of the twelve courses are ready; the rest are on the way.`}`,
     ready: "Courses you can follow now",
     soon: "Coming next",
     open: "See the day",
@@ -38,7 +38,7 @@ const T = {
     test: "Take the test",
   },
   ko: {
-    lede: (n: number) => `테스트로 나와 맞는 지역을 찾고, 그 지역의 하루를 아침부터 밤까지 따라가 보세요. 12개 지역 중 ${n}곳의 코스를 공개했고, 나머지도 준비하고 있습니다.`,
+    lede: (n: number) => `테스트로 나와 맞는 지역을 찾고, 그 지역의 하루를 아침부터 밤까지 따라가 보세요. ${n === 12 ? "12개 지역의 코스를 모두 공개했습니다." : `12개 지역 중 ${n}곳의 코스를 공개했고, 나머지도 준비하고 있습니다.`}`,
     ready: "지금 따라갈 수 있는 코스",
     soon: "준비 중인 지역",
     open: "하루 코스 보기",
@@ -76,7 +76,7 @@ function Shell({ lang, chooseLang, children }: { lang: Lang; chooseLang: (l: Lan
   );
 }
 
-/** /districts: the four ready courses first, then the districts still in preparation. */
+/** /districts: the ready courses in district order, then any still in preparation. */
 export function DistrictsIndex() {
   const [lang, chooseLang] = useLang();
   const t = T[lang];
@@ -98,6 +98,14 @@ export function DistrictsIndex() {
               return (
                 <li key={c.slug}>
                   <Link className={styles.readyRow} href={`/districts/${c.slug}`}>
+                    {!cover && (() => {
+                      const Glyph = ICONS[c.stops[0].icon];
+                      return (
+                        <span className={styles.readyTile} aria-hidden="true">
+                          <Glyph size={36} weight="light" />
+                        </span>
+                      );
+                    })()}
                     {cover && (
                       <img
                         className={styles.readyPhoto}
@@ -127,6 +135,7 @@ export function DistrictsIndex() {
           </ul>
         </section>
 
+        {later.length > 0 && (
         <section aria-labelledby="soon-heading">
           <h2 id="soon-heading" className={styles.groupLabel}>{t.soon}</h2>
           <ul className={styles.soonList}>
@@ -141,6 +150,7 @@ export function DistrictsIndex() {
             ))}
           </ul>
         </section>
+        )}
       </main>
     </Shell>
   );
@@ -150,6 +160,7 @@ const ICONS: Record<Icon, PhosphorIcon> = {
   park: Tree, shops: ShoppingBag, shoe: Sneaker, cafe: Coffee, food: ForkKnife, river: Waves,
   history: CastleTurret, view: Binoculars, hike: Mountains, temple: HandsPraying, trail: Path,
   tent: Tent, museum: Bank, market: Storefront, church: Church, beer: BeerStein, art: PaintBrush, perfume: Flask,
+  game: GameController, music: MusicNotes, pottery: HandPalm,
 };
 const MODES: Record<Mode, PhosphorIcon> = { walk: PersonSimpleWalk, metro: Subway, bus: Bus };
 

@@ -22,5 +22,5 @@ export const DISTRICTS: District[] = [
   { slug: "seongdong", nameEn: "Seongdong", nameKo: "성동구", profile: { time: 1.4, stage: -0.8, mood: -0.4, pace: 0.2 }, line: { en: "Handmade-shoe workshops and factories turned into new spaces", ko: "수제화 공방과 새 공간이 된 옛 공장" } },
   { slug: "yeongdeungpo", nameEn: "Yeongdeungpo", nameKo: "영등포구", profile: { time: 0.2, stage: -0.8, mood: -0.8, pace: -0.7 }, line: { en: "Art among the ironworks and the Han River at Yeouido", ko: "철공소 골목의 예술과 여의도의 한강" } },
   { slug: "gwanak", nameEn: "Gwanak", nameKo: "관악구", profile: { time: 0.3, stage: 1.2, mood: 1.0, pace: 0.5 }, line: { en: "A mountain, a university town and cheap, lively food", ko: "산과 대학가, 저렴하고 활기찬 먹거리" } },
-  { slug: "gangnam", nameEn: "Gangnam", nameKo: "강남구", profile: { time: 1.6, stage: 0.7, mood: -0.5, pace: 1.4 }, line: { en: "Royal tombs in the city, stream walks and polished Seoul", ko: "도심 속 왕릉과 하천 산책길, 세련된 서울" } },
+  { slug: "gangnam", nameEn: "Gangnam", nameKo: "강남구", profile: { time: 1.6, stage: 0.7, mood: -0.5, pace: 1.4 }, line: { en: "Royal tombs and a thousand-year-old temple in polished Gangnam", ko: "도심 속 왕릉과 천년 고찰, 세련된 강남" } },
 ];
