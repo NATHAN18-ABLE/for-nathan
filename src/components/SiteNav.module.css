@@ -189,6 +189,8 @@
   font-size: 15px;
   line-height: 1.35;
   color: var(--ink-soft);
+  /* two even lines rather than a long line and a lone word */
+  text-wrap: balance;
 }
 
 .sheetLink[aria-current="page"] .sheetLabel {

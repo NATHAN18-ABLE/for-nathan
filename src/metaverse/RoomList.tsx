@@ -18,12 +18,12 @@ const PLAN: Record<string, { place: { en: string; ko: string }; hour: { en: stri
   jongno: { place: { en: "Seosulla-gil, along the Jongmyo wall", ko: "서순라길, 종묘 돌담길" }, hour: { en: "Autumn afternoon", ko: "가을 오후" }, sky: ["#a9c4e2", "#f1d3a8"] },
   seodaemun: { place: { en: "Ansan forest boardwalk", ko: "안산 자락길" }, hour: { en: "Afternoon", ko: "오후" }, sky: ["#b9d4ea", "#eef1e6"] },
   yongsan: { place: { en: "Haebangchon hillside stairs", ko: "해방촌 언덕 계단길" }, hour: { en: "Sunset", ko: "해 질 녘" }, sky: ["#8fa6d6", "#f2c9a5"] },
-  yeongdeungpo: { place: { en: "Mullae metal-workshop alleys", ko: "문래 철공소 골목" }, hour: { en: "Night", ko: "밤" }, sky: ["#1d2a5a", "#4a4f7a"] },
+  yeongdeungpo: { place: { en: "Mullae ironworks alleys", ko: "문래 철공소 골목" }, hour: { en: "Night", ko: "밤" }, sky: ["#1d2a5a", "#4a4f7a"] },
 };
 
 const TEXT = {
   en: {
-    lede: "Meet travelers who found the same district. Each room holds thirty people; when it is full, another copy of the room opens.",
+    lede: "Walk the streets of Seoul with friends before you go. Each room holds up to thirty people, and a new room opens when one fills up.",
     enter: "Enter",
     soon: "Opening soon",
     here: (n: number) => (n === 1 ? "1 traveler here" : `${n} travelers here`),
@@ -31,7 +31,7 @@ const TEXT = {
     near: (d: string) => `Closest room to ${d}`,
   },
   ko: {
-    lede: "같은 구를 고른 여행자들을 만나 보세요. 방마다 서른 명까지 들어갈 수 있고, 가득 차면 같은 방이 하나 더 열려요.",
+    lede: "친구들과 함께 서울의 골목을 먼저 걸어 보세요. 방마다 30명까지 들어갈 수 있고, 가득 차면 같은 방이 하나 더 열립니다.",
     enter: "들어가기",
     soon: "곧 열려요",
     here: (n: number) => `지금 ${n}명`,

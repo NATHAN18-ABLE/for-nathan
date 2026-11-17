@@ -12,34 +12,34 @@ export type PageKey = "districts" | "story" | "metaverse" | "about";
 const PAGES = {
   en: {
     districts: {
-      lede: "A day course for each of the twelve districts, side by side. The places are being researched now.",
+      lede: "Itineraries for all twelve districts, side by side. We are still researching the places.",
     },
     story: {
-      lede: "Two thousand years of Seoul, from Hanseong Baekje to the city you are about to walk. Coming next.",
+      lede: "Two thousand years of Seoul, from the Baekje kingdom to the city you are about to explore. Coming soon.",
     },
     metaverse: {
-      lede: "Meet travelers who found the same district. Four rooms open first.",
+      lede: "Walk the streets of Seoul with friends before you go. Four rooms open first.",
       list: ["Jongno", "Seodaemun", "Yongsan", "Yeongdeungpo"],
     },
     about: {
-      lede: "The team behind Seoul, Curated. Introductions are on their way.",
+      lede: "Meet the people who want you to discover Seoul. Coming soon.",
     },
     cta: "Take the test",
     home: "Back to the start",
   },
   ko: {
     districts: {
-      lede: "열두 개 구의 하루 코스를 한곳에서 비교해 보세요. 장소는 지금 조사하고 있습니다.",
+      lede: "12개 지역의 여행 코스를 한곳에서 비교해 보세요. 지금 장소를 조사하고 있습니다.",
     },
     story: {
-      lede: "한성백제부터 지금 걷게 될 도시까지, 서울의 2천 년. 곧 이어집니다.",
+      lede: "한성백제부터 지금 걷게 될 도시까지, 서울의 2천 년을 담았습니다. 곧 공개됩니다.",
     },
     metaverse: {
-      lede: "같은 구를 고른 여행자들을 만나 보세요. 네 개의 방이 먼저 열립니다.",
+      lede: "친구들과 함께 서울의 골목을 먼저 걸어 보세요. 네 개의 방이 먼저 열립니다.",
       list: ["종로", "서대문", "용산", "영등포"],
     },
     about: {
-      lede: "Seoul, Curated를 만든 팀을 곧 소개합니다.",
+      lede: "당신에게 서울을 만나게 해 주고 싶은 우리를 곧 소개합니다.",
     },
     cta: "테스트 시작하기",
     home: "처음으로",

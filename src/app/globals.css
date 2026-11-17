@@ -1,17 +1,18 @@
 :root {
-  --porcelain: #f6f6f3;
-  --porcelain-shadow: #e4e6e2;
+  /* Toned down one step from paper white: a warm stone, easier on the eyes. */
+  --porcelain: #ebe8e1;
+  --porcelain-shadow: #d8d4ca;
   --ink: #1e2126;
   --ink-soft: rgb(30 33 38 / 0.66);
   --cobalt: #22418f;
   --cobalt-press: #1b3577;
   --celadon: #9cc3b3;
-  --white: #fbfbf9;
+  --white: #f5f3ee;
   --night: #101b3f;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --radius-panel: 28px;
   --gutter: clamp(16px, 4vw, 56px);
-  --font: "Jost Variable", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
 }
 
 *,
