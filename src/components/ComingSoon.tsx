@@ -8,13 +8,10 @@ import { BuildTag } from "./BuildTag";
 import { Phrases } from "./Phrases";
 import styles from "./ComingSoon.module.css";
 
-export type PageKey = "districts" | "story" | "metaverse";
+export type PageKey = "story" | "metaverse";
 
 const PAGES = {
   en: {
-    districts: {
-      lede: "Itineraries for all twelve districts, side by side. We are still researching the places.",
-    },
     story: {
       lede: "Two thousand years of Seoul, from the Baekje kingdom to the city you are about to explore. Coming soon.",
     },
@@ -26,9 +23,6 @@ const PAGES = {
     home: "Back to the start",
   },
   ko: {
-    districts: {
-      lede: "12개 지역의 여행 코스를 한곳에서 비교해 보세요. 지금 장소를 조사하고 있습니다.",
-    },
     story: {
       lede: "한성백제부터 지금 걷게 될 도시까지, 서울의 2천 년을 담았습니다. 곧 공개됩니다.",
     },

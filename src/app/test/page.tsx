@@ -14,6 +14,7 @@ import { Phrases } from "@/components/Phrases";
 import { nearestRoom } from "@/lib/metaverse/queue.ts";
 import { entryRoom, roomHref } from "@/lib/metaverse/open.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
+import { courseFor } from "@/lib/districts/courses.ts";
 import styles from "./test.module.css";
 
 const KEY = "seoul.answers";
@@ -25,6 +26,7 @@ const T = {
     yourSeoul: "Your Seoul is",
     also: "Also close to you:",
     course: (d: string) => `A day course for ${d} is in preparation.`,
+    seeDay: (d: string) => `See a day in ${d}`,
     roomSoon: (room: string, open: string) => `The ${room} room opens soon. Until then, travelers meet in ${open}.`,
     meet: (open: string) => `Walk ${open} with friends first`,
     again: "Take the test again",
@@ -35,6 +37,7 @@ const T = {
     yourSeoul: "당신의 서울은",
     also: "이곳도 잘 맞아요:",
     course: (d: string) => `${d} 하루 코스는 준비 중입니다.`,
+    seeDay: (d: string) => `${d}의 하루 코스 보기`,
     roomSoon: (room: string, open: string) => `${room} 방은 곧 열립니다. 그동안은 ${open}에서 다른 여행자들을 만날 수 있습니다.`,
     meet: (open: string) => `친구들과 ${open} 먼저 걸어 보기`,
     again: "테스트 다시 하기",
@@ -127,8 +130,13 @@ function Result({ lang, answers, onRestart }: { lang: Lang; answers: Answer[]; o
           {t.also} {name(runnerUp)} <span lang={ko ? "en" : "ko"}>{ko ? runnerUp.nameEn : runnerUp.nameKo}</span>
         </p>
       </div>
+      {courseFor(best.slug) && (
+        <p className={styles.courseLink}>
+          <Link href={`/districts/${best.slug}`}>{t.seeDay(name(best))}</Link>
+        </p>
+      )}
       <p className={styles.note}>
-        <Phrases text={t.course(name(best))} />
+        {!courseFor(best.slug) && <Phrases text={t.course(name(best))} />}
         {open !== room && (
           <>
             {" "}
