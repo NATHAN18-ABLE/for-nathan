@@ -6,6 +6,7 @@ import { useLang } from "@/lib/lang.ts";
 import { asset } from "@/lib/base-path.ts";
 import { TEAM } from "@/lib/team/team.ts";
 import { SiteNav } from "./SiteNav";
+import { BuildTag } from "./BuildTag";
 import { Phrases } from "./Phrases";
 import styles from "./AboutTeam.module.css";
 
@@ -68,6 +69,7 @@ export function AboutTeam() {
       </main>
       <footer className="site-footer">
         <p><Phrases text={COPY[lang].proposal} /></p>
+        <BuildTag lang={lang} />
       </footer>
     </div>
   );

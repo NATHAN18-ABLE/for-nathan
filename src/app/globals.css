@@ -7,7 +7,6 @@
   --cobalt: #22418f;
   --cobalt-press: #1b3577;
   --celadon: #9cc3b3;
-  --seal: #b4432f;
   --white: #f5f3ee;
   --night: #101b3f;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -154,4 +153,11 @@ button {
 
 .site-footer p {
   margin: 0 0 6px;
+}
+
+.site-footer .build-tag {
+  margin-top: 14px;
+  font-size: 12px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
 }

@@ -7,8 +7,9 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
 import { evictions, wanted } from "@/lib/hero/frame-cache.ts";
-import { COPY } from "@/lib/hero/copy.ts";
+import { COPY, type Lang } from "@/lib/hero/copy.ts";
 import { useLang } from "@/lib/lang.ts";
+import { BuildTag } from "./BuildTag";
 import { asset } from "@/lib/base-path.ts";
 import { SiteNav } from "./SiteNav";
 import { Phrases } from "./Phrases";
@@ -372,7 +373,7 @@ export function HeroScroll() {
             {startBlock}
           </div>
         </section>
-        <Footer t={t} />
+        <Footer t={t} lang={lang} />
       </div>
     );
   }
@@ -415,12 +416,12 @@ export function HeroScroll() {
           </div>
         </div>
       </section>
-      <Footer t={t} />
+      <Footer t={t} lang={lang} />
     </div>
   );
 }
 
-function Footer({ t }: { t: (typeof COPY)[keyof typeof COPY] }) {
+function Footer({ t, lang }: { t: (typeof COPY)[keyof typeof COPY]; lang: Lang }) {
   return (
     <footer className="site-footer" id="about">
       <p>
@@ -429,6 +430,7 @@ function Footer({ t }: { t: (typeof COPY)[keyof typeof COPY] }) {
       <p>
         <Phrases text={t.sceneNote} />
       </p>
+      <BuildTag lang={lang} />
     </footer>
   );
 }

@@ -4,6 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 rm -rf out
+# Version shown in every footer: Korea date and time of this deploy.
+export NEXT_PUBLIC_BUILD="$(TZ=Asia/Seoul date +%Y.%m.%d-%H%M)"
 STATIC_EXPORT=1 NEXT_PUBLIC_BASE_PATH=/for-nathan NEXT_TELEMETRY_DISABLED=1 npx next build
 touch out/.nojekyll   # keep the _next folder, which Jekyll would otherwise drop
 url=$(git remote get-url origin)
@@ -15,4 +17,5 @@ git -C "$tmp" -c user.name="$(git log -1 --format=%an)" -c user.email="$(git log
   commit -q -m "Deploy static preview of Seoul, Curated"
 git -C "$tmp" push -f "$url" gh-pages
 rm -rf "$tmp"
-echo "Published to https://nathan18-able.github.io/for-nathan/"
+echo "Published $NEXT_PUBLIC_BUILD to https://nathan18-able.github.io/for-nathan/"
+echo "Share link (skips old caches): https://nathan18-able.github.io/for-nathan/?v=$NEXT_PUBLIC_BUILD"

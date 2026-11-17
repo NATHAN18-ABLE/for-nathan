@@ -4,6 +4,7 @@ import Link from "next/link";
 import { COPY } from "@/lib/hero/copy.ts";
 import { useLang } from "@/lib/lang.ts";
 import { SiteNav } from "./SiteNav";
+import { BuildTag } from "./BuildTag";
 import { Phrases } from "./Phrases";
 import styles from "./ComingSoon.module.css";
 
@@ -70,6 +71,7 @@ export function ComingSoon({ page }: { page: PageKey }) {
         <p>
           <Phrases text={COPY[lang].proposal} />
         </p>
+        <BuildTag lang={lang} />
       </footer>
     </div>
   );

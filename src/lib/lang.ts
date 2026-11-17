@@ -10,6 +10,15 @@ export function useLang(): [Lang, (next: Lang) => void] {
   const [lang, setLang] = useState<Lang>("en");
 
   useEffect(() => {
+    // A shared link can carry ?lang=ko or ?lang=en; it wins over what this browser remembered.
+    const asked = new URLSearchParams(window.location.search).get("lang");
+    if (asked === "en" || asked === "ko") {
+      setLang(asked);
+      try {
+        localStorage.setItem(KEY, asked);
+      } catch {}
+      return;
+    }
     try {
       const saved = localStorage.getItem(KEY);
       if (saved === "en" || saved === "ko") setLang(saved);

@@ -15,7 +15,7 @@ type Props = {
   tone?: "light" | "dark";
 };
 
-// Each section takes an hour of the same view, so the menu reads from day to night.
+// The pictures run from dusk to deep night down the list.
 const ROUTES = [
   { key: "test", href: "/test" },
   { key: "districts", href: "/districts" },
@@ -24,7 +24,16 @@ const ROUTES = [
   { key: "about", href: "/about" },
 ] as const;
 
-const image = (key: string) => asset(`/menu/${key}.jpg`);
+// The files carry a version in their name so a changed picture never comes from an old cache.
+// focus: where the subject sits, kept in view when the tall panel crops a wide photo.
+const PICTURES: Record<(typeof ROUTES)[number]["key"], { file: string; focus: string }> = {
+  test: { file: "test-v2.jpg", focus: "50% 50%" }, // Heunginjimun at dusk
+  districts: { file: "districts-v2.jpg", focus: "50% 50%" }, // Lotte World Tower and Seokchon Lake
+  story: { file: "story-v2.jpg", focus: "22% 50%" }, // the city wall path at night
+  metaverse: { file: "metaverse-v2.jpg", focus: "53% 50%" }, // Namsan and the night city
+  about: { file: "about.jpg", focus: "50% 50%" },
+};
+const image = (key: keyof typeof PICTURES) => asset(`/menu/${PICTURES[key].file}`);
 
 export function SiteNav({ lang, onLang, tone = "light" }: Props) {
   const t = COPY[lang].nav;
@@ -59,13 +68,17 @@ export function SiteNav({ lang, onLang, tone = "light" }: Props) {
     if (refocus) menuButton.current?.focus();
   };
 
-  // A small name seal (낙관) beside the name, the way a painter signs a scroll.
   const mark = (
     <>
-      <span className={styles.seal} aria-hidden="true">
-        <span>서</span>
-        <span>울</span>
-      </span>
+      <img
+        className={styles.logo}
+        src={asset("/brand/logo-128.png")}
+        srcSet={`${asset("/brand/logo-64.png")} 1x, ${asset("/brand/logo-128.png")} 2x, ${asset("/brand/logo-256.png")} 3x`}
+        alt=""
+        width={32}
+        height={32}
+        decoding="async"
+      />
       <span className={styles.wordText} aria-hidden="true">
         <span className={styles.wordStrong}>Seoul,</span> Curated
       </span>
@@ -145,7 +158,16 @@ export function SiteNav({ lang, onLang, tone = "light" }: Props) {
                   <span className={styles.sheetLabel}>{t[key]}</span>
                   <span className={styles.sheetHint}><Phrases text={t.hints[key]} /></span>
                 </span>
-                <img className={styles.thumb} src={image(key)} alt="" loading="lazy" decoding="async" />
+                <img
+                  className={styles.thumb}
+                  src={image(key)}
+                  alt=""
+                  width={64}
+                  height={64}
+                  style={{ objectPosition: PICTURES[key].focus }}
+                  loading="lazy"
+                  decoding="async"
+                />
               </Link>
             ))}
           </nav>
@@ -160,6 +182,7 @@ export function SiteNav({ lang, onLang, tone = "light" }: Props) {
               data-active={i === active}
               src={image(key)}
               alt=""
+              style={{ objectPosition: PICTURES[key].focus }}
               loading="lazy"
               decoding="async"
             />
