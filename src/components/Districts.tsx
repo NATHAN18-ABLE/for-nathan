@@ -240,7 +240,7 @@ function StopBand({ stop, prev, lang, t }: { stop: Stop; prev: Tone; lang: Lang;
           </div>
           <div className={styles.media}>
             {stop.photo ? (
-              <figure className={styles.figure} style={{ maxWidth: stop.photo.width }}>
+              <figure className={styles.figure}>
                 <img
                   src={asset(stop.photo.src)}
                   alt={stop.photo.alt[lang]}

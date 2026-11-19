@@ -416,6 +416,7 @@ export const COURSES: Course[] = [
         icon: "trail",
         mode: "bus",
         name: { en: "Gyeongchun Line Forest Trail", ko: "경춘선숲길" },
+        photo: photo("nowon", "gyeongchun-trail", 680, 413, "An old steam locomotive on the rails of the Gyeongchun Line Forest Trail", "경춘선숲길 철로 위의 옛 증기기관차"),
         kind: { en: "Walk", ko: "산책" },
         body: {
           en: "The old Gyeongchun railway, closed in 2010, is now a tree-lined path of more than 6 km through Gongneung-dong. The rails are still under your feet. Stop for a snack at Gongneung-dong Dokkaebi Market on the way.",
@@ -1471,6 +1472,7 @@ export const COURSES: Course[] = [
         icon: "museum",
         mode: "walk",
         name: { en: "Starfield Library and COEX Mall", ko: "별마당 도서관과 코엑스몰" },
+        photo: photo("gangnam", "starfield-library", 800, 571, "Starfield Library's tall bookshelves under the COEX glass roof", "코엑스 유리 지붕 아래 별마당 도서관의 높은 책장"),
         kind: { en: "Library and dinner", ko: "도서관과 저녁" },
         body: {
           en: "An open library with bookshelves several floors high in the heart of COEX Mall, free and open to 22:00. Have dinner in the mall's restaurants.",

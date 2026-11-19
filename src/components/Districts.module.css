@@ -555,10 +555,13 @@
   color: inherit;
 }
 
+/* Every photo sits in the same 4:3 frame so the stops keep one rhythm, whatever the source size. */
 .media img {
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
   border-radius: 16px;
   box-shadow: 0 10px 30px -14px rgb(10 15 35 / 0.45);
 }
