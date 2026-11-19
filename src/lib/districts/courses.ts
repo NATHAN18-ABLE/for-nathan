@@ -317,7 +317,7 @@ export const COURSES: Course[] = [
           ko: "해 지는 시간이 겨울엔 오후 5시 20분, 여름엔 7시 50분 무렵이라 계절에 맞춰 시간을 옮기세요. 입장료는 공식 누리집에서 확인하세요.",
         },
         way: { en: "Walk 15 min", ko: "걸어서 15분" },
-        photo: photo("songpa", "seoul-sky", 354, 263, "Night view of the Han River from Seoul Sky", "서울스카이에서 본 한강 야경"),
+        photo: photo("songpa", "lotte-tower-night", 1200, 800, "Lotte World Tower over Seokchon Lake at night", "밤의 석촌호수와 롯데월드타워"),
       },
       {
         time: "20:00",

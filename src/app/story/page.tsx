@@ -1,7 +1,7 @@
-import { ComingSoon } from "@/components/ComingSoon";
+import { SeoulStory } from "@/components/SeoulStory";
 
 export const metadata = { title: "Seoul Story · Seoul, Curated" };
 
 export default function Page() {
-  return <ComingSoon page="story" />;
+  return <SeoulStory />;
 }
