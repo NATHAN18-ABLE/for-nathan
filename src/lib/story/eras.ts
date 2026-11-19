@@ -57,6 +57,11 @@ export const ERAS: Era[] = [
       ko: "서울의 역사는 물과 먹을거리가 풍부한 한강 변에서 시작됐습니다. 강동구 암사동에는 신석기시대 사람들이 살던 움집 터가 남아 있습니다.",
     },
     places: [{ name: { en: "Amsa-dong Prehistoric Settlement", ko: "서울 암사동 유적" }, district: "gangdong" }],
+    photo: img("/story/amsa.jpg", 960, 720, "Rebuilt Neolithic pit houses at Amsa-dong", "암사동 유적에 다시 지은 신석기시대 움집", {
+      by: "G41rn8",
+      license: "CC BY-SA 4.0",
+      url: "https://commons.wikimedia.org/wiki/File:Amsadong_IMG_2081.jpg",
+    }),
   },
   {
     id: "baekje",
