@@ -136,6 +136,11 @@ export const ERAS: Era[] = [
       { name: { en: "War Memorial of Korea", ko: "전쟁기념관" }, district: "yongsan" },
       { name: { en: "Seoul Museum of History", ko: "서울역사박물관" }, district: "jongno" },
     ],
+    photo: img("/story/seoul-1951.jpg", 960, 656, "A woman searching the ruins of Seoul for salvage during the Korean War", "한국전쟁 중 폐허가 된 서울에서 쓸 만한 것을 찾는 여인", {
+      by: "Capt. C. W. Huff, U.S. Army",
+      license: "Public domain",
+      url: "https://commons.wikimedia.org/wiki/File:An_aged_Korean_woman_pauses_in_her_search_for_salvageable_materials_among_the_ruins_of_Seoul,_Korea_HD-SN-99-03163.jpg",
+    }),
   },
   {
     id: "miracle",

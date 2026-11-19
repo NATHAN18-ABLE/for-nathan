@@ -155,8 +155,16 @@
   --line: rgb(30 33 38 / 0.14);
   --panel: rgb(255 255 255 / 0.5);
   color: var(--fg);
-  background: linear-gradient(to bottom, var(--from) 0%, var(--tone) 160px, var(--tone) 100%);
+  background: var(--tone);
   scroll-margin-top: 72px;
+}
+
+/* The change of hour happens in a strip above each scene, so text always sits on its own tone. */
+.band::before {
+  content: "";
+  display: block;
+  height: clamp(56px, 9svh, 112px);
+  background: linear-gradient(to bottom, var(--from), var(--tone));
 }
 
 .band[data-tone="night"] {
@@ -185,12 +193,7 @@
     "body media";
   column-gap: clamp(28px, 4vw, 64px);
   align-items: start;
-  padding-block: clamp(48px, 8svh, 88px);
-  border-top: 1px solid var(--line);
-}
-
-.band:first-child .inner {
-  border-top: 0;
+  padding-block: clamp(8px, 2svh, 24px) clamp(48px, 8svh, 88px);
 }
 
 .mark {
