@@ -43,10 +43,17 @@ const vline = (s, x, y, h, color = HEX.rule, width = 0.75) => rect(s, { x: x - w
 const dot = (s, x, y, d, color) => s.addShape(pres.shapes.OVAL, { x: x - d / 2, y: y - d / 2, w: d, h: d, fill: { color }, line: { type: "none" }, objectName: `d${++oid}` });
 
 // 세로형 카드 모티프 (ID-1 카드 비율 1 : 1.586)
-function card(s, x, y, w, { fill, chip, lines = [], lineSize = 11 }) {
+// 현대카드 세로형 카드: 칩은 위, 흰색 로고는 아래 (logo: true)
+const LOGO_W = "photos/out/H_logo_white.png", LOGO_RATIO = 165 / 750;
+function cardLogo(s, x, y, w, h) {
+  const lw = w * 0.66;
+  if (require("fs").existsSync(LOGO_W)) s.addImage({ path: LOGO_W, x: x + w * 0.11, y: y + h - w * 0.11 - lw * LOGO_RATIO, w: lw, h: lw * LOGO_RATIO, objectName: `logo${++oid}` });
+}
+function card(s, x, y, w, { fill, chip, lines = [], lineSize = 11, logo = false }) {
   const h = w * 1.586;
   rrect(s, { x, y, w, h, rectRadius: Math.min(0.14, w * 0.05), fill: { color: fill } });
   rrect(s, { x: x + w * 0.11, y: y + w * 0.14, w: w * 0.17, h: w * 0.135, rectRadius: w * 0.02, fill: { color: chip } });
+  if (logo) cardLogo(s, x, y, w, h);
   if (lines.length) {
     T(s, lines, { x: x + w * 0.11, y: y + h - w * 0.42, w: w * 0.8, h: w * 0.3, fontSize: lineSize, color: C.background1, valign: "bottom" });
   }
@@ -86,7 +93,7 @@ function cardStack(s, x, y, w, fills, chip) {
   const dx = w * 0.17, dy = w * 0.13, n = fills.length;
   fills.forEach((f, i) => {
     const k = n - 1 - i;
-    const opts = { fill: f, chip: i === n - 1 ? chip : f };
+    const opts = { fill: f, chip: i === n - 1 ? chip : f, logo: i === n - 1 };
     card(s, x - k * dx, y + k * dy, w, opts);
   });
 }
@@ -96,7 +103,7 @@ function section(num, title, sub, note) {
   T(s, num, { x: M, y: 1.35, w: 4, h: 1.5, fontSize: 96, bold: true, color: C.accent1, valign: "bottom" });
   T(s, title, { x: M, y: 3.05, w: 8, h: 0.8, fontSize: 40, bold: true, color: C.background1, valign: "top" });
   if (sub) T(s, sub, { x: M, y: 3.95, w: 8, h: 0.4, fontSize: 18, color: HEX.darkSub });
-  cardStack(s, SW - M - 1.9, 3.2, 1.9, ["2E2E2E", "4A4A4A", HEX.accent], C.text1);
+  cardStack(s, SW - M - 1.9, 3.2, 1.9, ["2E2E2E", "4A4A4A", HEX.accent], "D6D6D6");
   s.addNotes(note);
   return s;
 }
@@ -151,7 +158,8 @@ function photo(s, name, x, y, w, h, credit) {
   card(s, cx - 2 * k, cy + 2 * 0.13 * cw, cw, { fill: "2E2E2E", chip: "2E2E2E" });
   card(s, cx - k, cy + 0.13 * cw, cw, { fill: HEX.accent, chip: HEX.accent });
   photo(s, "A_card", cx, cy, cw, ch);
-  rrect(s, { x: cx + cw * 0.11, y: cy + cw * 0.14, w: cw * 0.17, h: cw * 0.135, rectRadius: cw * 0.02, fill: { color: HEX.accent } });
+  rrect(s, { x: cx + cw * 0.11, y: cy + cw * 0.14, w: cw * 0.17, h: cw * 0.135, rectRadius: cw * 0.02, fill: { color: "D6D6D6" } });
+  cardLogo(s, cx, cy, cw, ch);
   s.addNotes("안녕하세요, ○조입니다. 저희는 현대카드 정태영 부회장이 2023년부터 지금까지, 고금리 위기 속에서 카드사를 AI 회사로 바꾸고 있는 과정을 수업에서 배운 리더십 이론으로 분석했습니다.");
 }
 
@@ -163,7 +171,7 @@ function photo(s, name, x, y, w, h, credit) {
   const pw = 4.35;
   rect(s, { x: 0, y: 0, w: pw, h: SH, fill: { color: C.text1 } });
   T(s, "목차", { x: M, y: 0.84, w: pw - M, h: 0.75, fontSize: 28, bold: true, color: C.background1, valign: "top" });
-  card(s, M, 4.1, 1.55, { fill: C.accent1, chip: C.text1 });
+  card(s, M, 4.1, 1.55, { fill: C.accent1, chip: "D6D6D6", logo: true });
   const items = [["리더와 분석 범위", ""], ["개인 리더십", "2장 · 4장"], ["리더십 스킬", "6장"], ["조직 리더십", "9장"], ["결론", ""]];
   const x0 = pw + 0.9, w0 = SW - M - x0, y0 = 0.75, rh = 1.2;
   items.forEach(([t, ch], i) => {

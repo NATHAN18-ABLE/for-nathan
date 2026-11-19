@@ -65,5 +65,19 @@ def main():
         print(name, out.size)
 
 
+def knockout_logo():
+    """검정 로고를 흰색 + 투명 배경 PNG로 (어두운 카드 위에 얹기용)"""
+    path = os.path.join(SRC, "H_logo.jpg")
+    if not os.path.exists(path):
+        return
+    g = ImageOps.grayscale(Image.open(path).convert("RGB").crop((230, 315, 980, 480)))
+    alpha = ImageOps.invert(g).point(lambda v: 255 if v > 150 else (0 if v < 40 else int((v - 40) * 255 / 110)))
+    out = Image.new("RGBA", g.size, (255, 255, 255, 0))
+    out.putalpha(alpha)
+    out.save(os.path.join(OUT, "H_logo_white.png"))
+    print("H_logo_white", out.size)
+
+
 if __name__ == "__main__":
     main()
+    knockout_logo()
