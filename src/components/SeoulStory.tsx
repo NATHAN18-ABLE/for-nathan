@@ -11,6 +11,7 @@ import { ERAS, STORY, type Era } from "@/lib/story/eras.ts";
 import { SiteNav } from "./SiteNav";
 import { Phrases } from "./Phrases";
 import { BuildTag } from "./BuildTag";
+import { useReveal } from "@/lib/ui/reveal.ts";
 import styles from "./SeoulStory.module.css";
 
 const T = {
@@ -66,7 +67,7 @@ function Scene({ era, prev, lang }: { era: Era; prev: Tone; lang: Lang }) {
   const Glyph = GLYPHS[era.id];
   return (
     <section className={styles.band} data-tone={TONES[era.id]} data-from={prev} id={era.id} aria-labelledby={`${era.id}-title`}>
-      <div className={styles.inner}>
+      <div className={styles.inner} data-reveal>
         <div className={styles.when}>
           <p className={styles.mark}>{era.mark[lang]}</p>
           <p className={styles.span}>{era.span[lang]}</p>
@@ -137,6 +138,7 @@ function Scene({ era, prev, lang }: { era: Era; prev: Tone; lang: Lang }) {
 export function SeoulStory() {
   const [lang, chooseLang] = useLang();
   const t = T[lang];
+  useReveal();
   return (
     <div className={styles.page}>
       <SiteNav lang={lang} onLang={chooseLang} tone="dark" />

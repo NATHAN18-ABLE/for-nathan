@@ -14,6 +14,7 @@ import {
 import { SiteNav } from "./SiteNav";
 import { Phrases } from "./Phrases";
 import { BuildTag } from "./BuildTag";
+import { useReveal } from "@/lib/ui/reveal.ts";
 import styles from "./Districts.module.css";
 
 const T = {
@@ -204,7 +205,7 @@ function StopBand({ stop, prev, lang, t }: { stop: Stop; prev: Tone; lang: Lang;
             <span>{stop.way[lang]}</span>
           </p>
         )}
-        <article className={styles.stop}>
+        <article className={styles.stop} data-reveal>
           <time className={styles.time}>{stop.time}</time>
           <div className={styles.stopMain}>
             <h3 className={styles.stopName}>{stop.name[lang]}</h3>
@@ -279,6 +280,7 @@ export function CourseView({ slug }: { slug: string }) {
   const course = courseFor(slug) as Course;
   const others = COURSES.filter((c) => c.slug !== slug);
   const tones = course.stops.map((s) => toneAt(s.time));
+  useReveal([slug]);
   return (
     <Shell lang={lang} chooseLang={chooseLang}>
       <main className={styles.courseMain}>

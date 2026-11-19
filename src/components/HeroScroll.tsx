@@ -65,6 +65,7 @@ export function HeroScroll() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nightRef = useRef<HTMLDivElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
+  const cueRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<HTMLDivElement>(null);
   const welcomeRef = useRef<HTMLHeadingElement>(null);
   const captionRefs = useRef<(HTMLParagraphElement | null)[]>([]);
@@ -245,6 +246,13 @@ export function HeroScroll() {
         w.style.visibility = v > 0 ? "visible" : "hidden";
       }
       const u = easeOut(phase(p, 0, INTRO_OUT));
+      // The scroll cue leaves as soon as the visitor starts, a little ahead of the headline.
+      const cue = cueRef.current;
+      if (cue) {
+        const c = Math.min(1, u * 2.5);
+        cue.style.opacity = String(1 - c);
+        cue.style.visibility = c >= 1 ? "hidden" : "visible";
+      }
       const intro = introRef.current;
       if (intro) {
         intro.style.opacity = String(1 - u);
@@ -344,6 +352,16 @@ export function HeroScroll() {
     </div>
   );
 
+  // Tells first-time visitors the page is driven by scrolling.
+  const cue = (
+    <div ref={cueRef} className={styles.cue} aria-hidden="true">
+      <span className={styles.cueText}>{t.scrollCue}</span>
+      <span className={styles.cueTrack}>
+        <span className={styles.cueDot} />
+      </span>
+    </div>
+  );
+
   const startBlock = (
     <div ref={startRef} className={styles.start}>
       <p className={styles.startLine}>
@@ -365,6 +383,7 @@ export function HeroScroll() {
         <section className={styles.staticHero} style={{ backgroundImage: `url(${asset(`/hero/poster-${set}.jpg`)})` }}>
           <div className={styles.shade} aria-hidden="true" />
           {intro}
+          {cue}
         </section>
         <section className={styles.staticNight} style={nightBg}>
           <div className={styles.dusk} aria-hidden="true" />
@@ -397,6 +416,7 @@ export function HeroScroll() {
           <div className={styles.shade} aria-hidden="true" />
           <div ref={lowShadeRef} className={styles.lowShade} aria-hidden="true" />
           {intro}
+          {cue}
           {t.captions.map((line, k) => (
             <p
               key={k}

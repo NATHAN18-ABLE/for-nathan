@@ -88,8 +88,8 @@
   letter-spacing: -0.022em;
   color: var(--white);
   text-shadow:
-    0 1px 2px rgb(10 20 50 / 0.3),
-    0 4px 32px rgb(10 20 50 / 0.45);
+    0 1px 2px rgb(8 10 16 / 0.3),
+    0 4px 32px rgb(8 10 16 / 0.45);
   text-wrap: balance;
   opacity: 0;
   visibility: hidden;
@@ -164,8 +164,8 @@
   text-align: center;
   color: var(--white);
   text-shadow:
-    0 1px 3px rgb(10 20 50 / 0.28),
-    0 6px 48px rgb(10 20 50 / 0.42);
+    0 1px 3px rgb(8 10 16 / 0.28),
+    0 6px 48px rgb(8 10 16 / 0.42);
   will-change: opacity, transform, filter;
 }
 
@@ -246,5 +246,59 @@
 @media (hover: hover) and (pointer: fine) {
   .walkFirst:hover {
     color: var(--white);
+  }
+}
+
+/* Scroll cue: a short track with a dot travelling down it, under a quiet label. */
+.cue {
+  position: absolute;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom));
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  transform: translateX(-50%);
+  color: var(--white);
+  text-shadow: 0 1px 2px rgb(8 10 16 / 0.35), 0 2px 14px rgb(8 10 16 / 0.3);
+  pointer-events: none;
+}
+
+.cueText {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.cueTrack {
+  position: relative;
+  width: 2px;
+  height: 44px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.3);
+}
+
+.cueDot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--white);
+  animation: cueRun 1.8s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+@keyframes cueRun {
+  0% { transform: translateY(-14px); }
+  70%, 100% { transform: translateY(44px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cueDot {
+    animation: none;
+    transform: translateY(15px);
   }
 }

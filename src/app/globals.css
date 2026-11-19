@@ -160,3 +160,33 @@ button {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+
+/* Scroll reveal (see lib/ui/reveal.ts): only blocks the script set aside start hidden. */
+[data-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+[data-reveal="in"] {
+  opacity: 1;
+  transform: none;
+  transition: opacity 600ms var(--ease-out), transform 700ms var(--ease-out);
+}
+
+/* Details that open: the text arrives with a short fade instead of popping in. */
+details[open] > :not(summary) {
+  animation: details-in 220ms var(--ease-out);
+}
+
+@keyframes details-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details[open] > :not(summary) {
+    animation: none;
+  }
+}

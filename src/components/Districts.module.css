@@ -284,11 +284,11 @@
 .route li::before {
   content: "";
   position: absolute;
-  top: 37px;
+  top: 34px;
   left: 0;
   right: 0;
-  height: 3px;
-  background: var(--cobalt);
+  height: 2px;
+  background: rgb(34 65 143 / 0.4);
 }
 
 .route li:first-child::before {
@@ -301,6 +301,7 @@
 
 .route a {
   position: relative;
+  z-index: 1;
   display: grid;
   justify-items: center;
   gap: 8px;
@@ -317,11 +318,11 @@
 }
 
 .routeDot {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--tone);
-  box-shadow: 0 0 0 3px var(--cobalt), 0 0 0 6px var(--porcelain);
+  box-shadow: inset 0 0 0 2px var(--cobalt), 0 0 0 5px var(--porcelain);
   transition: transform 200ms var(--ease-out);
 }
 
@@ -696,6 +697,8 @@
   .readyArea {
     display: block;
     margin: 2px 0 0;
+    /* on its own line here, so it may wrap between words */
+    white-space: normal;
   }
   .soonList {
     grid-template-columns: minmax(0, 1fr);

@@ -1,0 +1,36 @@
+/* White with difference blending, so it reads on porcelain pages and night photos alike. */
+.ring {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  mix-blend-mode: difference;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease, background-color 200ms ease;
+  will-change: transform;
+}
+
+.ring[data-shown="true"] {
+  opacity: 0.9;
+}
+
+.ring[data-over="true"] {
+  background-color: rgb(255 255 255 / 0.18);
+}
+
+@media not ((hover: hover) and (pointer: fine)) {
+  .ring {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    display: none;
+  }
+}
