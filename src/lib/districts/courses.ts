@@ -1332,6 +1332,7 @@ export const COURSES: Course[] = [
         icon: "history",
         mode: "metro",
         name: { en: "Nakseongdae Park", ko: "낙성대공원" },
+        photo: photo("gwanak", "nakseongdae", 960, 636, "The Nakseongdae stone marker", "낙성대 표석", { by: "Mark Froelich", license: "CC BY-SA 3.0", url: "https://commons.wikimedia.org/wiki/File:Anguksa_rock_monument.jpg" }),
         kind: { en: "History", ko: "역사" },
         body: {
           en: "Legend says a great star fell when General Gang Gam-chan (948–1031) was born, hence the name 'where the star fell'. The park holds his shrine, Anguksa, and a stone pagoda moved from his birthplace nearby.",
