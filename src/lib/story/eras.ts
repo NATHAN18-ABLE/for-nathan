@@ -116,6 +116,11 @@ export const ERAS: Era[] = [
       { name: { en: "Deoksugung Palace", ko: "덕수궁" }, district: "jung" },
       { name: { en: "Seodaemun Prison History Hall", ko: "서대문형무소역사관" }, district: "seodaemun" },
     ],
+    photo: img("/story/seodaemun-prison.jpg", 960, 640, "The brick cell blocks of the old Seodaemun Prison, with a Korean flag hung on the wall", "태극기가 걸린 옛 서대문형무소 옥사", {
+      by: "Noh Mun Duek",
+      license: "CC BY-SA 4.0",
+      url: "https://commons.wikimedia.org/wiki/File:Overview_of_the_Old_Seodaemun_Prison_(%EA%B5%AC%EC%84%9C%EB%8C%80%EB%AC%B8%ED%98%95%EB%AC%B4%EC%86%8C).jpg",
+    }),
   },
   {
     id: "liberation",
@@ -146,6 +151,11 @@ export const ERAS: Era[] = [
       { name: { en: "Gangnam", ko: "강남" }, district: "gangnam", inCourse: true },
       { name: { en: "Yeouido Hangang Park", ko: "여의도한강공원" }, district: "yeongdeungpo", inCourse: true },
     ],
+    photo: img("/story/olympic-park.jpg", 960, 540, "The Olympic Park sign, with the World Peace Gate behind", "올림픽공원 표지와 그 뒤의 평화의 문", {
+      by: "Silas Low",
+      license: "CC BY-SA 4.0",
+      url: "https://commons.wikimedia.org/wiki/File:Olympic_Park_Seoul.jpg",
+    }),
   },
   {
     id: "today",
