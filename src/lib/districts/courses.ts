@@ -127,6 +127,7 @@ export const COURSES: Course[] = [
         icon: "shoe",
         mode: "walk",
         name: { en: "Seongsu Handmade Shoe Street", ko: "성수 수제화 거리" },
+        photo: photo("seongdong", "shoe-street", 800, 600, "A sculpture of hands stitching a shoe on Seongsu Shoe Street", "성수 수제화 거리의 구두 꿰매는 손 조형물"),
         kind: { en: "Workshops", ko: "공방" },
         body: {
           en: "Around exits 1 and 2 of Seongsu Station, hundreds of shoemakers have worked for decades. Browse the shared showrooms under the elevated tracks, or join a class at the Handmade Shoe Hope Platform.",
@@ -288,6 +289,7 @@ export const COURSES: Course[] = [
         icon: "cafe",
         mode: "walk",
         name: { en: "Songnidan-gil", ko: "송리단길" },
+        photo: photo("songpa", "songnidan-gil", 800, 600, "A Songnidan-gil street with Lotte World Tower at its end", "롯데월드타워가 끝에 보이는 송리단길"),
         kind: { en: "Café", ko: "카페" },
         body: {
           en: "Small independent cafés fill the lanes between the tombs and the lake. Stop for tea.",
@@ -467,6 +469,7 @@ export const COURSES: Course[] = [
         cost: { en: "Adults ₩1,000", ko: "어른 1,000원" },
         icon: "museum",
         name: { en: "Seoul Yangnyeongsi Herb Medicine Museum", ko: "서울약령시 한의약박물관" },
+        photo: photo("dongdaemun", "herb-museum", 960, 570, "The Seoul Yangnyeongsi Herb Medicine Museum building", "서울약령시 한의약박물관 건물"),
         kind: { en: "Museum", ko: "박물관" },
         body: {
           en: "A small museum on traditional Korean medicine, a good primer before the market. Adults 1,000 won.",
@@ -1249,6 +1252,7 @@ export const COURSES: Course[] = [
         icon: "music",
         mode: "walk",
         name: { en: "A Hongdae live club", ko: "홍대 라이브 클럽 공연" },
+        photo: photo("mapo", "live-club", 600, 400, "A crowd at a Hongdae live show", "홍대 라이브 공연의 관객들"),
         kind: { en: "Live music", ko: "공연" },
         body: {
           en: "Hongdae is the home of Korean indie music. Clubs like Rolling Hall, open for some thirty years, host bands most nights.",
@@ -1316,6 +1320,7 @@ export const COURSES: Course[] = [
         icon: "food",
         mode: "bus",
         name: { en: "Sharosu-gil", ko: "샤로수길" },
+        photo: photo("gwanak", "sharosu-gil", 960, 720, "Lanterns strung over Sharosu-gil at dusk", "저녁 무렵 등이 걸린 샤로수길"),
         kind: { en: "Lunch and coffee", ko: "점심과 커피" },
         body: {
           en: "Next to an old market by Seoul National University Station, small restaurants from many cuisines and specialty coffee bars fill the lanes. Cheap, lively and full of students.",
