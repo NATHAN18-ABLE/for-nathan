@@ -89,12 +89,12 @@ export const COURSES: Course[] = [
         cost: { en: "Free", ko: "무료" },
         icon: "park",
         name: { en: "Seoul Forest", ko: "서울숲" },
+        photo: photo("seongdong", "seoul-forest", 960, 541, "The Seoul Forest sign among the trees", "나무 사이의 서울숲 표지", { by: "Christian Bolz", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Seoul_Forest_%EC%84%9C%EC%9A%B8%EC%88%B2.jpg" }),
         kind: { en: "Park", ko: "공원" },
         body: {
           en: "Open the day with an easy walk. Ponds, wide lawns and forest paths, right in the middle of the city.",
           ko: "가벼운 산책으로 하루를 엽니다. 연못과 넓은 잔디밭, 숲길이 도심 한가운데 펼쳐져 있습니다.",
         },
-        photo: photo("seongdong", "seoul-forest", 396, 273, "Ponds and trees in Seoul Forest", "서울숲의 연못과 나무들"),
       },
       {
         time: "12:30",
@@ -255,13 +255,13 @@ export const COURSES: Course[] = [
         icon: "river",
         mode: "walk",
         name: { en: "Seokchon Lake", ko: "석촌호수" },
+        photo: photo("songpa", "seokchon-lake", 960, 540, "Seokchon Lake with cherry blossoms along the shore", "벚꽃이 핀 석촌호수", { by: "Ox1997cow", license: "CC BY-SA 3.0", url: "https://commons.wikimedia.org/wiki/File:Seokchon_Lake_Cherry_Blossoms_2020.jpg" }),
         kind: { en: "Walk", ko: "산책" },
         body: {
           en: "A loop around the east and west lakes in front of the mall, about 2.5 km. In early April the whole shore is lined with cherry blossoms.",
           ko: "롯데월드몰 바로 앞, 동호와 서호를 가볍게 한 바퀴 걷습니다. 둘레는 약 2.5km이고, 4월 초에는 호숫가 전체가 벚꽃길이 됩니다.",
         },
         way: { en: "Walk 5 min", ko: "걸어서 5분" },
-        photo: photo("songpa", "seokchon-lake", 367, 219, "Seokchon Lake from above in cherry blossom season", "벚꽃이 핀 석촌호수"),
       },
       {
         time: "15:30",
@@ -358,6 +358,7 @@ export const COURSES: Course[] = [
         note: { en: "Shoes with grip", ko: "미끄럽지 않은 신발" },
         icon: "hike",
         name: { en: "Buramsan summit", ko: "불암산 정상" },
+        photo: photo("nowon", "buramsan", 960, 711, "The granite peak of Buramsan", "불암산의 바위 봉우리", { by: "Kellnerp", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Buram_Mountain_Peak.JPG" }),
         kind: { en: "Hike", ko: "등산" },
         body: {
           en: "A 508 m peak on Seoul's northeastern edge. Its great granite top is said to look like the Buddha in a traditional hat, which gave the mountain its name. From the top, the whole city spreads out below.",
@@ -367,7 +368,6 @@ export const COURSES: Course[] = [
           en: "About 3 hours up and down. Wear shoes with grip; the top is bare rock.",
           ko: "오르내리는 데 3시간쯤 걸립니다. 정상 부근은 바위라 미끄럽지 않은 신발을 신으세요.",
         },
-        photo: photo("nowon", "buramsan", 385, 256, "The city seen from Buramsan", "불암산에서 내려다본 서울"),
       },
       {
         time: "12:30",
@@ -587,6 +587,7 @@ export const COURSES: Course[] = [
         note: { en: "Closed Tuesdays", ko: "화요일 휴궁" },
         icon: "history",
         name: { en: "Gyeongbokgung Palace", ko: "경복궁" },
+        photo: photo("jongno", "gyeongbokgung", 960, 640, "Geunjeongjeon, the throne hall of Gyeongbokgung", "경복궁 근정전", { by: "Brady Bellini", license: "CC0", url: "https://commons.wikimedia.org/wiki/File:Gyeongbokgung(palace)_Geunjeongjeon(hall).jpg" }),
         kind: { en: "Palace", ko: "궁궐" },
         body: {
           en: "The first and largest palace of the Joseon kings. See the throne hall Geunjeongjeon and the Gyeonghoeru pavilion on its pond, and catch the gate guard ceremony in front of Gwanghwamun.",
@@ -596,7 +597,6 @@ export const COURSES: Course[] = [
           en: "Wear a hanbok and entry is free; rental shops line the streets nearby. The guard ceremony is usually at 10:00 and 14:00.",
           ko: "한복을 입으면 입장료가 무료이고, 주변에 한복 대여점이 많습니다. 수문장 교대식은 보통 10시와 14시에 열립니다.",
         },
-        photo: photo("jongno", "gyeongbokgung", 394, 245, "Geunjeongjeon, the throne hall of Gyeongbokgung", "경복궁 근정전"),
       },
       {
         time: "11:40",
