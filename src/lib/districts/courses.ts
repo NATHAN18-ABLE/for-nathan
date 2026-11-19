@@ -169,6 +169,7 @@ export const COURSES: Course[] = [
         icon: "food",
         mode: "walk",
         name: { en: "Seongsu pork galbi alley", ko: "성수동 돼지갈비 골목" },
+        photo: photo("seongdong", "galbi", 960, 643, "Grilled marinated pork ribs", "구운 양념 돼지갈비", { by: "egg (Hong, Yun Seon)", license: "CC BY 2.0", url: "https://commons.wikimedia.org/wiki/File:Korean_barbecue-Dwaeji_galbi-01.jpg" }),
         kind: { en: "Dinner", ko: "저녁" },
         body: {
           en: "Near Ttukseom Station, old galbi houses grill marinated pork ribs at outdoor tables. Daesung Galbi is the best known.",
@@ -215,6 +216,7 @@ export const COURSES: Course[] = [
         note: { en: "Museum closed Mondays", ko: "박물관 월요일 휴관" },
         icon: "history",
         name: { en: "Mongchontoseong and the Hanseong Baekje Museum", ko: "몽촌토성과 한성백제박물관" },
+        photo: photo("songpa", "mongchontoseong", 960, 638, "The grassy moat and walls of Mongchontoseong", "몽촌토성의 해자와 성벽", { by: "Saigen Jiro", license: "CC0", url: "https://commons.wikimedia.org/wiki/File:Seoul_Mongchon_Toseong-1.JPG" }),
         kind: { en: "History", ko: "역사" },
         body: {
           en: "Walk the grassy earthen wall of Baekje's capital inside Olympic Park, then see what was dug up here at the museum next to it.",
@@ -234,6 +236,7 @@ export const COURSES: Course[] = [
         icon: "shops",
         mode: "metro",
         name: { en: "Lotte World Mall", ko: "롯데월드몰" },
+        photo: photo("songpa", "lotte-world-mall", 960, 720, "The entrance of Lotte World Mall", "롯데월드몰 입구", { by: "Christophe95", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Lotte_World_Mall_in_Seoul.jpg" }),
         kind: { en: "Lunch", ko: "점심" },
         body: {
           en: "Connected to Jamsil Station. Look around the mall and pick lunch from its many restaurants.",
@@ -268,6 +271,7 @@ export const COURSES: Course[] = [
         icon: "history",
         mode: "walk",
         name: { en: "Seokchon-dong Ancient Tombs", ko: "석촌동 고분군" },
+        photo: photo("songpa", "seokchon-tombs", 960, 636, "A stepped stone-mound tomb at Seokchon-dong", "석촌동의 계단식 돌무지무덤", { by: "Saigen Jiro", license: "CC0", url: "https://commons.wikimedia.org/wiki/File:Tomb_Two_of_Seoul_Seokchon-dong_Gobungun.JPG" }),
         kind: { en: "History", ko: "역사" },
         body: {
           en: "Stone-mound tombs of early Baekje rulers, in a quiet park between apartment blocks. One of them is thought to belong to a 4th-century king.",
@@ -393,6 +397,7 @@ export const COURSES: Course[] = [
         icon: "temple",
         mode: "walk",
         name: { en: "Hakdoam Hermitage", ko: "학도암" },
+        photo: photo("nowon", "hakdoam", 960, 640, "Hakdoam below the granite of Buramsan", "불암산 바위 아래의 학도암", { by: "Myojang", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Morning_hakdoam.jpg" }),
         kind: { en: "Temple", ko: "사찰" },
         body: {
           en: "A small hermitage on the mountain's west slope. Behind its hall, a 13.4 m Bodhisattva carved into the cliff in the 1870s looks out over the city; tradition says Empress Myeongseong had it made.",
@@ -501,6 +506,7 @@ export const COURSES: Course[] = [
         icon: "food",
         mode: "walk",
         name: { en: "Yongdu-dong jjukkumi alley", ko: "용두동 쭈꾸미 골목" },
+        photo: photo("dongdaemun", "jjukkumi", 960, 720, "Spicy stir-fried baby octopus", "매콤한 쭈꾸미볶음", { by: "Chun Yip So", license: "CC BY 2.0", url: "https://commons.wikimedia.org/wiki/File:Jukkumi-bokkeum_1.jpg" }),
         kind: { en: "Lunch", ko: "점심" },
         body: {
           en: "Fiery stir-fried baby octopus, finished with fried rice in the same pan. Najeongsun Halmae Jjukkumi is the long-time favorite.",
@@ -539,6 +545,7 @@ export const COURSES: Course[] = [
         icon: "food",
         mode: "metro",
         name: { en: "Hoegi pajeon alley", ko: "회기역 파전골목" },
+        photo: photo("dongdaemun", "pajeon", 960, 456, "Pajeon with a bowl of makgeolli", "막걸리와 파전", { by: "Korea.net / Korean Culture and Information Service (Jeon…", license: "CC BY-SA 2.0", url: "https://commons.wikimedia.org/wiki/File:Buchimgae_and_makgeolli.jpg" }),
         kind: { en: "Dinner", ko: "저녁" },
         body: {
           en: "Outside Hoegi Station near Kyung Hee University, small shops fry big seafood pajeon to go with makgeolli.",
@@ -788,6 +795,7 @@ export const COURSES: Course[] = [
         note: { en: "Step-free boardwalk", ko: "계단 없는 데크길" },
         icon: "trail",
         name: { en: "Ansan Jarak-gil", ko: "안산 자락길" },
+        photo: photo("seodaemun", "ansan-view", 960, 640, "Seoul seen from Ansan, with Namsan Tower in the distance", "안산에서 본 서울, 멀리 남산타워", { by: "Chensiyuan", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:1_ansan_mountain_night_2018.jpg" }),
         kind: { en: "Forest walk", ko: "숲길 산책" },
         body: {
           en: "A step-free wooden boardwalk loops the waist of Ansan. Walk part of it from Dongnimmun, look out over Inwangsan and downtown from the lookouts, and come down at the Yeonhui forest rest area.",
@@ -998,6 +1006,7 @@ export const COURSES: Course[] = [
         icon: "river",
         mode: "walk",
         name: { en: "Yeouido Hangang Park", ko: "여의도한강공원" },
+        photo: photo("yeongdeungpo", "yeouido-park", 960, 629, "Yeouido Hangang Park and the 63 Building", "여의도한강공원과 63빌딩", { by: "kallerna", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Yeouido_Hangang_Park_from_Mapo_Bridge_1.jpg" }),
         kind: { en: "Riverside", ko: "한강" },
         body: {
           en: "Walk out to the river for the sunset. Cooking instant ramyeon in the riverside convenience-store machines, then eating it on the grass, is one of Seoul's small pleasures.",
@@ -1099,6 +1108,7 @@ export const COURSES: Course[] = [
         icon: "museum",
         mode: "metro",
         name: { en: "National Museum of Korea", ko: "국립중앙박물관" },
+        photo: photo("yongsan", "national-museum", 960, 606, "The National Museum of Korea across its pond", "연못 너머의 국립중앙박물관", { by: "Jinah78", license: "CC BY-SA 3.0", url: "https://commons.wikimedia.org/wiki/File:Front_view_of_national_museum_of_korea.jpg" }),
         kind: { en: "Museum", ko: "박물관" },
         body: {
           en: "Korea's largest museum, from prehistory to the Joseon kings. Don't miss the Room of Quiet Contemplation, where two pensive Buddha statues sit alone in a dim hall.",
@@ -1120,6 +1130,7 @@ export const COURSES: Course[] = [
         icon: "view",
         mode: "bus",
         name: { en: "Haebangchon and Sinheung Market", ko: "해방촌과 신흥시장" },
+        photo: photo("yongsan", "sinheung-market", 960, 640, "Tables under the roof of Sinheung Market", "신흥시장 지붕 아래의 테이블", { by: "Lee Jeong Woo (이정우) / Ministry of Culture, Sports and…", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Haebangchon_(55192500745).jpg" }),
         kind: { en: "Dinner and a view", ko: "저녁과 전망" },
         body: {
           en: "A village on the slope of Namsan, settled after 1945. Sinheung Market, open since 1953, has been reborn with new restaurants under its roof, and rooftop cafés along the lanes look up at Namsan Tower and out over the city.",
@@ -1152,6 +1163,7 @@ export const COURSES: Course[] = [
         cost: { en: "₩5,000–10,000", ko: "1인 약 5천~1만 원" },
         icon: "market",
         name: { en: "Mangwon Market", ko: "망원시장" },
+        photo: photo("mapo", "mangwon-market", 960, 432, "Stalls inside Mangwon Market", "망원시장 안의 가게들", { by: "Enamoradadecorea", license: "CC0", url: "https://commons.wikimedia.org/wiki/File:Mercado_Mangwon_en_Se%C3%BAl.jpg" }),
         kind: { en: "Market", ko: "시장" },
         body: {
           en: "A covered market where locals do their daily shopping. Graze on croquettes, sweet-and-spicy fried chicken and fish cakes, a few coins at a time.",
@@ -1167,6 +1179,7 @@ export const COURSES: Course[] = [
         icon: "river",
         mode: "walk",
         name: { en: "Mangwon Hangang Park", ko: "망원한강공원" },
+        photo: photo("mapo", "mangwon-park", 960, 719, "Paths and pines at Mangwon Hangang Park", "망원한강공원의 산책길과 소나무", { by: "Brit in Seoul", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Mangwon_Hangang_Park.png" }),
         kind: { en: "Riverside", ko: "한강" },
         body: {
           en: "Follow the 'Han River' signs from the market past Seoul Battleship Park to the riverbank, and walk along the water.",
@@ -1183,6 +1196,7 @@ export const COURSES: Course[] = [
         icon: "food",
         mode: "bus",
         name: { en: "Lunch in Yeonnam-dong", ko: "연남동 점심" },
+        photo: photo("mapo", "yeonnam", 900, 676, "A tree-lined street in Yeonnam-dong", "나무가 늘어선 연남동 거리", { by: "azer0", license: "CC BY 2.0 kr", url: "https://commons.wikimedia.org/wiki/File:%EC%97%B0%EB%82%A8%EB%8F%99_(20240803)_1.jpg" }),
         kind: { en: "Lunch", ko: "점심" },
         body: {
           en: "Since a Chinese school moved to neighboring Yeonhui-dong in 1969, ethnic Chinese families have run restaurants here. Try their jjajangmyeon or jjamppong, or pick any of the small places in the lanes.",
@@ -1199,6 +1213,7 @@ export const COURSES: Course[] = [
         icon: "trail",
         mode: "walk",
         name: { en: "Gyeongui Line Forest Park, Yeonnam section", ko: "경의선숲길 연남동 구간" },
+        photo: photo("mapo", "gyeongui-forest", 960, 540, "Old rails along the Gyeongui Line Forest Park", "옛 철로가 남은 경의선숲길", { by: "Christian Bolz (크리스티안 볼츠)", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Gyeonguiseon_Forest_Trail_Park_and_Ttaeng-ttaeng_Street_in_Seoul_(near_Hongdae,_1).jpg" }),
         kind: { en: "Walk", ko: "산책" },
         body: {
           en: "The old Gyeongui railway now runs underground, and its tracks above became a long, narrow park. The 1.2 km Yeonnam stretch, lined with cafés, leads to Hongik University Station.",
@@ -1216,6 +1231,7 @@ export const COURSES: Course[] = [
         icon: "art",
         mode: "walk",
         name: { en: "Hongdae streets and KT&G Sangsangmadang", ko: "홍대 거리와 KT&G 상상마당" },
+        photo: photo("mapo", "hongdae", 960, 640, "Hongdae's streets lit up at night", "불 켜진 밤의 홍대 거리", { by: "lumoplank", license: "CC0", url: "https://commons.wikimedia.org/wiki/File:Hongdae,_Seoul-_Part_II_-_Hongdae2237.jpg" }),
         kind: { en: "Street culture", ko: "거리 문화" },
         body: {
           en: "The streets around Hongik University, Korea's best-known art school, are full of buskers and dancers. KT&G Sangsangmadang has an indie design shop and a free gallery. Have dinner nearby before the show.",
@@ -1262,6 +1278,7 @@ export const COURSES: Course[] = [
         note: { en: "The summit adds 3 hours or more", ko: "정상(연주대)은 왕복 3시간 이상" },
         icon: "hike",
         name: { en: "Gwanaksan Valley Trail", ko: "관악산 계곡 나들길" },
+        photo: photo("gwanak", "gwanaksan-gate", 960, 720, "The gate of Gwanaksan Park", "관악산공원 입구의 일주문", { by: "Kth696586", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:20201006_%EA%B4%80%EC%95%85%EC%82%B0%EC%9E%85%EA%B5%AC.jpg" }),
         kind: { en: "Hike", ko: "산책 산행" },
         body: {
           en: "From Gwanaksan Station, walk through Gwanaksan Park past the lake garden and up the valley to the spring at its head. An easy walk, with stream pools that fill with families in summer.",
@@ -1282,6 +1299,7 @@ export const COURSES: Course[] = [
         icon: "history",
         mode: "walk",
         name: { en: "Seoul National University main gate", ko: "서울대학교 정문" },
+        photo: photo("gwanak", "snu-gate", 945, 573, "The 'sha'-shaped main gate of Seoul National University at night", "밤의 서울대학교 정문 '샤'", { by: "Deuterium 001", license: "CC BY 3.0", url: "https://commons.wikimedia.org/wiki/File:SeoulNatlUnivMainGateAtNight.jpg" }),
         kind: { en: "Campus", ko: "캠퍼스" },
         body: {
           en: "The main gate sculpture, built from the Korean initials of the university, reads like the syllable '샤' (sha). Students named their favorite street after it. Walk a little way into the campus under the mountain.",
@@ -1330,6 +1348,7 @@ export const COURSES: Course[] = [
         icon: "food",
         mode: "metro",
         name: { en: "Sillim-dong Sundae Town", ko: "신림동 순대타운" },
+        photo: photo("gwanak", "sundae", 960, 640, "Stir-fried sundae on a hot plate", "철판 위의 순대볶음", { by: "최광모 (Choe Kwangmo)", license: "CC0", url: "https://commons.wikimedia.org/wiki/File:Sundae-bokkeum_2.jpg" }),
         kind: { en: "Dinner", ko: "저녁" },
         body: {
           en: "Three floors of stalls stir-fry Korean blood sausage with vegetables on a hot plate. The plain 'white' version, without chili paste, started here in the 1970s; dip it in the sesame-salt sauce.",
@@ -1411,6 +1430,7 @@ export const COURSES: Course[] = [
         icon: "history",
         mode: "metro",
         name: { en: "Seonjeongneung Royal Tombs", ko: "선정릉" },
+        photo: photo("gangnam", "seonjeongneung", 960, 432, "A gate in the wall of the Seonjeongneung woods", "선정릉 숲의 돌담 문", { by: "Isra Rulowsinsky", license: "CC0", url: "https://commons.wikimedia.org/wiki/File:Seolleung_and_Jeongneung_Royal_Tombs.jpg" }),
         kind: { en: "History", ko: "역사" },
         body: {
           en: "The tombs of King Seongjong, his queen and King Jungjong, part of the Joseon royal tombs listed by UNESCO in 2009. A quiet wooded park among Gangnam's office towers.",
@@ -1428,6 +1448,7 @@ export const COURSES: Course[] = [
         icon: "temple",
         mode: "metro",
         name: { en: "Bongeunsa Temple", ko: "봉은사" },
+        photo: photo("gangnam", "bongeunsa", 960, 641, "Bongeunsa with the COEX towers behind", "코엑스 빌딩을 배경으로 한 봉은사", { by: "kallerna", license: "CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:Bongeunsa_Seoul_9.jpg" }),
         kind: { en: "Temple", ko: "사찰" },
         body: {
           en: "Founded in 794 and renamed when Seongjong's queen restored it next to his tomb in 1498. A 23 m stone Maitreya Buddha looks out across the road at the glass towers of COEX.",
