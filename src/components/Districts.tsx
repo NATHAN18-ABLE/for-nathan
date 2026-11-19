@@ -240,15 +240,25 @@ function StopBand({ stop, prev, lang, t }: { stop: Stop; prev: Tone; lang: Lang;
           </div>
           <div className={styles.media}>
             {stop.photo ? (
-              <img
-                src={asset(stop.photo.src)}
-                alt={stop.photo.alt[lang]}
-                width={stop.photo.width}
-                height={stop.photo.height}
-                style={{ maxWidth: stop.photo.width }}
-                loading="lazy"
-                decoding="async"
-              />
+              <figure className={styles.figure} style={{ maxWidth: stop.photo.width }}>
+                <img
+                  src={asset(stop.photo.src)}
+                  alt={stop.photo.alt[lang]}
+                  width={stop.photo.width}
+                  height={stop.photo.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+                {stop.photo.credit && (
+                  <figcaption className={styles.credit}>
+                    <a href={stop.photo.credit.url} target="_blank" rel="noopener noreferrer">
+                      {stop.photo.credit.by}
+                    </a>
+                    {" · "}
+                    {stop.photo.credit.license}
+                  </figcaption>
+                )}
+              </figure>
             ) : (
               <div className={styles.tile} aria-hidden="true">
                 <Glyph size={44} weight="light" />

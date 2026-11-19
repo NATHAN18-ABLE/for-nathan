@@ -539,6 +539,22 @@
   color: var(--fg-soft);
 }
 
+.figure {
+  margin: 0;
+}
+
+.credit {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg-soft);
+  overflow-wrap: break-word;
+}
+
+.credit a {
+  color: inherit;
+}
+
 .media img {
   display: block;
   width: 100%;

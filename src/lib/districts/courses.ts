@@ -11,6 +11,14 @@ export interface Photo {
   width: number;
   height: number;
   alt: Text;
+  // Openly licensed photos (Wikimedia Commons) carry their author, license and source page.
+  credit?: Credit;
+}
+
+export interface Credit {
+  by: string;
+  license: string;
+  url: string;
 }
 
 export type Icon =
@@ -51,11 +59,12 @@ export interface Course {
   more?: Text;
 }
 
-const photo = (slug: string, file: string, width: number, height: number, en: string, ko: string): Photo => ({
+const photo = (slug: string, file: string, width: number, height: number, en: string, ko: string, credit?: Credit): Photo => ({
   src: `/districts/${slug}/${file}.jpg`,
   width,
   height,
   alt: { en, ko },
+  ...(credit ? { credit } : {}),
 });
 
 export const CHECKED = { en: "November 2026", ko: "2026년 11월" };
