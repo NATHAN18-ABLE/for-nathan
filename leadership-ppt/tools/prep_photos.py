@@ -8,7 +8,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC, OUT = os.path.join(ROOT, "photos", "src"), os.path.join(ROOT, "photos", "out")
 DPI = 220
 
-# 이름: (원본, 가로 인치, 세로 인치, 초점 x, 초점 y, 둥근 모서리 인치)
+# 이름: (원본, 가로 인치, 세로 인치, 초점 x, 초점 y, 둥근 모서리 인치[, 옵션])
+# 옵션: box=(x0, y0, x1, y1) 먼저 잘라낼 픽셀 영역, dark=밝기 배율
 JOBS = {
     "A_card": ("A_portrait.jpg", 2.75, 2.75 * 1.586, 0.5, 0.42, 0.12),
     "B_tile": ("B_applepay.png", 1.85, 2.3, 0.5, 0.5, 0),
@@ -17,7 +18,10 @@ JOBS = {
     "E_tile": ("E_snu.jpg", 1.85, 2.3, 0.13, 0.5, 0),
     "B_panel": ("B_applepay.png", 3.4, 4.6, 0.5, 0.5, 0),
     "D_panel": ("D_llm.jpg", 5.4, 4.6, 0.6, 0.5, 0),
-    "E_panel": ("E_snu.jpg", 4.3, 4.6, 0.32, 0.5, 0),
+    "E_panel": ("E_snu.jpg", 4.0, 3.05, 0.3, 0.5, 0),
+    "G_header": ("G_instagram.webp", 4.0, 4.0 * 295 / 880, 0.5, 0.5, 0, {"box": (20, 265, 900, 560)}),
+    "H_logo": ("H_logo.jpg", 2.2, 2.2 * 165 / 750, 0.5, 0.5, 0, {"box": (230, 315, 980, 480)}),
+    "I_close": ("I_building.jpg", 5.9, 7.5, 0.42, 0.5, 0, {"dark": 0.7}),
 }
 
 
@@ -34,16 +38,21 @@ def crop_to(im, ratio, fx, fy):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    for name, (src, wi, hi, fx, fy, r) in JOBS.items():
+    for name, (src, wi, hi, fx, fy, r, *rest) in JOBS.items():
+        opt = rest[0] if rest else {}
         path = os.path.join(SRC, src)
         if not os.path.exists(path):
             continue
         im = Image.open(path).convert("RGB")
+        if "box" in opt:
+            im = im.crop(opt["box"])
         im = crop_to(im, wi / hi, fx, fy)
         im = im.resize((round(wi * DPI), round(hi * DPI)), Image.LANCZOS)
         g = ImageOps.grayscale(im)
         g = ImageOps.autocontrast(g, cutoff=1)
         g = ImageEnhance.Contrast(g).enhance(1.05)
+        if "dark" in opt:
+            g = ImageEnhance.Brightness(g).enhance(opt["dark"])
         out = g.convert("RGB")
         if r:
             mask = Image.new("L", out.size, 0)
