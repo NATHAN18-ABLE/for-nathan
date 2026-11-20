@@ -421,7 +421,7 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
   const crownGeo = useMemo(() => {
     // Weld the sphere first, then push vertices in and out smoothly, so the crown stays
     // one soft mass instead of splitting into loose triangles.
-    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 3).deleteAttribute("normal").deleteAttribute("uv"));
+    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 2).deleteAttribute("normal").deleteAttribute("uv"));
     const p = g.attributes.position;
     const v = new THREE.Vector3();
     for (let i = 0; i < p.count; i++) {
@@ -482,7 +482,8 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
         <cylinderGeometry args={[0.12, 0.2, 1, 10]} />
         <Ink />
       </instancedMesh>
-      <instancedMesh ref={crown} args={[crownGeo, undefined, blobs.length]} castShadow material={toonWith({ color: "#ffffff", key: "tree-crown" })}>
+      {/* solid: the camera stops in front of a crown instead of hiding the traveler behind it */}
+      <instancedMesh ref={crown} args={[crownGeo, undefined, blobs.length]} castShadow material={toonWith({ color: "#ffffff", key: "tree-crown" })} userData={{ solid: true }}>
         <Ink />
       </instancedMesh>
     </group>

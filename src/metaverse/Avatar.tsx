@@ -8,6 +8,7 @@ import { positionAt, type P } from "@/lib/metaverse/path.ts";
 import type { Look } from "@/lib/metaverse/look.ts";
 import { paletteOf, type Avatar as AvatarLook } from "@/lib/metaverse/outfit.ts";
 import { ToonFigure, type Action } from "./toon/ToonFigure";
+import { Detail } from "./toon/part";
 import styles from "./Metaverse.module.css";
 
 export const WALK_SPEED = 1.5; // metres per second, matched to the toon figure's steps
@@ -15,6 +16,8 @@ export const WALK_SPEED = 1.5; // metres per second, matched to the toon figure'
 const FIGURE_SCALE = 1.35;
 // Seats were placed for a taller figure; a seated toon's hips sit lower, so lift it onto the seat.
 const SEAT_LIFT = 0.26;
+const FULL = { lines: true, shadows: true };
+const LIGHT = { lines: false, shadows: false };
 
 /** Mutable per-person motion, written by the network and read every frame. */
 export interface Motion {
@@ -59,6 +62,9 @@ export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubbl
   const camera = useThree((s) => s.camera);
   const facing = useRef(motion.heading);
   const pose = useRef<Action>("idle");
+  // Others far from the camera draw without outlines and shadows; your own figure always has them.
+  const [near, setNear] = useState(true);
+  const nearRef = useRef(true);
   // Labels attach to the canvas's parent, which may not exist on the very first frame.
   const [labels, setLabels] = useState(false);
   useEffect(() => {
@@ -124,6 +130,11 @@ export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubbl
       const d = camera.position.distanceTo(g.position);
       const o = d > 32 ? 0 : d > 22 ? (32 - d) / 10 : 1;
       tag.current.style.opacity = String(o);
+      // Switch with a margin so a traveler at the edge does not flicker between the two.
+      if (!isMe && (nearRef.current ? d > 16 : d < 13)) {
+        nearRef.current = !nearRef.current;
+        setNear(nearRef.current);
+      }
     }
     facing.current += shortestAngle(facing.current, m.heading) * (1 - Math.exp(-dt * 10));
     g.rotation.y = facing.current;
@@ -131,6 +142,7 @@ export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubbl
 
   return (
     <group ref={root}>
+      <Detail.Provider value={near ? FULL : LIGHT}>
       <ToonFigure
         scale={FIGURE_SCALE}
         outfit={avatar.outfit}
@@ -140,6 +152,7 @@ export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubbl
         look={look}
         actionRef={pose}
       />
+      </Detail.Provider>
       {labels && (
         <Html position={[0, 1.78, 0]} center pointerEvents="none" zIndexRange={[6, 1]}>
           <div ref={tag} className={styles.tag} data-me={isMe} data-same={sameType}>

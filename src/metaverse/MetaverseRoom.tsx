@@ -25,6 +25,7 @@ import { Effects } from "./Effects";
 import { chime, setSound, stopSound } from "./sound";
 import { emit } from "./bus";
 import { MapSheet } from "./MapSheet";
+import { mergeStatic } from "./mergeStatic";
 import type { Poi, RoomConfig } from "./types";
 import styles from "./Metaverse.module.css";
 
@@ -555,6 +556,11 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           onCreated={({ gl }) => {
             // Toon colours are painted as they should look; no film curve on top.
             gl.toneMapping = THREE.NoToneMapping;
+            // ?perf: expose the renderer's counters for performance checks.
+            if (new URLSearchParams(location.search).has("perf")) {
+              gl.info.autoReset = false;
+              (window as unknown as { __gl: THREE.WebGLRenderer }).__gl = gl;
+            }
           }}
         >
           <Lights room={room} motions={motions} meId={me.current.id} low={lowPower} />
@@ -891,6 +897,8 @@ function Frozen({ children }: { children: React.ReactNode }) {
         o.matrixAutoUpdate = false;
         o.matrixWorldAutoUpdate = false;
       });
+      // Then draw it as a few large meshes instead of hundreds of small ones.
+      mergeStatic(g.current);
     }
   });
   return <group ref={g}>{children}</group>;
@@ -922,7 +930,7 @@ function Lights({ room, motions, meId, low }: { room: RoomConfig; motions: React
         color={room.sun.color}
         intensity={room.sun.intensity}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={low ? [1024, 1024] : [2048, 2048]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.04}
         shadow-camera-left={wide ? -26 : -18}
