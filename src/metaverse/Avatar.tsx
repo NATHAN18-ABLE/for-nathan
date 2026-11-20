@@ -1,25 +1,20 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { positionAt, type P } from "@/lib/metaverse/path.ts";
-import { asset } from "@/lib/base-path.ts";
-import { Wearables } from "./Wearables";
 import type { Look } from "@/lib/metaverse/look.ts";
+import { paletteOf, type Avatar as AvatarLook } from "@/lib/metaverse/outfit.ts";
+import { ToonFigure, type Action } from "./toon/ToonFigure";
 import styles from "./Metaverse.module.css";
 
-export const WALK_SPEED = 1.8; // metres per second, matched to the walk cycle below
-const MODEL = "/metaverse/chars/traveler-a.glb";
-const CLIP = {
-  walk: "Casual_Walk",
-  idle: "Idle",
-  wave: "Big_Wave_Hello",
-  bow: "Formal_Bow",
-  sit: "Chair_Sit_Idle_F",
-} as const;
+export const WALK_SPEED = 1.5; // metres per second, matched to the toon figure's steps
+// The toon figure is drawn about 1.15 m tall; in the street it stands a little larger.
+const FIGURE_SCALE = 1.35;
+// Seats were placed for a taller figure; a seated toon's hips sit lower, so lift it onto the seat.
+const SEAT_LIFT = 0.26;
 
 /** Mutable per-person motion, written by the network and read every frame. */
 export interface Motion {
@@ -42,6 +37,7 @@ export function newMotion(x: number, z: number, heading = 0): Motion {
 type Props = {
   motion: Motion;
   look: Look;
+  avatar: AvatarLook;
   name: string;
   type: string | null;
   sameType: boolean;
@@ -56,126 +52,13 @@ type Props = {
 
 const shortestAngle = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
-/**
- * The generated idle shifts its weight a lot and sometimes leans far forward. Keep a short
- * stretch around the moment whose posture is closest to the clip's average (upright, centred),
- * and loop it gently back and forth.
- */
-function calmIdle(clip: THREE.AnimationClip, half = 0.7): THREE.AnimationClip {
-  const rot = clip.tracks.filter((t) => t.name.endsWith(".quaternion") && t.times.length > 2);
-  if (!rot.length) return clip;
-  const frames = rot[0].times.length;
-  const mean = rot.map((t) => {
-    const m = new THREE.Quaternion(0, 0, 0, 0);
-    const q = new THREE.Quaternion();
-    const first = new THREE.Quaternion().fromArray(t.values, 0);
-    for (let i = 0; i < t.times.length; i++) {
-      q.fromArray(t.values, i * 4);
-      if (q.dot(first) < 0) q.set(-q.x, -q.y, -q.z, -q.w); // keep one hemisphere
-      m.set(m.x + q.x, m.y + q.y, m.z + q.z, m.w + q.w);
-    }
-    return m.normalize();
-  });
-  const q = new THREE.Quaternion();
-  let best = 0;
-  let bestDev = Infinity;
-  for (let i = 0; i < frames; i++) {
-    let dev = 0;
-    rot.forEach((t, k) => {
-      if (i < t.times.length) dev += q.fromArray(t.values, i * 4).angleTo(mean[k]);
-    });
-    if (dev < bestDev) (bestDev = dev), (best = i);
-  }
-  const fps = 30;
-  const at = rot[0].times[best];
-  const from = Math.max(0, at - half);
-  const to = Math.min(clip.duration, from + half * 2);
-  return THREE.AnimationUtils.subclip(clip, "IdleCalm", Math.round(from * fps), Math.round(to * fps), fps);
-}
-
-/** Shadows on, and the texture fix for the generated figure (see below). */
-export function prepareFigure(scene: THREE.Object3D) {
-  scene.traverse((o) => {
-    const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    mesh.castShadow = true;
-    mesh.receiveShadow = false;
-    // The generated texture is cut into many small pieces. Its smaller mip levels blend
-    // neighbouring pieces together, which drew white streaks along the seams (on the
-    // trousers especially). Sample the full-size texture only.
-    const map = (mesh.material as THREE.MeshStandardMaterial).map;
-    if (map && map.generateMipmaps) {
-      map.generateMipmaps = false;
-      map.minFilter = THREE.LinearFilter;
-      map.needsUpdate = true;
-    }
-  });
-}
-
-type Pose = "walk" | "idle" | "wave" | "bow" | "sit";
-
-/** The rigged traveler figure, with its own copy of the skeleton and a mixer. */
-function Figure({ pose, hop, look }: { pose: React.RefObject<Pose>; hop: React.RefObject<number>; look: Look }) {
-  const gltf = useGLTF(asset(MODEL));
-  const { scene, mixer, actions } = useMemo(() => {
-    const scene = cloneSkinned(gltf.scene);
-    prepareFigure(scene);
-    const mixer = new THREE.AnimationMixer(scene);
-    const actions = Object.fromEntries(
-      (Object.keys(CLIP) as Pose[]).map((k) => {
-        const found = gltf.animations.find((c) => c.name === CLIP[k]);
-        const clip = found && k === "idle" ? calmIdle(found) : found;
-        const a = clip ? mixer.clipAction(clip) : null;
-        if (a && k === "idle") a.setLoop(THREE.LoopPingPong, Infinity);
-        if (a && (k === "wave" || k === "bow")) {
-          a.setLoop(THREE.LoopOnce, 1);
-          a.clampWhenFinished = true;
-        }
-        return [k, a];
-      }),
-    ) as Record<Pose, THREE.AnimationAction | null>;
-    return { scene, mixer, actions };
-  }, [gltf]);
-
-  const current = useRef<Pose | null>(null);
-  const holder = useRef<THREE.Group>(null);
-
-  useEffect(() => () => void mixer.stopAllAction(), [mixer]);
-
-  useFrame((_, dt) => {
-    const next = pose.current ?? "idle";
-    if (next !== current.current) {
-      const from = current.current ? actions[current.current] : null;
-      const to = actions[next];
-      if (to) {
-        to.reset();
-        to.setEffectiveWeight(1);
-        to.timeScale = next === "walk" ? 1.35 : next === "idle" ? 0.6 : 1;
-        to.play();
-        if (from && from !== to) from.crossFadeTo(to, 0.25, false);
-      }
-      current.current = next;
-    }
-    mixer.update(Math.min(dt, 0.05));
-    if (holder.current) holder.current.position.y = hop.current ?? 0;
-  });
-
-  return (
-    <group ref={holder}>
-      <primitive object={scene} />
-      <Wearables scene={scene} look={look} />
-    </group>
-  );
-}
-
-export function Avatar({ motion, look, name, type, sameType, isMe, bubble, meLabel, rest, onArrive, ground }: Props) {
+export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubble, meLabel, rest, onArrive, ground }: Props) {
   const root = useRef<THREE.Group>(null);
   const tag = useRef<HTMLDivElement>(null);
   const seatBlend = useRef(0);
   const camera = useThree((s) => s.camera);
   const facing = useRef(motion.heading);
-  const pose = useRef<Pose>("idle");
-  const hop = useRef(0);
+  const pose = useRef<Action>("idle");
   // Labels attach to the canvas's parent, which may not exist on the very first frame.
   const [labels, setLabels] = useState(false);
   useEffect(() => {
@@ -209,12 +92,11 @@ export function Avatar({ motion, look, name, type, sameType, isMe, bubble, meLab
     }
 
     const t = (now - m.emoteAt) / 1000;
-    hop.current = 0;
-    let next: Pose = walking ? "walk" : "idle";
+    let next: Action = walking ? "walk" : "idle";
     if (!walking && m.emote) {
       if (m.emote === "wave" && t < 2.6) next = "wave";
       else if (m.emote === "bow" && t < 3) next = "bow";
-      else if (m.emote === "hop" && t < 1.1) hop.current = Math.abs(Math.sin(t * Math.PI * 2)) * 0.32;
+      else if (m.emote === "hop" && t < 1.1) next = "hop";
       else if (m.emote === "sit") {
         m.sitting = true;
         m.emote = null;
@@ -235,7 +117,7 @@ export function Avatar({ motion, look, name, type, sameType, isMe, bubble, meLab
       const b = seatBlend.current;
       g.position.x += (m.seat.x - m.x) * b;
       g.position.z += (m.seat.z - m.z) * b;
-      g.position.y += m.seat.y * b;
+      g.position.y += (m.seat.y + SEAT_LIFT) * b;
     }
     // Name tags keep one small size and fade out with distance.
     if (tag.current) {
@@ -249,11 +131,17 @@ export function Avatar({ motion, look, name, type, sameType, isMe, bubble, meLab
 
   return (
     <group ref={root}>
-      <Suspense fallback={null}>
-        <Figure pose={pose} hop={hop} look={look} />
-      </Suspense>
+      <ToonFigure
+        scale={FIGURE_SCALE}
+        outfit={avatar.outfit}
+        hair={avatar.hair}
+        palette={paletteOf(avatar)}
+        lashes={avatar.gender === "f"}
+        look={look}
+        actionRef={pose}
+      />
       {labels && (
-        <Html position={[0, 1.5, 0]} center pointerEvents="none" zIndexRange={[6, 1]}>
+        <Html position={[0, 1.78, 0]} center pointerEvents="none" zIndexRange={[6, 1]}>
           <div ref={tag} className={styles.tag} data-me={isMe} data-same={sameType}>
             {isMe && meLabel && <span className={styles.tagMe}>{meLabel}</span>}
             <span>{name}</span>
@@ -262,7 +150,7 @@ export function Avatar({ motion, look, name, type, sameType, isMe, bubble, meLab
         </Html>
       )}
       {labels && bubble && (
-        <Html position={[0, 1.85, 0]} center pointerEvents="none" zIndexRange={[8, 7]}>
+        <Html position={[0, 2.12, 0]} center pointerEvents="none" zIndexRange={[8, 7]}>
           <div className={styles.bubble}>{bubble}</div>
         </Html>
       )}
@@ -270,4 +158,3 @@ export function Avatar({ motion, look, name, type, sameType, isMe, bubble, meLab
   );
 }
 
-useGLTF.preload(asset(MODEL));

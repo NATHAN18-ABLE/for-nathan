@@ -3,13 +3,11 @@
 // A jeweller's bench set out in front of a workshop. When someone watches, the hammer
 // rises and falls in rhythm; each strike rings and throws a few sparks.
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { asset } from "@/lib/base-path.ts";
-import { prepareFigure } from "./Avatar";
+import { paletteOf } from "@/lib/metaverse/outfit.ts";
+import { ToonFigure } from "./toon/ToonFigure";
 import { on } from "./bus";
 import { tap } from "./sound";
 import { TexBox } from "./world";
@@ -17,20 +15,18 @@ import { TexBox } from "./world";
 const STRIKES = 9;
 const BEAT = 0.42; // seconds between strikes
 
-/** The craftsperson: the traveler figure seated on a stool behind the bench. */
+/** The craftsperson: a toon figure in work clothes, seated on the stool behind the bench. */
 function Maker() {
-  const gltf = useGLTF(asset("/metaverse/chars/traveler-a.glb"));
-  const { scene, mixer } = useMemo(() => {
-    const scene = cloneSkinned(gltf.scene);
-    prepareFigure(scene);
-    const mixer = new THREE.AnimationMixer(scene);
-    const sit = gltf.animations.find((c) => c.name === "Chair_Sit_Idle_F");
-    if (sit) mixer.clipAction(sit).play();
-    return { scene, mixer };
-  }, [gltf]);
-  useEffect(() => () => void mixer.stopAllAction(), [mixer]);
-  useFrame((_, dt) => mixer.update(Math.min(dt, 0.05) * 0.5));
-  return <primitive object={scene} position={[0, 0.12, -0.75]} />;
+  return (
+    <ToonFigure
+      outfit="baji"
+      hair="short"
+      palette={paletteOf({ gender: "m", outfit: "baji", colorway: 1, hair: "short", hairColor: 1, skin: 1 })}
+      action="sit"
+      scale={1.1}
+      position={[0, 0.27, -0.75]}
+    />
+  );
 }
 
 export function Workshop({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
@@ -95,9 +91,7 @@ export function Workshop({ position, rotation = 0 }: { position: [number, number
   return (
     <group position={position} rotation={[0, rotation, 0]} scale={1.25}>
       <TexBox size={[0.45, 0.42, 0.45]} position={[0, 0.21, -0.78]} name="wood" tile={0.8} />
-      <Suspense fallback={null}>
-        <Maker />
-      </Suspense>
+      <Maker />
       {/* bench */}
       <TexBox size={[1.5, 0.08, 0.7]} position={[0, 0.78, 0]} name="wood" tile={0.8} />
       {[-0.65, 0.65].map((x) => (

@@ -4,6 +4,8 @@ import { Forest, GableRoof, Hanok, JarTerrace, Mountains, Pavement, TexBox, Terr
 import { LeafLitter } from "../autumn";
 import { Workshop } from "../Workshop";
 import type { RoomConfig } from "../types";
+import { toon } from "../toon/material";
+import { Ink } from "../toon/part";
 
 // Seosulla-gil and its neighbourhood, about 90 m x 80 m.
 // North is -z. The lane runs north-south along the west wall of Jongmyo (east side, x = 20);
@@ -58,9 +60,9 @@ function MainHall() {
       <TexBox size={[16, 1.3, 50]} position={[0, 0.65, 0]} name="granite" tile={1.6} tint="#d6d0c4" />
       <TexBox size={[7.5, 4.4, 44]} position={[0.8, 1.3 + 2.2, 0]} name="plaster" tile={3} tint="#c9c1b3" />
       {Array.from({ length: posts }, (_, i) => (
-        <mesh key={i} position={[-3.3, 1.3 + 2.2, -21 + (42 / (posts - 1)) * i]} castShadow>
+        <mesh key={i} position={[-3.3, 1.3 + 2.2, -21 + (42 / (posts - 1)) * i]} castShadow material={toon("#a24a38")}>
           <cylinderGeometry args={[0.28, 0.3, 4.4, 12]} />
-          <meshStandardMaterial color="#7b3b2c" roughness={0.75} />
+          <Ink />
         </mesh>
       ))}
       <group position={[0, 1.3 + 4.4 + 0.2, 0]} rotation={[0, Math.PI / 2, 0]}>
@@ -78,9 +80,9 @@ function Pavilion() {
       <TexBox size={[4.6, 0.12, 4.6]} position={[0, 0.9, 0]} name="wood" tile={1} />
       {[-2, 2].flatMap((x) =>
         [-2, 2].map((z) => (
-          <mesh key={`${x}${z}`} position={[x, 2.1, z]} castShadow>
+          <mesh key={`${x}${z}`} position={[x, 2.1, z]} castShadow material={toon("#a85a3e")}>
             <cylinderGeometry args={[0.15, 0.17, 3.2, 12]} />
-            <meshStandardMaterial color="#8a4a33" roughness={0.75} />
+            <Ink />
           </mesh>
         )),
       )}
@@ -236,14 +238,14 @@ export const jongno: RoomConfig = {
   walk: { cell: 0.5, rects: RECTS, holes: HOLES },
   spawn: { x: 13, z: 35 },
   spawnHeading: Math.PI,
-  sky: { top: "#d9c4a8", bottom: "#f2e3cc" },
+  // A clear autumn sky over warm haze at the horizon.
+  sky: { top: "#a9cbe6", bottom: "#f4e6cf" },
   // A low, warm sun from the south-west: late afternoon in October.
-  sun: { position: [-42, 22, 34], color: "#ffc98c", intensity: 3.1 },
-  ambient: { sky: "#f0d8b8", ground: "#6d5843", intensity: 0.6 },
+  sun: { position: [-42, 30, 34], color: "#ffe8c8", intensity: 2.2 },
+  ambient: { sky: "#fff3e2", ground: "#d8c6ae", intensity: 1.05 },
   world: {
     hills: HILLS,
-    hdr: "/metaverse/tex/sky_autumn.hdr",
-    fog: ["#e6cfb2", 40, 175],
+    fog: ["#f1e3cd", 48, 200],
   },
   lanterns: true,
   map: {

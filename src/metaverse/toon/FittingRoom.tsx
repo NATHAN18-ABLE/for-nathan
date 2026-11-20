@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { OPEN_ROOMS } from "@/lib/metaverse/open.ts";
+import { DISTRICTS } from "@/lib/match/districts.ts";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { Shuffle } from "@phosphor-icons/react";
@@ -42,8 +45,9 @@ const T = {
     scarfColor: "Scarf colour",
     scarfN: (n: number) => `Scarf colour ${n}`,
     shuffle: "Surprise me",
-    saved:
-      "Saved on this device. Your traveler will look like this in the metaverse.",
+    saved: "Saved on this device. Your traveler will look like this in the metaverse.",
+    back: "All rooms",
+    enter: (room: string) => `Walk into ${room}`,
     preview: "Try a move",
     actions: {
       idle: "Stand",
@@ -71,6 +75,8 @@ const T = {
     scarfN: (n: number) => `목도리 색 ${n}`,
     shuffle: "무작위로 고르기",
     saved: "이 기기에 저장됩니다. 메타버스에서 이 모습으로 걷게 됩니다.",
+    back: "모든 방",
+    enter: (room: string) => `${room}로 들어가기`,
     preview: "동작 보기",
     actions: {
       idle: "서 있기",
@@ -93,6 +99,13 @@ export function FittingRoom() {
   const [av, setAv] = useState<Avatar>(() => defaultAvatar("f"));
   const [action, setAction] = useState<Action>("idle");
   const [look, setLook] = useState<Look>(defaultLook);
+  // Where to go next: the room that sent the traveler here, or the first open room.
+  const [room, setRoom] = useState(OPEN_ROOMS[0]);
+  useEffect(() => {
+    const from = new URLSearchParams(location.search).get("from");
+    if (from && OPEN_ROOMS.includes(from)) setRoom(from);
+  }, []);
+  const roomName = DISTRICTS.find((d) => d.slug === room)?.[lang === "ko" ? "nameKo" : "nameEn"] ?? room;
 
   useEffect(() => {
     try {
@@ -195,6 +208,9 @@ export function FittingRoom() {
       </div>
 
       <aside className={styles.panel}>
+        <Link href="/metaverse" className={styles.back}>
+          ← {t.back}
+        </Link>
         <header className={styles.head}>
           <div>
             <h1>{t.title}</h1>
@@ -369,10 +385,15 @@ export function FittingRoom() {
         </section>
 
         <footer className={styles.foot}>
-          <button type="button" className={styles.shuffle} onClick={shuffle}>
-            <Shuffle size={18} weight="bold" aria-hidden="true" />
-            {t.shuffle}
-          </button>
+          <div className={styles.footRow}>
+            <Link className="btn btn-primary" href={`/metaverse/${room}`}>
+              {t.enter(roomName)}
+            </Link>
+            <button type="button" className={styles.shuffle} onClick={shuffle}>
+              <Shuffle size={18} weight="bold" aria-hidden="true" />
+              {t.shuffle}
+            </button>
+          </div>
           <p>{t.saved}</p>
         </footer>
       </aside>

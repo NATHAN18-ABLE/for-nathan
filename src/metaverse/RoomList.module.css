@@ -29,6 +29,28 @@
   color: var(--ink-soft);
 }
 
+.wardrobe {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 16px;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--cobalt);
+  text-underline-offset: 0.25em;
+}
+
+.wardrobe span {
+  transition: transform 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wardrobe:hover span {
+    transform: translateX(3px);
+  }
+}
+
 .rooms {
   margin: clamp(40px, 7svh, 72px) 0 0;
   padding: 0;

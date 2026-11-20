@@ -24,6 +24,8 @@ export type { Palette };
 export type Action = "idle" | "walk" | "wave" | "bow" | "sit" | "hop";
 
 const BINYEO = "#d8b25c";
+// Steps per second × π: brisk little steps, so the feet keep up with the walking speed.
+const WALK_RATE = 9;
 const DAENGGI = "#c23a4a";
 const WHITE = "#fdfaf3";
 
@@ -106,11 +108,13 @@ function expressionFor(action: Action): Expression {
   return action === "wave" || action === "hop" ? "smile" : action === "bow" ? "happy" : "open";
 }
 
-export function ToonFigure({ outfit, hair, palette, action, look, lashes = false, seed = 0, ...group }: {
+export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle", actionRef, look, lashes = false, seed = 0, ...group }: {
   outfit: Outfit;
   hair: Hair;
   palette: Palette;
-  action: Action;
+  action?: Action;
+  // For figures driven every frame (the metaverse): read the action here instead of the prop.
+  actionRef?: React.RefObject<Action>;
   lashes?: boolean;
   look?: Look;
   seed?: number;
@@ -234,6 +238,7 @@ export function ToonFigure({ outfit, hair, palette, action, look, lashes = false
     const d = Math.min(dt, 0.05);
     st.t += d;
     const t = st.t;
+    const action = actionRef?.current ?? actionProp;
     const b = body.current, tr = torso.current, hd = head.current;
     const al = armL.current, ar = armR.current, ll = legL.current, lr = legR.current;
     if (!b || !tr || !hd || !al || !ar || !ll || !lr) return;
@@ -250,8 +255,8 @@ export function ToonFigure({ outfit, hair, palette, action, look, lashes = false
       aLx += Math.sin(t * 2.2) * 0.04;
       aRx -= Math.sin(t * 2.2) * 0.04;
     } else if (action === "walk") {
-      const f = t * 7;
-      lL = Math.sin(f) * 0.6;
+      const f = t * WALK_RATE;
+      lL = Math.sin(f) * 0.66;
       lR = -lL;
       aLx = -Math.sin(f) * 0.55;
       aRx = -aLx;
@@ -298,7 +303,7 @@ export function ToonFigure({ outfit, hair, palette, action, look, lashes = false
 
     // Something in the left hand: hold it out in front, swinging a little with the step.
     if (handItem && action !== "hop" && action !== "bow") {
-      const step = action === "walk" ? Math.sin(t * 7) * 0.12 : 0;
+      const step = action === "walk" ? Math.sin(t * WALK_RATE) * 0.12 : 0;
       aLx = (handItem === "lantern" ? -0.62 : -0.9) + step;
       aL = handItem === "lantern" ? -0.12 : -0.32;
     }
@@ -516,7 +521,7 @@ export function ToonFigure({ outfit, hair, palette, action, look, lashes = false
               </Part>
               {side < 0 && handItem && (
                 <group ref={holder} position={[0, -ARM - HAND * 0.32, 0.004]}>
-                  {handItem === "lantern" ? <Lantern moving={action === "walk"} /> : <TaegeukFan moving={action === "walk"} />}
+                  {handItem === "lantern" ? <Lantern moving={actionProp === "walk"} /> : <TaegeukFan moving={actionProp === "walk"} />}
                 </group>
               )}
             </group>

@@ -3,6 +3,7 @@
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import type { P } from "./path.ts";
 import type { Look } from "./look.ts";
+import type { Avatar } from "./outfit.ts";
 import type { WishId } from "./lanterns.ts";
 
 // Public by design: the publishable key only opens Realtime channels, there is no table data.
@@ -18,6 +19,7 @@ export interface Presence {
   name: string;
   type: string | null; // travel type code, when the test is done
   look: Look;
+  avatar?: Avatar; // figure and outfit from the wardrobe; checked with sanitizeAvatar on arrival
   x: number;
   z: number;
   heading: number;

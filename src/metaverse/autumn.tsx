@@ -7,6 +7,9 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { rand, heightAt, type Hill } from "./world";
 import type { Motion } from "./Avatar";
+import { toonWith } from "./toon/material";
+
+const leafMaterial = () => toonWith({ color: "#ffffff", side: THREE.DoubleSide, key: "leaf" });
 
 const LEAF_COLORS = ["#d24a2a", "#e0782f", "#e9a73a", "#c93b30", "#b95a2c", "#e8c14b"];
 
@@ -53,9 +56,7 @@ export function FallingLeaves({ motions, meId, count = 140 }: { motions: React.R
     mesh.instanceMatrix.needsUpdate = true;
   });
   return (
-    <instancedMesh ref={ref} args={[geom, undefined, count]} frustumCulled={false}>
-      <meshStandardMaterial side={THREE.DoubleSide} roughness={0.8} />
-    </instancedMesh>
+    <instancedMesh ref={ref} args={[geom, leafMaterial(), count]} frustumCulled={false} />
   );
 }
 
@@ -90,8 +91,6 @@ export function LeafLitter({ spots, hills = [], seed = 3 }: { spots: { x: number
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [items, hills]);
   return (
-    <instancedMesh ref={ref} args={[geom, undefined, items.length]} receiveShadow>
-      <meshStandardMaterial side={THREE.DoubleSide} roughness={0.9} />
-    </instancedMesh>
+    <instancedMesh ref={ref} args={[geom, leafMaterial(), items.length]} receiveShadow />
   );
 }

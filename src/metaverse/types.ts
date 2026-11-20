@@ -22,8 +22,8 @@ export interface RoomConfig {
   walk: Walkable;
   spawn: P;
   spawnHeading?: number; // radians, 0 faces +z
-  // v2 rooms: terrain hills, sky image and fog [color, near, far]
-  world?: { hills: Hill[]; hdr: string; fog: [string, number, number] };
+  // v2 rooms: terrain hills and fog [color, near, far]; the sky is painted from `sky`
+  world?: { hills: Hill[]; fog: [string, number, number] };
   // Where seated sit emotes look natural (a platform or bench). Optional.
   seats?: P[];
   sky: { top: string; bottom: string };

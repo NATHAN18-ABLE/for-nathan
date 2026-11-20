@@ -9,6 +9,7 @@ import { findPath, isWalkable, nearestWalkable, type P } from "@/lib/metaverse/p
 import { fetchLanterns, hangLantern, joinRoom, peekCounts, type Lantern, type Presence, type RoomConnection, type RoomEvent } from "@/lib/metaverse/realtime.ts";
 import { LANTERN_COLORS, WISHES, type WishId } from "@/lib/metaverse/lanterns.ts";
 import { ITEMS, SCARF_COLORS, defaultLook, sanitizeLook, toggleItem, type ItemId, type Look } from "@/lib/metaverse/look.ts";
+import { defaultAvatar, sanitizeAvatar, type Avatar as AvatarLook } from "@/lib/metaverse/outfit.ts";
 import { CAPACITY, MAX_INSTANCES, isIdle, pickInstance, seatMembers, statusOf } from "@/lib/metaverse/queue.ts";
 import { EMOTES, PHRASES, phraseText } from "@/lib/metaverse/phrases.ts";
 import { autoName } from "@/lib/metaverse/names.ts";
@@ -17,14 +18,13 @@ import { QUESTIONS } from "@/lib/match/questions.ts";
 import { useLang } from "@/lib/lang.ts";
 import { Phrases } from "@/components/Phrases";
 import { Avatar, WALK_SPEED, newMotion, type Motion } from "./Avatar";
-import { heightAt, LampPost } from "./world";
+import { heightAt, LampPost, ToonSky } from "./world";
 import { LanternRack } from "./Lanterns";
 import { FallingLeaves } from "./autumn";
 import { Effects } from "./Effects";
 import { chime, setSound, stopSound } from "./sound";
 import { emit } from "./bus";
 import { MapSheet } from "./MapSheet";
-import { asset } from "@/lib/base-path.ts";
 import type { Poi, RoomConfig } from "./types";
 import styles from "./Metaverse.module.css";
 
@@ -52,6 +52,7 @@ const UI = {
     watch: "Watch the craftsperson",
     dressTitle: "Dress up",
     dressBody: "Tap an item to wear it, tap again to take it off. One item per spot.",
+    wardrobe: "Change clothes in the wardrobe",
     scarfColor: "Scarf colour",
     done: "Done",
     otherCopy: "Go to another copy",
@@ -95,6 +96,7 @@ const UI = {
     watch: "공방 구경하기",
     dressTitle: "꾸미기",
     dressBody: "소품을 누르면 착용하고, 다시 누르면 벗어요. 한 부위에 하나씩이에요.",
+    wardrobe: "옷장에서 옷 갈아입기",
     scarfColor: "목도리 색",
     done: "완료",
     otherCopy: "다른 방으로 가기",
@@ -171,6 +173,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     return () => clearTimeout(id);
   }, []);
   const [look, setLook] = useState<Look>(defaultLook());
+  const [avatar, setAvatar] = useState<AvatarLook>(() => defaultAvatar("f"));
   const [dressOpen, setDressOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [hangOpen, setHangOpen] = useState(false);
@@ -190,7 +193,8 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const motions = useRef(new Map<string, Motion>());
   const conn = useRef<RoomConnection | null>(null);
   const lastInput = useRef(Date.now());
-  const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.2, dist: 5.2, touchedAt: 0 });
+  // A raised three-quarter view, like looking down on a little town.
+  const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.5, dist: 7.4, touchedAt: 0 });
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinch = useRef(0);
   const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0), [room]);
@@ -210,11 +214,11 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     if (pointers.current.size === 2) {
       const [a, b] = [...pointers.current.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinch.current) v.dist = Math.min(14, Math.max(2.8, v.dist * (pinch.current / Math.max(1, d))));
+      if (pinch.current) v.dist = Math.min(14, Math.max(3.4, v.dist * (pinch.current / Math.max(1, d))));
       pinch.current = d;
     } else {
       v.yaw -= (e.clientX - prev.x) * 0.006;
-      v.pitch = Math.min(1.1, Math.max(-0.08, v.pitch + (e.clientY - prev.y) * 0.005));
+      v.pitch = Math.min(1.1, Math.max(0.05, v.pitch + (e.clientY - prev.y) * 0.005));
     }
     v.touchedAt = performance.now();
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -225,7 +229,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   };
   const onWheel = (e: React.WheelEvent) => {
     if (!room.world) return;
-    view.current.dist = Math.min(14, Math.max(2.8, view.current.dist * Math.exp(e.deltaY * 0.0012)));
+    view.current.dist = Math.min(14, Math.max(3.4, view.current.dist * Math.exp(e.deltaY * 0.0012)));
   };
   const bubbleTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
@@ -235,6 +239,11 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     me.current = { id, type: myType(), name: autoName(id) };
     try {
       setLook(sanitizeLook(JSON.parse(localStorage.getItem("seoul.mv.look2") ?? "null")));
+    } catch {}
+    try {
+      // Chosen in the wardrobe; a traveler who skipped it gets a figure at random.
+      const saved = localStorage.getItem("seoul.mv.avatar1");
+      setAvatar(saved ? sanitizeAvatar(JSON.parse(saved)) : sanitizeAvatar({ ...defaultAvatar(Math.random() < 0.5 ? "f" : "m"), skin: Math.floor(Math.random() * 4) }));
     } catch {}
     setWebgl(hasWebgl());
     setReady(true);
@@ -300,7 +309,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         : { x: room.spawn.x + (Math.random() - 0.5) * 3, z: room.spawn.z + (Math.random() - 0.5) * 1.5 };
     motions.current.set(id, newMotion(spawn.x, spawn.z, lastSpot.current?.heading ?? room.spawnHeading ?? 0));
     lastSpot.current = null;
-    const presence: Presence = { id, joinedAt: Date.now(), name, type, look, x: spawn.x, z: spawn.z, heading: 0 };
+    const presence: Presence = { id, joinedAt: Date.now(), name, type, look, avatar, x: spawn.x, z: spawn.z, heading: 0 };
     lastInput.current = Date.now();
     setAway(false);
 
@@ -542,10 +551,10 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           shadows
           dpr={lowPower ? [1, 1.25] : [1, 1.5]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-          camera={{ fov: room.world ? 50 : 34, near: 0.3, far: 600, position: [0, 12, 14] }}
+          camera={{ fov: room.world ? 42 : 34, near: 0.3, far: 600, position: [0, 12, 14] }}
           onCreated={({ gl }) => {
-            gl.toneMapping = THREE.NeutralToneMapping;
-            gl.toneMappingExposure = 1.08;
+            // Toon colours are painted as they should look; no film curve on top.
+            gl.toneMapping = THREE.NoToneMapping;
           }}
         >
           <Lights room={room} motions={motions} meId={me.current.id} low={lowPower} />
@@ -564,6 +573,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               key="me"
               motion={motions.current.get(me.current.id) ?? newMotion(room.spawn.x, room.spawn.z)}
               look={look}
+              avatar={avatar}
               name={me.current.name}
               type={me.current.type}
               sameType={false}
@@ -582,6 +592,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
                 key={p.id}
                 motion={m}
                 look={sanitizeLook(p.look)}
+                avatar={sanitizeAvatar(p.avatar)}
                 name={p.name}
                 type={p.type}
                 sameType={!!p.type && p.type === me.current.type}
@@ -764,6 +775,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             </fieldset>
           )}
           <div className={styles.sheetActions}>
+            <Link className={styles.ghost} href={`/metaverse/wardrobe?from=${room.slug}`}>
+              {t.wardrobe}
+            </Link>
             <button type="button" className="btn btn-primary" onClick={() => setDressOpen(false)}>
               {t.done}
             </button>
@@ -920,7 +934,7 @@ function Lights({ room, motions, meId, low }: { room: RoomConfig; motions: React
       />
       {room.world ? (
         <>
-          <Environment files={asset(room.world.hdr)} background environmentIntensity={0.9} backgroundIntensity={1} />
+          <ToonSky top={room.sky.top} horizon={room.sky.bottom} />
           <fog attach="fog" args={room.world.fog} />
         </>
       ) : (
@@ -1207,9 +1221,16 @@ function PoiCard({ poi, lang }: { poi: Poi; lang: "en" | "ko" }) {
 
 /** Covers the first load (textures, the traveler, the sky) with a quiet progress line. */
 function Loader({ label }: { label: string }) {
-  const { progress, active } = useProgress();
+  const { progress, active, total } = useProgress();
   const [gone, setGone] = useState(false);
-  const done = !active && progress >= 100;
+  // The toon world is drawn in code, so often nothing is downloaded at all; then the first
+  // frames are the only wait.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setSettled(true), 900);
+    return () => clearTimeout(id);
+  }, []);
+  const done = !active && (progress >= 100 || (settled && total === 0));
   useEffect(() => {
     if (!done) return;
     const id = setTimeout(() => setGone(true), 700);

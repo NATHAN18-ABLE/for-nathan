@@ -1,3 +1,0 @@
-Textures and sky from Poly Haven (polyhaven.com), CC0 1.0 Universal.
-Sources: grey_roof_tiles, granite_tile, japanese_stone_wall, painted_plaster_wall, brown_planks_04, forest_ground_04, sparse_grass, kloofendal_48d_partly_cloudy_puresky, evening_road_01_puresky.
-Downloaded 2026-11-16 from dl.polyhaven.org via api.polyhaven.com.

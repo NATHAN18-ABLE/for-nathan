@@ -25,6 +25,7 @@ const TEXT = {
   en: {
     lede: "Walk the streets of Seoul with friends before you go. Each room holds up to thirty people, and a new room opens when one fills up.",
     enter: "Enter",
+    wardrobe: "Choose your traveler in the wardrobe",
     soon: "Opening soon",
     here: (n: number) => (n === 1 ? "1 traveler here" : `${n} travelers here`),
     yours: "Your room",
@@ -33,6 +34,7 @@ const TEXT = {
   ko: {
     lede: "친구들과 함께 서울의 골목을 먼저 걸어 보세요. 방마다 30명까지 들어갈 수 있고, 가득 차면 같은 방이 하나 더 열립니다.",
     enter: "들어가기",
+    wardrobe: "옷장에서 내 캐릭터 꾸미기",
     soon: "곧 열려요",
     here: (n: number) => `지금 ${n}명`,
     yours: "나의 방",
@@ -88,6 +90,10 @@ export function RoomList() {
         <p className={styles.lede}>
           <Phrases text={t.lede} />
         </p>
+        <Link className={styles.wardrobe} href="/metaverse/wardrobe">
+          {t.wardrobe}
+          <span aria-hidden="true">→</span>
+        </Link>
         <ol className={styles.rooms}>
           {ROOMS.map((slug) => {
             const plan = PLAN[slug];

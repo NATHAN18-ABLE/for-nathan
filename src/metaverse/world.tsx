@@ -1,13 +1,15 @@
 "use client";
 
-// Building blocks for the larger, textured neighbourhood rooms (v2).
-// Materials use CC0 Poly Haven textures (public/metaverse/tex); shapes are made in code.
+// Building blocks for the neighbourhood rooms, drawn in the same soft toon style as the
+// travelers: flat colours, a light painted pattern (roof tiles, paving joints, wall stones)
+// and an ink outline on the main shapes. Everything is made in code; nothing is downloaded.
 
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { useFrame, useLoader } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { asset } from "@/lib/base-path.ts";
+import { toon, toonWith, toonGlow } from "./toon/material";
+import { Ink } from "./toon/part";
 
 type V3 = [number, number, number];
 
@@ -19,43 +21,126 @@ export function rand(seed: number) {
   };
 }
 
-/* ---------- textured materials ---------- */
+/* ---------- surfaces ---------- */
 
 const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass"] as const;
 export type TexName = (typeof TEX)[number];
 
-const matCache = new Map<string, THREE.MeshStandardMaterial>();
+// Base colours: an autumn afternoon, softened.
+const BASE: Record<TexName, string> = {
+  roof: "#6f7886",
+  granite: "#e6dfd2",
+  stonewall: "#ddd3c3",
+  plaster: "#f7f1e5",
+  wood: "#b8865a",
+  ground: "#dfcaa6",
+  grass: "#b2c77f",
+};
 
-/** A textured material; `repeat` is metres per texture tile. */
-export function useSurface(name: TexName, metresPerTile: number, tint = "#ffffff", gain = 1) {
-  const [diff, nor, rough] = useLoader(THREE.TextureLoader, [
-    asset(`/metaverse/tex/${name}_diff.jpg`),
-    asset(`/metaverse/tex/${name}_nor.jpg`),
-    asset(`/metaverse/tex/${name}_rough.jpg`),
-  ]);
-  return useMemo(() => {
-    const key = `${name}|${metresPerTile}|${tint}|${gain}`;
-    let m = matCache.get(key);
-    if (m) return m;
-    const prep = (t: THREE.Texture, color: boolean) => {
-      const c = t.clone();
-      c.wrapS = c.wrapT = THREE.RepeatWrapping;
-      c.repeat.set(1 / metresPerTile, 1 / metresPerTile);
-      c.anisotropy = 4;
-      if (color) c.colorSpace = THREE.SRGBColorSpace;
-      c.needsUpdate = true;
-      return c;
-    };
-    m = new THREE.MeshStandardMaterial({
-      map: prep(diff, true),
-      normalMap: prep(nor, false),
-      roughnessMap: prep(rough, false),
-      color: new THREE.Color(tint).multiplyScalar(gain),
-      roughness: 1,
-    });
-    matCache.set(key, m);
-    return m;
-  }, [diff, nor, rough, name, metresPerTile, tint, gain]);
+/**
+ * One tile of a surface's pattern, painted as light and shade around white, so the material's
+ * colour shows through: tile rows on roofs, joints between paving slabs, stones in a wall.
+ */
+function paintPattern(name: TexName): HTMLCanvasElement | null {
+  if (name === "plaster") return null;
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const g = c.getContext("2d")!;
+  const r = rand(name.length * 31);
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, 256, 256);
+  if (name === "roof") {
+    // Four columns of round tiles per tile width, each with a lit crest and a shaded gap.
+    for (let i = 0; i < 4; i++) {
+      const x = i * 64;
+      const grad = g.createLinearGradient(x, 0, x + 64, 0);
+      grad.addColorStop(0, "#b9bec8");
+      grad.addColorStop(0.18, "#e9ecf0");
+      grad.addColorStop(0.5, "#ffffff");
+      grad.addColorStop(0.82, "#e3e6ec");
+      grad.addColorStop(1, "#b9bec8");
+      g.fillStyle = grad;
+      g.fillRect(x, 0, 64, 256);
+    }
+    g.fillStyle = "rgba(120,128,140,0.35)";
+    for (let j = 0; j < 4; j++) g.fillRect(0, j * 64, 256, 3);
+  } else if (name === "granite") {
+    // Slabs in a running bond.
+    g.fillStyle = "#d9d3c7";
+    for (let j = 0; j < 2; j++) {
+      g.fillRect(0, j * 128, 256, 4);
+      const off = j % 2 ? 64 : 0;
+      for (let i = 0; i < 3; i++) g.fillRect(((off + i * 128) % 256) - 2, j * 128, 4, 128);
+    }
+  } else if (name === "stonewall") {
+    // Rounded stones in rows, set in pale mortar.
+    g.fillStyle = "#cfc6b8";
+    g.fillRect(0, 0, 256, 256);
+    for (let y = 0; y < 256; y += 42) {
+      let x = -((y / 42) % 2) * 30;
+      while (x < 256) {
+        const w = 44 + r() * 40;
+        const shade = 236 + Math.floor(r() * 19);
+        g.fillStyle = `rgb(${shade},${shade - 2},${shade - 6})`;
+        g.beginPath();
+        g.roundRect(x + 3, y + 3, w - 6, 36, 12);
+        g.fill();
+        if (x + w > 256) {
+          g.beginPath();
+          g.roundRect(x + 3 - 256, y + 3, w - 6, 36, 12);
+          g.fill();
+        }
+        x += w;
+      }
+    }
+  } else if (name === "wood") {
+    g.strokeStyle = "rgba(120,80,50,0.12)";
+    g.lineWidth = 3;
+    for (let i = 0; i < 9; i++) {
+      const y = r() * 256;
+      g.beginPath();
+      g.moveTo(0, y);
+      g.bezierCurveTo(80, y + (r() - 0.5) * 20, 170, y + (r() - 0.5) * 20, 256, y);
+      g.stroke();
+    }
+  } else {
+    // grass and earth: soft blotches so a large field is not one flat sheet
+    for (let i = 0; i < 26; i++) {
+      g.fillStyle = r() > 0.5 ? "rgba(0,0,0,0.045)" : "rgba(255,255,255,0.5)";
+      g.beginPath();
+      g.ellipse(r() * 256, r() * 256, 10 + r() * 26, 6 + r() * 16, r() * 3, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  return c;
+}
+
+const patterns = new Map<TexName, HTMLCanvasElement | null>();
+const surfaces = new Map<string, THREE.MeshToonMaterial>();
+
+/** A surface material; `metresPerTile` is how far one tile of its pattern stretches. */
+export function useSurface(name: TexName, metresPerTile: number, tint = "#ffffff", _gain = 1) {
+  return useMemo(() => surface(name, metresPerTile, tint), [name, metresPerTile, tint]);
+}
+
+export function surface(name: TexName, metresPerTile: number, tint = "#ffffff") {
+  const key = `${name}|${metresPerTile}|${tint}`;
+  let m = surfaces.get(key);
+  if (m) return m;
+  if (!patterns.has(name)) patterns.set(name, paintPattern(name));
+  const canvas = patterns.get(name)!;
+  let map: THREE.Texture | undefined;
+  if (canvas) {
+    map = new THREE.CanvasTexture(canvas);
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(1 / metresPerTile, 1 / metresPerTile);
+    map.anisotropy = 4;
+    map.colorSpace = THREE.SRGBColorSpace;
+  }
+  const color = `#${new THREE.Color(BASE[name]).multiply(new THREE.Color(tint)).getHexString()}`;
+  m = toonWith({ color, map, key: `surface|${key}` });
+  surfaces.set(key, m);
+  return m;
 }
 
 /** Box with UVs in metres, so textures keep their scale on any size. */
@@ -74,10 +159,14 @@ export function worldBox(w: number, h: number, d: number) {
   return g;
 }
 
-export function TexBox({ size, position, rotation = 0, name, tile, tint, gain, cast = true }: { size: V3; position: V3; rotation?: number; name: TexName; tile: number; tint?: string; gain?: number; cast?: boolean }) {
+export function TexBox({ size, position, rotation = 0, name, tile, tint, gain, cast = true, line = true }: { size: V3; position: V3; rotation?: number; name: TexName; tile: number; tint?: string; gain?: number; cast?: boolean; line?: boolean }) {
   const mat = useSurface(name, tile, tint, gain);
   const geom = useMemo(() => worldBox(...size), [size[0], size[1], size[2]]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <mesh geometry={geom} material={mat} position={position} rotation={[0, rotation, 0]} castShadow={cast} receiveShadow userData={{ solid: true }} />;
+  return (
+    <mesh geometry={geom} material={mat} position={position} rotation={[0, rotation, 0]} castShadow={cast} receiveShadow userData={{ solid: true }}>
+      {line && <Ink />}
+    </mesh>
+  );
 }
 
 /* ---------- terrain ---------- */
@@ -100,8 +189,7 @@ export function heightAt(x: number, z: number, hills: Hill[]) {
 }
 
 export function Terrain({ size, hills, name = "grass", tile = 6 }: { size: [number, number]; hills: Hill[]; name?: TexName; tile?: number }) {
-  // The CC0 grass is late-summer dry; a spring tint keeps the morning fresh.
-  const mat = useSurface(name, tile, "#a9d48a", 1.15);
+  const mat = useSurface(name, tile);
   const geom = useMemo(() => {
     const g = new THREE.PlaneGeometry(size[0], size[1], Math.round(size[0] / 1.5), Math.round(size[1] / 1.5));
     g.rotateX(-Math.PI / 2);
@@ -122,7 +210,7 @@ export function Terrain({ size, hills, name = "grass", tile = 6 }: { size: [numb
 export function Pavement({ from, to, name = "granite", tile = 2.4, y = 0.01, gain = 1 }: { from: [number, number]; to: [number, number]; name?: TexName; tile?: number; y?: number; gain?: number }) {
   const w = to[0] - from[0];
   const d = to[1] - from[1];
-  const mat = useSurface(name, tile, name === "granite" ? "#fff0dc" : "#ffffff", gain);
+  const mat = useSurface(name, tile, "#ffffff", gain);
   const geom = useMemo(() => {
     const g = new THREE.PlaneGeometry(w, d);
     g.rotateX(-Math.PI / 2);
@@ -182,8 +270,8 @@ export function gableRoofGeometry(length: number, depth: number, height: number,
 }
 
 export function GableRoof({ length, depth, height, position = [0, 0, 0], lift, sag }: { length: number; depth: number; height: number; position?: V3; lift?: number; sag?: number }) {
-  const mat = useSurface("roof", 1.4, "#c9ccd2");
-  const under = useSurface("wood", 1.5, "#9b7b5c");
+  const mat = useSurface("roof", 1.4);
+  const under = useSurface("wood", 1.5, "#d8c6b2");
   const top = useMemo(() => gableRoofGeometry(length, depth, height, lift, sag), [length, depth, height, lift, sag]);
   const bottom = useMemo(() => {
     const g = gableRoofGeometry(length, depth, height, lift, sag);
@@ -192,15 +280,17 @@ export function GableRoof({ length, depth, height, position = [0, 0, 0], lift, s
     g.computeVertexNormals();
     return g;
   }, [length, depth, height, lift, sag]);
-  const ridge = useSurface("plaster", 2, "#e9e6df");
+  const ridge = useSurface("plaster", 2, "#f2efe9");
   return (
     <group position={position}>
-      <mesh geometry={top} material={mat} castShadow receiveShadow />
+      <mesh geometry={top} material={mat} castShadow receiveShadow>
+        <Ink />
+      </mesh>
       <mesh geometry={bottom} material={under} />
       {/* ridge: a white-banded tile ridge */}
-      <mesh position={[0, height + 0.05, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+      <mesh position={[0, height + 0.05, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={toon("#545c69")}>
         <cylinderGeometry args={[0.16, 0.16, length * 0.98, 12]} />
-        <meshStandardMaterial color="#4b5058" roughness={0.6} />
+        <Ink />
       </mesh>
       <mesh position={[0, height - 0.12, 0]} material={ridge}>
         <boxGeometry args={[length * 0.96, 0.16, 0.36]} />
@@ -216,13 +306,15 @@ export function Hanok({ position, rotation = 0, width = 9, depth = 6, glow = 0.3
   const bayW = width / bays;
   const r = useMemo(() => rand(seed), [seed]);
   const lit = useMemo(() => Array.from({ length: bays }, () => r() > 0.45), [bays, r]);
-  const wood = useSurface("wood", 1.2, "#b98d63");
-  const plaster = useSurface("plaster", 2.5, "#fbf6ec", 1.15);
+  const wood = useSurface("wood", 1.2);
+  const plaster = useSurface("plaster", 2.5);
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       <TexBox size={[width + 0.6, 0.6, depth + 0.6]} position={[0, 0.3, 0]} name="granite" tile={1.2} tint="#d8d4cc" />
       {/* walls */}
-      <mesh position={[0, 0.6 + wallH / 2, -0.2]} material={plaster} castShadow receiveShadow userData={{ solid: true }} geometry={useMemo(() => worldBox(width - 0.3, wallH, depth - 0.8), [width, depth])} />
+      <mesh position={[0, 0.6 + wallH / 2, -0.2]} material={plaster} castShadow receiveShadow userData={{ solid: true }} geometry={useMemo(() => worldBox(width - 0.3, wallH, depth - 0.8), [width, depth])}>
+        <Ink />
+      </mesh>
       {/* a stone footing around the walls, and a small window on each side */}
       <TexBox size={[width - 0.22, 0.85, depth - 0.72]} position={[0, 0.6 + 0.425, -0.2]} name="stonewall" tile={1.3} tint="#ece5d9" />
       {[-1, 1].map((side) => (
@@ -234,10 +326,12 @@ export function Hanok({ position, rotation = 0, width = 9, depth = 6, glow = 0.3
       {Array.from({ length: bays + 1 }, (_, i) => (
         <mesh key={i} position={[-width / 2 + i * bayW, 0.6 + wallH / 2, depth / 2 - 0.35]} material={wood} castShadow>
           <cylinderGeometry args={[0.17, 0.19, wallH, 12]} />
+          <Ink />
         </mesh>
       ))}
       <mesh position={[0, 0.6 + wallH + 0.12, depth / 2 - 0.35]} material={wood} castShadow>
         <boxGeometry args={[width + 0.3, 0.3, 0.32]} />
+        <Ink />
       </mesh>
       {/* bays: lattice doors, some lit from inside */}
       {Array.from({ length: bays }, (_, i) => (
@@ -259,13 +353,11 @@ function LatticeDoor({ position, width, height, glow }: { position: V3; width: n
   }, [width, height]);
   return (
     <group position={position}>
-      <mesh position={[0, height / 2, 0]}>
+      {/* hanji paper, warm where a lamp is lit inside */}
+      <mesh position={[0, height / 2, 0]} material={toonWith({ color: "#fbf3e2", emissive: "#ffc983", emissiveIntensity: Math.round(glow * 10) / 10 })}>
         <boxGeometry args={[width, height, 0.03]} />
-        <meshStandardMaterial color="#f6efe0" emissive="#ffcf8a" emissiveIntensity={glow} roughness={0.9} />
       </mesh>
-      <mesh geometry={bars}>
-        <meshStandardMaterial color="#7a5636" roughness={0.7} />
-      </mesh>
+      <mesh geometry={bars} material={toon("#8a6240")} />
     </group>
   );
 }
@@ -334,7 +426,7 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
     const v = new THREE.Vector3();
     for (let i = 0; i < p.count; i++) {
       v.fromBufferAttribute(p, i);
-      const bump = 1 + 0.09 * Math.sin(v.x * 5 + seed) * Math.cos(v.z * 4.3) + 0.06 * Math.sin(v.y * 7.1 + seed * 2);
+      const bump = 1 + 0.05 * Math.sin(v.x * 4 + seed) * Math.cos(v.z * 3.6) + 0.035 * Math.sin(v.y * 5.3 + seed * 2);
       p.setXYZ(i, v.x * bump, v.y * bump * 0.86, v.z * bump);
     }
     g.computeVertexNormals();
@@ -386,12 +478,12 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
 
   return (
     <group>
-      <instancedMesh ref={trunk} args={[undefined, undefined, trees.length]} castShadow>
-        <cylinderGeometry args={[0.12, 0.2, 1, 7]} />
-        <meshStandardMaterial color="#6e533c" roughness={0.9} />
+      <instancedMesh ref={trunk} args={[undefined, undefined, trees.length]} castShadow material={toon("#7d5a3e")}>
+        <cylinderGeometry args={[0.12, 0.2, 1, 10]} />
+        <Ink />
       </instancedMesh>
-      <instancedMesh ref={crown} args={[crownGeo, undefined, blobs.length]} castShadow receiveShadow>
-        <meshStandardMaterial roughness={0.8} />
+      <instancedMesh ref={crown} args={[crownGeo, undefined, blobs.length]} castShadow material={toonWith({ color: "#ffffff", key: "tree-crown" })}>
+        <Ink />
       </instancedMesh>
     </group>
   );
@@ -420,34 +512,34 @@ export function Mountains({ seed = 7, radius = 170 }: { seed?: number; radius?: 
   }, [seed, radius]);
   return (
     <mesh geometry={geom}>
-      {/* Kept out of the fog so the ridges stay green rather than melting into the warm haze. */}
-      <meshStandardMaterial color="#5f7f58" roughness={1} side={THREE.BackSide} fog={false} />
+      {/* Pale, like distant hills in a picture book; kept out of the fog so they stay hills. */}
+      <primitive object={toonWith({ color: "#a9bd94", side: THREE.BackSide, fog: false })} attach="material" />
     </mesh>
   );
 }
 
 /** A street lamp with a paper shade. Travelers light it; it fades on as it warms up. */
 export function LampPost({ position, lit, hills = [] }: { position: [number, number]; lit: boolean; hills?: Hill[] }) {
-  const shade = useRef<THREE.MeshStandardMaterial>(null);
+  const shade = useMemo(() => toonGlow("#fff6e6", "#ffb866", 0.08), []);
   const glow = useRef(lit ? 1 : 0);
   useFrame((_, dt) => {
     glow.current += ((lit ? 1 : 0) - glow.current) * (1 - Math.exp(-dt * 2.5));
-    if (shade.current) shade.current.emissiveIntensity = 0.08 + glow.current * 2.6;
+    shade.emissiveIntensity = 0.08 + glow.current * 2.6;
   });
   const y = heightAt(position[0], position[1], hills);
   return (
     <group position={[position[0], y, position[1]]}>
-      <mesh position={[0, 1.4, 0]} castShadow>
-        <cylinderGeometry args={[0.06, 0.08, 2.8, 8]} />
-        <meshStandardMaterial color="#2c2f35" roughness={0.6} />
+      <mesh position={[0, 1.4, 0]} castShadow material={toon("#3d424c")}>
+        <cylinderGeometry args={[0.07, 0.09, 2.8, 10]} />
+        <Ink />
       </mesh>
-      <mesh position={[0, 2.95, 0]}>
+      <mesh position={[0, 2.95, 0]} material={shade}>
         <boxGeometry args={[0.42, 0.5, 0.42]} />
-        <meshStandardMaterial ref={shade} color="#fff4de" emissive="#ffb866" emissiveIntensity={0.08} roughness={0.8} />
+        <Ink />
       </mesh>
-      <mesh position={[0, 3.3, 0]}>
+      <mesh position={[0, 3.3, 0]} material={toon("#3d424c")}>
         <coneGeometry args={[0.36, 0.22, 4]} />
-        <meshStandardMaterial color="#2c2f35" roughness={0.6} />
+        <Ink />
       </mesh>
     </group>
   );
@@ -482,14 +574,64 @@ export function JarTerrace({ position, rotation = 0, seed = 2 }: { position: [nu
       <TexBox size={[3.6, 0.32, 2.1]} position={[0, 0.16, -0.4]} name="granite" tile={1.2} />
       {jars.map((j, i) => (
         <group key={i} position={[j.x, 0.32, j.z]} scale={j.s}>
-          <mesh geometry={jar} castShadow receiveShadow>
-            <meshStandardMaterial color="#5a3424" roughness={0.28} metalness={0.05} />
+          <mesh geometry={jar} castShadow material={toon("#7a4630")}>
+            <Ink />
           </mesh>
-          <mesh geometry={lid} position={[0, 0.69, 0]} castShadow>
-            <meshStandardMaterial color="#4b2b1e" roughness={0.3} />
+          <mesh geometry={lid} position={[0, 0.69, 0]} castShadow material={toon("#64382a")}>
+            <Ink />
           </mesh>
         </group>
       ))}
+    </group>
+  );
+}
+
+/* ---------- sky ---------- */
+
+/** A painted sky: a soft vertical gradient and a ring of round clouds drifting very slowly. */
+export function ToonSky({ top, horizon }: { top: string; horizon: string }) {
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        uniforms: { top: { value: new THREE.Color(top) }, horizon: { value: new THREE.Color(horizon) } },
+        vertexShader: "varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+        fragmentShader:
+          "uniform vec3 top; uniform vec3 horizon; varying vec3 vDir; void main() { float k = smoothstep(-0.05, 0.55, vDir.y); gl_FragColor = vec4(mix(horizon, top, k), 1.0); }",
+      }),
+    [top, horizon],
+  );
+  const clouds = useMemo(() => {
+    const r = rand(21);
+    return Array.from({ length: 14 }, () => {
+      const a = r() * Math.PI * 2;
+      const d = 150 + r() * 50;
+      return { x: Math.cos(a) * d, y: 38 + r() * 34, z: Math.sin(a) * d, s: 7 + r() * 7, puffs: Array.from({ length: 4 }, (_, i) => ({ x: (i - 1.5) * 1.1 + (r() - 0.5) * 0.6, y: (r() - 0.3) * 0.7, s: 0.8 + r() * 0.6 })) };
+    });
+  }, []);
+  const ring = useRef<THREE.Group>(null);
+  useFrame((_, dt) => {
+    if (ring.current) ring.current.rotation.y += Math.min(dt, 0.05) * 0.004;
+  });
+  const cloudMat = useMemo(() => toonWith({ color: "#fffaf1", fog: false, key: "cloud" }), []);
+  return (
+    <group>
+      <mesh material={material} renderOrder={-1}>
+        <sphereGeometry args={[320, 32, 16]} />
+      </mesh>
+      <group ref={ring}>
+        {clouds.map((c, i) => (
+          <group key={i} position={[c.x, c.y, c.z]} scale={[c.s, c.s * 0.62, c.s]} rotation={[0, -Math.atan2(c.z, c.x), 0]}>
+            {c.puffs.map((p, j) => (
+              <mesh key={j} position={[0, p.y, p.x]} scale={p.s} material={cloudMat}>
+                <sphereGeometry args={[1, 16, 12]} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+      </group>
     </group>
   );
 }

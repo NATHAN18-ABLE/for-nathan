@@ -62,6 +62,31 @@ export function toon(color: string) {
   return m;
 }
 
+/** A toon material with more settings (a pattern, two sides, glow, out of the fog), cached by its settings. */
+export function toonWith(o: { color: string; map?: THREE.Texture; side?: THREE.Side; fog?: boolean; emissive?: string; emissiveIntensity?: number; key?: string }) {
+  const key = o.key ?? `${o.color}|${o.map?.uuid ?? ""}|${o.side ?? 0}|${o.fog ?? true}|${o.emissive ?? ""}|${o.emissiveIntensity ?? 0}`;
+  let m = cache.get(key);
+  if (!m) {
+    m = patch(
+      new THREE.MeshToonMaterial({
+        color: o.color,
+        map: o.map ?? null,
+        side: o.side ?? THREE.FrontSide,
+        fog: o.fog ?? true,
+        gradientMap: getRamp(),
+        ...(o.emissive ? { emissive: new THREE.Color(o.emissive), emissiveIntensity: o.emissiveIntensity ?? 1 } : {}),
+      }),
+    );
+    cache.set(key, m);
+  }
+  return m;
+}
+
+/** A toon material of its own, for a glow that changes over time (lamps). */
+export function toonGlow(color: string, emissive: string, emissiveIntensity = 0) {
+  return patch(new THREE.MeshToonMaterial({ color, emissive: new THREE.Color(emissive), emissiveIntensity, gradientMap: getRamp() }));
+}
+
 /** A toon material of its own, for parts whose texture changes (the face). */
 export function toonMapped(map: THREE.Texture) {
   return patch(new THREE.MeshToonMaterial({ color: "#ffffff", map, gradientMap: getRamp() }));
