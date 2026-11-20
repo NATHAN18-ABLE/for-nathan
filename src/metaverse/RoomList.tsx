@@ -17,7 +17,7 @@ import styles from "./RoomList.module.css";
 const PLAN: Record<string, { place: { en: string; ko: string }; hour: { en: string; ko: string }; sky: [string, string] }> = {
   jongno: { place: { en: "Seosulla-gil, along the Jongmyo wall", ko: "서순라길, 종묘 돌담길" }, hour: { en: "Autumn evening", ko: "가을 저녁" }, sky: ["#2f3b6b", "#eea07c"] },
   seodaemun: { place: { en: "Ansan Jarak-gil forest boardwalk", ko: "안산 자락길 숲길" }, hour: { en: "Autumn day", ko: "가을 낮" }, sky: ["#8ec3ea", "#e6f0ea"] },
-  yongsan: { place: { en: "Haebangchon hillside stairs", ko: "해방촌 언덕 계단길" }, hour: { en: "Sunset", ko: "해 질 녘" }, sky: ["#8fa6d6", "#f2c9a5"] },
+  yongsan: { place: { en: "Haebangchon, the hillside village", ko: "해방촌 언덕 마을" }, hour: { en: "Autumn afternoon", ko: "가을 오후" }, sky: ["#7fb2e0", "#f6dcb8"] },
   yeongdeungpo: { place: { en: "Mullae ironworks alleys", ko: "문래 철공소 골목" }, hour: { en: "Night", ko: "밤" }, sky: ["#1d2a5a", "#4a4f7a"] },
 };
 

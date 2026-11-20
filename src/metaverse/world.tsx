@@ -26,7 +26,7 @@ export function rand(seed: number) {
 
 /* ---------- surfaces ---------- */
 
-const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass", "deck"] as const;
+const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass", "deck", "facade"] as const;
 export type TexName = (typeof TEX)[number];
 
 // Base colours: an autumn afternoon, softened.
@@ -39,6 +39,7 @@ const BASE: Record<TexName, string> = {
   ground: "#dfcaa6",
   grass: "#b2c77f",
   deck: "#c39467",
+  facade: "#ffffff",
 };
 
 /**
@@ -97,6 +98,17 @@ function paintPattern(name: TexName): HTMLCanvasElement | null {
         x += w;
       }
     }
+  } else if (name === "facade") {
+    // One storey of a small house: a window with a frame and a sill, the rest plain wall.
+    g.fillStyle = "#5f6f82";
+    g.fillRect(70, 70, 116, 110);
+    g.fillStyle = "#8ea3b8";
+    g.fillRect(78, 78, 48, 46);
+    g.fillStyle = "#fbfaf6";
+    g.fillRect(124, 70, 8, 110);
+    g.fillRect(70, 122, 116, 6);
+    g.fillStyle = "#d9d3c8";
+    g.fillRect(62, 180, 132, 10);
   } else if (name === "deck") {
     // Deck boards: four planks per tile with a dark seam between each.
     for (let j = 0; j < 4; j++) {
@@ -200,10 +212,10 @@ export function heightAt(x: number, z: number, hills: Hill[]) {
   return y;
 }
 
-export function Terrain({ size, hills, name = "grass", tile = 6 }: { size: [number, number]; hills: Hill[]; name?: TexName; tile?: number }) {
+export function Terrain({ size, hills, name = "grass", tile = 6, step = 1.5 }: { size: [number, number]; hills: Hill[]; name?: TexName; tile?: number; step?: number }) {
   const mat = useSurface(name, tile);
   const geom = useMemo(() => {
-    const g = new THREE.PlaneGeometry(size[0], size[1], Math.round(size[0] / 1.5), Math.round(size[1] / 1.5));
+    const g = new THREE.PlaneGeometry(size[0], size[1], Math.round(size[0] / step), Math.round(size[1] / step));
     g.rotateX(-Math.PI / 2);
     const pos = g.attributes.position;
     const uv = g.attributes.uv;
@@ -686,7 +698,18 @@ const segment = (a: THREE.Vector3, b: THREE.Vector3, r: number) => {
  * follow the slope, a skirt down to the ground, and a railing wherever the deck ends (not where two
  * stretches meet). Built once from the walk map, so the deck and the walkable area always agree.
  */
-export function Boardwalk({ rects, hills, lift = 0.18 }: { rects: { x0: number; z0: number; x1: number; z1: number }[]; hills: Hill[]; lift?: number }) {
+export function Boardwalk({
+  rects,
+  hills,
+  lift = 0.18,
+  paving,
+}: {
+  rects: { x0: number; z0: number; x1: number; z1: number }[];
+  hills: Hill[];
+  lift?: number;
+  // Paved streets instead of a deck: stone slabs following the ground, no railings or skirt.
+  paving?: { name: TexName; tile: number; tint?: string };
+}) {
   const { deck, rail, skirt } = useMemo(() => {
     const y = (x: number, z: number) => heightAt(x, z, hills) + lift;
     const inside = (x: number, z: number) => rects.some((r) => x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1);
@@ -755,11 +778,15 @@ export function Boardwalk({ rects, hills, lift = 0.18 }: { rects: { x0: number; 
   }, [rects, hills, lift]);
   return (
     <group>
-      <mesh geometry={deck} material={surface("deck", 1)} receiveShadow />
-      <mesh geometry={skirt} material={toonWith({ color: "#8a6440", side: THREE.DoubleSide, key: "deck-skirt" })} />
-      <mesh geometry={rail} material={toon("#9a6c45")} castShadow>
-        <Ink />
-      </mesh>
+      <mesh geometry={deck} material={paving ? surface(paving.name, paving.tile, paving.tint) : surface("deck", 1)} receiveShadow />
+      {!paving && (
+        <>
+          <mesh geometry={skirt} material={toonWith({ color: "#8a6440", side: THREE.DoubleSide, key: "deck-skirt" })} />
+          <mesh geometry={rail} material={toon("#9a6c45")} castShadow>
+            <Ink />
+          </mesh>
+        </>
+      )}
     </group>
   );
 }
@@ -812,8 +839,17 @@ export function CityView({ from, to, seed = 4, tower, base = 0 }: { from: [numbe
           <mesh scale={[34, 20, 30]} material={toon("#7f9e6a")}>
             <sphereGeometry args={[1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
           </mesh>
-          {/* N Seoul Tower */}
-          <group position={[0, 19.5, 0]}>
+          <SeoulTower position={[0, 19.5, 0]} />
+        </group>
+      )}
+    </group>
+  );
+}
+
+/** N Seoul Tower: a slim white shaft, the observation rings and the red mast. */
+export function SeoulTower({ position, scale = 1 }: { position: V3; scale?: number }) {
+  return (
+          <group position={position} scale={scale}>
             <mesh position={[0, 9, 0]} material={toon("#f2efe9")}>
               <cylinderGeometry args={[0.9, 1.4, 18, 16]} />
               <Ink />
@@ -831,8 +867,48 @@ export function CityView({ from, to, seed = 4, tower, base = 0 }: { from: [numbe
               <Ink />
             </mesh>
           </group>
-        </group>
-      )}
+  );
+}
+
+/**
+ * A straight flight of outdoor stairs up a slope, along z: concrete steps whose tops follow the
+ * ground (so walkers stay on them), low side walls and a metal handrail on one side.
+ */
+export function Stairs({ rect, hills, rise = 1 }: { rect: { x0: number; z0: number; x1: number; z1: number }; hills: Hill[]; rise?: number }) {
+  const geo = useMemo(() => {
+    const steps: THREE.BufferGeometry[] = [];
+    const rails: THREE.BufferGeometry[] = [];
+    const w = rect.x1 - rect.x0;
+    const xc = (rect.x0 + rect.x1) / 2;
+    const n = Math.max(2, Math.round((rect.z1 - rect.z0) / 0.55));
+    const depth = (rect.z1 - rect.z0) / n;
+    let prev: THREE.Vector3 | null = null;
+    for (let i = 0; i < n; i++) {
+      const zc = rect.z0 + depth * (i + 0.5);
+      const top = heightAt(xc, zc, hills) * rise + 0.04;
+      const g = new THREE.BoxGeometry(w, 1.6, depth + 0.01);
+      g.translate(xc, top - 0.8, zc);
+      steps.push(g);
+      const p = new THREE.Vector3(rect.x1 - 0.12, top + 0.9, zc);
+      if (prev) rails.push(segment(prev, p, 0.03));
+      if (i % 4 === 0) rails.push(segment(new THREE.Vector3(p.x, top, p.z), p, 0.035));
+      prev = p;
+    }
+    const merge = (list: THREE.BufferGeometry[]) => {
+      const out = mergeGeometries(list.map((g) => (g.index ? g.toNonIndexed() : g)), false);
+      list.forEach((g) => g.dispose());
+      return out;
+    };
+    return { steps: merge(steps), rails: merge(rails) };
+  }, [rect, hills, rise]);
+  return (
+    <group>
+      <mesh geometry={geo.steps} material={toon("#d6d0c6")} receiveShadow castShadow>
+        <Ink />
+      </mesh>
+      <mesh geometry={geo.rails} material={toon("#5d6873")}>
+        <Ink />
+      </mesh>
     </group>
   );
 }
