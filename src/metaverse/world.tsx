@@ -7,7 +7,7 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { toon, toonWith, toonGlow } from "./toon/material";
 import { Ink } from "./toon/part";
 
@@ -23,7 +23,7 @@ export function rand(seed: number) {
 
 /* ---------- surfaces ---------- */
 
-const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass"] as const;
+const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass", "deck"] as const;
 export type TexName = (typeof TEX)[number];
 
 // Base colours: an autumn afternoon, softened.
@@ -35,6 +35,7 @@ const BASE: Record<TexName, string> = {
   wood: "#b8865a",
   ground: "#dfcaa6",
   grass: "#b2c77f",
+  deck: "#c39467",
 };
 
 /**
@@ -92,6 +93,14 @@ function paintPattern(name: TexName): HTMLCanvasElement | null {
         }
         x += w;
       }
+    }
+  } else if (name === "deck") {
+    // Deck boards: four planks per tile with a dark seam between each.
+    for (let j = 0; j < 4; j++) {
+      g.fillStyle = j % 2 ? "#f4eee6" : "#ffffff";
+      g.fillRect(0, j * 64, 256, 64);
+      g.fillStyle = "#b9a58f";
+      g.fillRect(0, j * 64, 256, 5);
     }
   } else if (name === "wood") {
     g.strokeStyle = "rgba(120,80,50,0.12)";
@@ -403,7 +412,7 @@ export interface TreeSpot {
   x: number;
   z: number;
   s: number;
-  kind?: "green" | "ginkgo" | "pine" | "persimmon" | "maple";
+  kind?: "green" | "ginkgo" | "pine" | "persimmon" | "maple" | "metasequoia";
 }
 
 const TREE_COLORS = {
@@ -412,6 +421,8 @@ const TREE_COLORS = {
   pine: ["#3f6b4a", "#4d7a55", "#365e40"],
   persimmon: ["#b8823c", "#c9933f", "#a8742f"],
   maple: ["#c8402a", "#dc5a2c", "#b33326", "#e27a34"],
+  // Metasequoias turn the colour of rust in late autumn.
+  metasequoia: ["#c0703a", "#b5622f", "#cf8446", "#a9693a"],
 };
 
 /** Many trees in four draw calls: trunks and three layers of soft canopy. */
@@ -436,6 +447,17 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
     const r = rand(seed + 3);
     return trees.flatMap((t) => {
       const base = heightAt(t.x, t.z, hills);
+      if (t.kind === "metasequoia") {
+        // A tall narrow spire: five stacked tufts, smaller toward the top.
+        const pal = TREE_COLORS.metasequoia;
+        return Array.from({ length: 5 }, (_, i) => ({
+          x: t.x + (r() - 0.5) * 0.15 * t.s,
+          y: base + t.s * (2.4 + i * 1.15),
+          z: t.z + (r() - 0.5) * 0.15 * t.s,
+          size: t.s * (1.15 - i * 0.18),
+          color: pal[Math.floor(r() * pal.length)],
+        }));
+      }
       const n = t.kind === "pine" ? 3 : 4;
       return Array.from({ length: n }, (_, i) => {
         const pine = t.kind === "pine";
@@ -491,7 +513,7 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
 }
 
 /** Distant ridgelines, softened by fog. */
-export function Mountains({ seed = 7, radius = 170 }: { seed?: number; radius?: number }) {
+export function Mountains({ seed = 7, radius = 170, color = "#a9bd94" }: { seed?: number; radius?: number; color?: string }) {
   const geom = useMemo(() => {
     const r = rand(seed);
     const g = new THREE.CylinderGeometry(radius, radius, 1, 160, 6, true);
@@ -514,7 +536,7 @@ export function Mountains({ seed = 7, radius = 170 }: { seed?: number; radius?: 
   return (
     <mesh geometry={geom}>
       {/* Pale, like distant hills in a picture book; kept out of the fog so they stay hills. */}
-      <primitive object={toonWith({ color: "#a9bd94", side: THREE.BackSide, fog: false })} attach="material" />
+      <primitive object={toonWith({ color, side: THREE.BackSide, fog: false })} attach="material" />
     </mesh>
   );
 }
@@ -633,6 +655,172 @@ export function ToonSky({ top, horizon }: { top: string; horizon: string }) {
           </group>
         ))}
       </group>
+    </group>
+  );
+}
+
+/* ---------- trails ---------- */
+
+const segment = (a: THREE.Vector3, b: THREE.Vector3, r: number) => {
+  const g = new THREE.CylinderGeometry(r, r, a.distanceTo(b), 6);
+  g.translate(0, a.distanceTo(b) / 2, 0);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()));
+  g.translate(a.x, a.y, a.z);
+  return g;
+};
+
+/**
+ * A wooden boardwalk laid over the hillside along a room's walkable rectangles: deck boards that
+ * follow the slope, a skirt down to the ground, and a railing wherever the deck ends (not where two
+ * stretches meet). Built once from the walk map, so the deck and the walkable area always agree.
+ */
+export function Boardwalk({ rects, hills, lift = 0.18 }: { rects: { x0: number; z0: number; x1: number; z1: number }[]; hills: Hill[]; lift?: number }) {
+  const { deck, rail, skirt } = useMemo(() => {
+    const y = (x: number, z: number) => heightAt(x, z, hills) + lift;
+    const inside = (x: number, z: number) => rects.some((r) => x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1);
+    const decks: THREE.BufferGeometry[] = [];
+    const rails: THREE.BufferGeometry[] = [];
+    const skirtPos: number[] = [];
+    for (const r of rects) {
+      const w = r.x1 - r.x0, d = r.z1 - r.z0;
+      const g = new THREE.PlaneGeometry(w, d, Math.max(1, Math.ceil(w)), Math.max(1, Math.ceil(d)));
+      g.rotateX(-Math.PI / 2);
+      g.translate(r.x0 + w / 2, 0, r.z0 + d / 2);
+      const p = g.attributes.position, uv = g.attributes.uv;
+      const alongZ = d >= w; // boards run across the way you walk
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i), z = p.getZ(i);
+        p.setY(i, y(x, z));
+        uv.setXY(i, alongZ ? x : z, alongZ ? z : x);
+      }
+      g.computeVertexNormals();
+      decks.push(g);
+      // Edges: a railing and a skirt where the deck ends.
+      const edges: [number, number, number, number, number, number][] = [
+        [r.x0, r.z0, r.x1, r.z0, 0, -1],
+        [r.x0, r.z1, r.x1, r.z1, 0, 1],
+        [r.x0, r.z0, r.x0, r.z1, -1, 0],
+        [r.x1, r.z0, r.x1, r.z1, 1, 0],
+      ];
+      for (const [ax, az, bx, bz, nx, nz] of edges) {
+        const len = Math.hypot(bx - ax, bz - az);
+        const n = Math.max(1, Math.round(len / 0.5));
+        let prev: THREE.Vector3 | null = null;
+        let sincePost = 99;
+        for (let k = 0; k <= n; k++) {
+          const x = ax + ((bx - ax) * k) / n, z = az + ((bz - az) * k) / n;
+          const open = inside(x + nx * 0.3, z + nz * 0.3);
+          const top = new THREE.Vector3(x - nx * 0.06, y(x, z) + 0.95, z - nz * 0.06);
+          if (open) {
+            prev = null;
+            continue;
+          }
+          if (prev) rails.push(segment(prev, top, 0.035));
+          if (sincePost >= 4 || k === n || !prev) {
+            rails.push(segment(new THREE.Vector3(top.x, y(x, z) - 0.05, top.z), top, 0.05));
+            sincePost = 0;
+          }
+          sincePost++;
+          if (prev) {
+            // skirt: a strip from the deck edge down into the slope
+            const x0 = prev.x + nx * 0.06, z0 = prev.z + nz * 0.06, x1 = x, z1 = z;
+            const y0 = y(x0, z0), y1 = y(x1, z1);
+            skirtPos.push(x0, y0, z0, x1, y1, z1, x1, y1 - 0.7, z1, x0, y0, z0, x1, y1 - 0.7, z1, x0, y0 - 0.7, z0);
+          }
+          prev = top;
+        }
+      }
+    }
+    const merge = (list: THREE.BufferGeometry[]) => {
+      const out = mergeGeometries(list.map((g) => (g.index ? g.toNonIndexed() : g)), false);
+      list.forEach((g) => g.dispose());
+      return out;
+    };
+    const skirt = new THREE.BufferGeometry();
+    skirt.setAttribute("position", new THREE.Float32BufferAttribute(skirtPos, 3));
+    skirt.computeVertexNormals();
+    return { deck: merge(decks), rail: merge(rails), skirt };
+  }, [rects, hills, lift]);
+  return (
+    <group>
+      <mesh geometry={deck} material={surface("deck", 1)} receiveShadow />
+      <mesh geometry={skirt} material={toonWith({ color: "#8a6440", side: THREE.DoubleSide, key: "deck-skirt" })} />
+      <mesh geometry={rail} material={toon("#9a6c45")} castShadow>
+        <Ink />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * The city seen from a hill: low blocks in pale colours spread over the plain, Namsan with
+ * N Seoul Tower on it, and a wide lowland under everything so the world has no edge.
+ */
+export function CityView({ from, to, seed = 4, tower, base = 0 }: { from: [number, number]; to: [number, number]; seed?: number; tower?: [number, number]; base?: number }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const blocks = useMemo(() => {
+    const r = rand(seed);
+    const out: { x: number; z: number; w: number; d: number; h: number; c: string }[] = [];
+    const colors = ["#f1ede4", "#e2ded6", "#d8dde2", "#ece3d2", "#cfd6dc", "#e8e0d6", "#c9cfd4"];
+    for (let x = from[0]; x < to[0]; x += 9)
+      for (let z = from[1]; z < to[1]; z += 9) {
+        if (r() < 0.22) continue;
+        if (tower && Math.hypot(x - tower[0], z - tower[1]) < 34) continue;
+        const tall = r() < 0.12;
+        out.push({ x: x + (r() - 0.5) * 3, z: z + (r() - 0.5) * 3, w: 4 + r() * 5, d: 4 + r() * 5, h: tall ? 12 + r() * 12 : 3 + r() * 6, c: colors[Math.floor(r() * colors.length)] });
+      }
+    return out;
+  }, [from, to, seed, tower]);
+  useLayoutEffect(() => {
+    const m = ref.current;
+    if (!m) return;
+    const o = new THREE.Object3D();
+    const c = new THREE.Color();
+    blocks.forEach((b, i) => {
+      o.position.set(b.x, base + b.h / 2 - 0.3, b.z);
+      o.scale.set(b.w, b.h, b.d);
+      o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+      m.setColorAt(i, c.set(b.c));
+    });
+    m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }, [blocks, base]);
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, base - 0.32, 0]} material={toon("#b9c49e")}>
+        <planeGeometry args={[900, 900]} />
+      </mesh>
+      <instancedMesh ref={ref} args={[undefined, undefined, blocks.length]} material={toonWith({ color: "#ffffff", key: "city-block" })}>
+        <boxGeometry args={[1, 1, 1]} />
+      </instancedMesh>
+      {tower && (
+        <group position={[tower[0], base, tower[1]]}>
+          {/* Namsan: a soft green hill */}
+          <mesh scale={[34, 20, 30]} material={toon("#7f9e6a")}>
+            <sphereGeometry args={[1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          </mesh>
+          {/* N Seoul Tower */}
+          <group position={[0, 19.5, 0]}>
+            <mesh position={[0, 9, 0]} material={toon("#f2efe9")}>
+              <cylinderGeometry args={[0.9, 1.4, 18, 16]} />
+              <Ink />
+            </mesh>
+            <mesh position={[0, 18.6, 0]} material={toon("#e8e4dc")}>
+              <cylinderGeometry args={[3.2, 2.4, 2.6, 24]} />
+              <Ink />
+            </mesh>
+            <mesh position={[0, 20.6, 0]} material={toon("#d9d4cb")}>
+              <cylinderGeometry args={[2.2, 3.2, 1.4, 24]} />
+              <Ink />
+            </mesh>
+            <mesh position={[0, 25, 0]} material={toon("#c8463c")}>
+              <cylinderGeometry args={[0.25, 0.45, 8, 8]} />
+              <Ink />
+            </mesh>
+          </group>
+        </group>
+      )}
     </group>
   );
 }

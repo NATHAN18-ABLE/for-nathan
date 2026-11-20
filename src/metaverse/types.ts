@@ -9,7 +9,8 @@ export interface Poi {
   title: { en: string; ko: string };
   line: { en: string; ko: string };
   // What the traveler can do here: hang a wish lantern, sit down, or watch a craftsperson.
-  action?: "lantern" | "sit" | "watch";
+  // signal: send up a smoke signal everyone sees; photo: take a keepsake photo here.
+  action?: "lantern" | "sit" | "watch" | "signal" | "photo";
   // Walk to (x, z), then sit at `on` (off the floor, e.g. on a platform edge) at height y.
   seat?: { x: number; z: number; heading: number; on?: { x: number; z: number; y: number } };
   // Places on the room's stamp card. Benches and other small spots set this to false.
@@ -27,7 +28,8 @@ export interface RoomConfig {
   spawn: P;
   spawnHeading?: number; // radians, 0 faces +z
   // v2 rooms: terrain hills and fog [color, near, far]; the sky is painted from `sky`
-  world?: { hills: Hill[]; fog: [string, number, number] };
+  // floorLift: travelers stand this far above the ground (on a boardwalk laid over it)
+  world?: { hills: Hill[]; fog: [string, number, number]; floorLift?: number };
   // Where seated sit emotes look natural (a platform or bench). Optional.
   seats?: P[];
   sky: { top: string; bottom: string };

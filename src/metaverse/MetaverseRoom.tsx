@@ -64,12 +64,14 @@ const UI = {
     otherCopy: "Go to another copy",
     map: "Map",
     loading: "Setting up the neighbourhood",
-    mapTitle: "Around Seosulla-gil",
+    mapTitle: (place: string) => `Around ${place}`,
     mapHint: "Tap a place to walk there.",
     you: "You",
     hint: "Tap the ground to walk, or use the stick. Drag to look around.",
     joystick: "Move",
     photo: "Photo",
+    photoHere: "Take a photo here",
+    signal: "Send a smoke signal",
     photoTitle: "Your photo",
     photoAlt: (room: string) => `A photo taken in the ${room} room`,
     save: "Save",
@@ -126,12 +128,14 @@ const UI = {
     otherCopy: "다른 방으로 가기",
     map: "지도",
     loading: "동네를 준비하는 중",
-    mapTitle: "서순라길 둘러보기",
+    mapTitle: (place: string) => `${place} 둘러보기`,
     mapHint: "가고 싶은 곳을 누르면 걸어가요.",
     you: "나",
     hint: "바닥을 누르거나 조이스틱으로 걸어요. 드래그하면 둘러볼 수 있어요.",
     joystick: "이동",
     photo: "사진",
+    photoHere: "여기서 사진 찍기",
+    signal: "봉수 올리기",
     photoTitle: "찍은 사진",
     photoAlt: (room: string) => `${room} 방에서 찍은 사진`,
     save: "저장",
@@ -253,7 +257,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const stick = useRef<Stick>({ x: 0, y: 0, active: false });
   const pinch = useRef(0);
-  const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0), [room]);
+  const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) + (room.world.floorLift ?? 0) : 0), [room]);
   // Phones get lighter effects; iPads and computers keep the full set. (An automatic
   // step-down tripped on loading hitches and left iPads blurry and jagged, so it is gone.)
   const [lowPower] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 600);
@@ -412,6 +416,8 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         m.sitting = false;
       } else if (e.kind === "say") {
         showBubbleRef.current(e.id, e.phrase);
+      } else if (e.kind === "signal") {
+        emit("signal");
       } else if (e.kind === "chat") {
         hearRef.current(e.id, e.text);
       } else if (e.kind === "emote" && m) {
@@ -639,6 +645,13 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       emote("sit");
     };
     walkTo({ x: seat.x, z: seat.z });
+  };
+
+  // A smoke signal (봉수): everyone in the room sees the smoke rise.
+  const signal = () => {
+    touch();
+    emit("signal");
+    conn.current?.send({ kind: "signal", id: me.current.id });
   };
 
   const watch = () => {
@@ -909,7 +922,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         <MapSheet
           room={room}
           lang={lang}
-          labels={t}
+          labels={{ ...t, mapTitle: t.mapTitle(room.place[lang]) }}
           motions={motions}
           meId={me.current.id}
           onGo={(p) => {
@@ -930,6 +943,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           onLantern={() => (touch(), setHangOpen(true))}
           onSit={() => near && sitHere(near)}
           onWatch={watch}
+          onSignal={signal}
           onLamp={lightLamp}
         />
       )}
@@ -1259,7 +1273,7 @@ function Rig({ room, motions, meId, view }: { room: RoomConfig; motions: React.R
   const { camera } = useThree();
   const look = useRef(new THREE.Vector3(room.spawn.x, 1, room.spawn.z));
   const aim = useRef(new THREE.Vector3());
-  const ground = (x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0);
+  const ground = (x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) + (room.world.floorLift ?? 0) : 0);
   // Walls, buildings and posts the camera should not pass through.
   const { scene } = useThree();
   const solids = useRef<THREE.Object3D[]>([]);
@@ -1478,6 +1492,7 @@ function ContextAction({
   onLantern,
   onSit,
   onWatch,
+  onSignal,
   onLamp,
 }: {
   poi: Poi | null;
@@ -1487,6 +1502,7 @@ function ContextAction({
   onLantern: () => void;
   onSit: () => void;
   onWatch: () => void;
+  onSignal: () => void;
   onLamp: (i: number) => void;
 }) {
   let label: string | null = null;
@@ -1494,6 +1510,8 @@ function ContextAction({
   if (poi?.action === "lantern") (label = labels.hangLantern), (run = onLantern);
   else if (poi?.action === "sit") (label = poi.actionLabel?.[lang] ?? labels.sit), (run = onSit);
   else if (poi?.action === "watch") (label = labels.watch), (run = onWatch);
+  else if (poi?.action === "signal") (label = poi.actionLabel?.[lang] ?? labels.signal), (run = onSignal);
+  else if (poi?.action === "photo") (label = poi.actionLabel?.[lang] ?? labels.photoHere), (run = () => emit("photo"));
   else if (lamp !== null) (label = labels.lightLamp), (run = () => onLamp(lamp));
   if (!label || !run) return null;
   return (

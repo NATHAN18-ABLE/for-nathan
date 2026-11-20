@@ -7,7 +7,7 @@ import type { RoomConfig } from "../types";
 import { toon } from "../toon/material";
 import { Ink } from "../toon/part";
 
-// Seosulla-gil and its neighbourhood, about 90 m x 80 m.
+// Seosulla-gil and its neighbourhood at dusk, about 90 m x 80 m.
 // North is -z. The lane runs north-south along the west wall of Jongmyo (east side, x = 20);
 // hanok workshops line its west side, two alleys lead west to a small hill with a pavilion,
 // and an entrance plaza sits at the south end. Beyond the wall, the long roof of Jongmyo's
@@ -180,7 +180,7 @@ function Scene() {
   const trees = TREES;
   return (
     <group>
-      <Mountains />
+      <Mountains color="#5c6884" />
       <Terrain size={[130, 120]} hills={HILLS} name="grass" tile={5} />
       {/* lane, plaza, alleys, courtyard and the path up the hill */}
       <Pavement from={[9.6, -40]} to={[19.6, 34]} name="granite" tile={1.6} gain={1.85} />
@@ -194,23 +194,23 @@ function Scene() {
       <MainHall />
 
       {/* workshops along the lane (facing east) */}
-      <Hanok position={[5.6, 0, -31.5]} rotation={Math.PI / 2} width={9} depth={6} seed={1} />
-      <Hanok position={[5.6, 0, -21.6]} rotation={Math.PI / 2} width={8} depth={6} seed={2} />
-      <Hanok position={[5.6, 0, -8.6]} rotation={Math.PI / 2} width={6.4} depth={6} seed={3} />
-      <Hanok position={[5.6, 0, 9.4]} rotation={Math.PI / 2} width={5} depth={6} seed={4} />
-      <Hanok position={[5.6, 0, 20.4]} rotation={Math.PI / 2} width={7.6} depth={6} seed={5} />
-      <Hanok position={[5.6, 0, 27.2]} rotation={Math.PI / 2} width={4.6} depth={6} seed={6} />
+      <Hanok position={[5.6, 0, -31.5]} rotation={Math.PI / 2} width={9} depth={6} glow={0.9} seed={1} />
+      <Hanok position={[5.6, 0, -21.6]} rotation={Math.PI / 2} width={8} depth={6} glow={0.9} seed={2} />
+      <Hanok position={[5.6, 0, -8.6]} rotation={Math.PI / 2} width={6.4} depth={6} glow={0.9} seed={3} />
+      <Hanok position={[5.6, 0, 9.4]} rotation={Math.PI / 2} width={5} depth={6} glow={0.9} seed={4} />
+      <Hanok position={[5.6, 0, 20.4]} rotation={Math.PI / 2} width={7.6} depth={6} glow={0.9} seed={5} />
+      <Hanok position={[5.6, 0, 27.2]} rotation={Math.PI / 2} width={4.6} depth={6} glow={0.9} seed={6} />
       {/* courtyard house */}
-      <Hanok position={[-4.2, 0, 1]} rotation={Math.PI / 2} width={10} depth={6.5} glow={0.5} seed={7} />
+      <Hanok position={[-4.2, 0, 1]} rotation={Math.PI / 2} width={10} depth={6.5} glow={1.1} seed={7} />
       {/* second rows along the alleys */}
-      <Hanok position={[-7, 0, -20.6]} rotation={Math.PI} width={9} depth={6.5} seed={8} />
-      <Hanok position={[-18, 0, -20.6]} rotation={Math.PI} width={9} depth={6.5} seed={9} />
-      <Hanok position={[-14.5, 0, -8.4]} rotation={Math.PI} width={9} depth={6.5} seed={10} />
-      <Hanok position={[-24, 0, -8.4]} rotation={Math.PI} width={7} depth={6.5} seed={11} />
-      <Hanok position={[-14.5, 0, 8.4]} rotation={0} width={9} depth={6.5} seed={12} />
-      <Hanok position={[-24, 0, 8.4]} rotation={0} width={7} depth={6.5} seed={13} />
-      <Hanok position={[-7, 0, 20.6]} rotation={Math.PI} width={9} depth={6.5} seed={14} />
-      <Hanok position={[-18, 0, 20.6]} rotation={Math.PI} width={9} depth={6.5} seed={15} />
+      <Hanok position={[-7, 0, -20.6]} rotation={Math.PI} width={9} depth={6.5} glow={0.9} seed={8} />
+      <Hanok position={[-18, 0, -20.6]} rotation={Math.PI} width={9} depth={6.5} glow={0.9} seed={9} />
+      <Hanok position={[-14.5, 0, -8.4]} rotation={Math.PI} width={9} depth={6.5} glow={0.9} seed={10} />
+      <Hanok position={[-24, 0, -8.4]} rotation={Math.PI} width={7} depth={6.5} glow={0.9} seed={11} />
+      <Hanok position={[-14.5, 0, 8.4]} rotation={0} width={9} depth={6.5} glow={0.9} seed={12} />
+      <Hanok position={[-24, 0, 8.4]} rotation={0} width={7} depth={6.5} glow={0.9} seed={13} />
+      <Hanok position={[-7, 0, 20.6]} rotation={Math.PI} width={9} depth={6.5} glow={0.9} seed={14} />
+      <Hanok position={[-18, 0, 20.6]} rotation={Math.PI} width={9} depth={6.5} glow={0.9} seed={15} />
 
       <Pyeongsang position={[3.6, 0, 1]} rotation={Math.PI / 2} />
       <JarTerrace position={[2.6, 0, 5.2]} rotation={0} />
@@ -236,18 +236,17 @@ export const jongno: RoomConfig = {
   slug: "jongno",
   name: { en: "Jongno", ko: "종로" },
   place: { en: "Seosulla-gil, along the Jongmyo wall", ko: "서순라길, 종묘 돌담길" },
-  hour: { en: "Autumn afternoon", ko: "가을 오후" },
+  hour: { en: "Autumn evening", ko: "가을 저녁" },
   walk: { cell: 0.5, rects: RECTS, holes: HOLES, body: 0.28 },
   spawn: { x: 13, z: 35 },
   spawnHeading: Math.PI,
-  // A clear autumn sky over warm haze at the horizon.
-  sky: { top: "#a9cbe6", bottom: "#f4e6cf" },
-  // A low, warm sun from the south-west: late afternoon in October.
-  sun: { position: [-42, 30, 34], color: "#ffe8c8", intensity: 2.2 },
-  ambient: { sky: "#fff3e2", ground: "#d8c6ae", intensity: 1.05 },
+  // Dusk: deep blue overhead, the last orange light low in the west. Lamps and lanterns matter now.
+  sky: { top: "#2f3b6b", bottom: "#eea07c" },
+  sun: { position: [-62, 11, 22], color: "#ffb07a", intensity: 1.2 },
+  ambient: { sky: "#9298c8", ground: "#5c4c50", intensity: 1.0 },
   world: {
     hills: HILLS,
-    fog: ["#f1e3cd", 48, 200],
+    fog: ["#d9a48f", 40, 190],
   },
   lanterns: true,
   map: {
