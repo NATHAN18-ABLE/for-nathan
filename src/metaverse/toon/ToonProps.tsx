@@ -41,7 +41,7 @@ export function Lantern({ moving }: { moving: boolean }) {
       <Part color={WOOD} position={[0, 0.025, 0.09]} rotation={[Math.PI / 2 - 0.35, 0, 0]}>
         <cylinderGeometry args={[0.007, 0.007, 0.21, 8]} />
       </Part>
-      <group ref={swing} position={[0, 0.06, 0.19]}>
+      <group ref={swing} position={[0, 0.06, 0.19]} userData={{ live: true }}>
         <Part color={GOLD} line={false} position={[0, -0.03, 0]}>
           <cylinderGeometry args={[0.003, 0.003, 0.06, 6]} />
         </Part>
@@ -105,7 +105,7 @@ export function TaegeukFan({ moving }: { moving: boolean }) {
     if (face.current) face.current.rotation.y = moving ? 0 : Math.sin(t.current * 5) * 0.35;
   });
   return (
-    <group ref={face} rotation={[0, 0, 0.2]}>
+    <group ref={face} rotation={[0, 0, 0.2]} userData={{ live: true }}>
       <Part color={WOOD} position={[0, 0.045, 0]}>
         <cylinderGeometry args={[0.008, 0.009, 0.1, 8]} />
       </Part>

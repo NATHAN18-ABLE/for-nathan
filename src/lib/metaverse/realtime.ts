@@ -26,8 +26,9 @@ export interface Presence {
 }
 
 export type RoomEvent =
-  | { kind: "move"; id: string; path: P[] }
+  | { kind: "move"; id: string; path: P[]; speed?: number }
   | { kind: "say"; id: string; phrase: string }
+  | { kind: "chat"; id: string; text: string }
   | { kind: "emote"; id: string; emote: string }
   | { kind: "lantern"; id: string; lantern: Lantern }
   | { kind: "lamp"; id: string; lamp: number };

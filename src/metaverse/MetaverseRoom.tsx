@@ -5,26 +5,31 @@ import Link from "next/link";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Environment, Lightformer, useProgress } from "@react-three/drei";
 import * as THREE from "three";
-import { findPath, isWalkable, nearestWalkable, type P } from "@/lib/metaverse/path.ts";
+import { cleanPath, cleanSpeed, findPath, isWalkable, nearestWalkable, RUN_SPEED, WALK_SPEED, type P } from "@/lib/metaverse/path.ts";
 import { fetchLanterns, hangLantern, joinRoom, peekCounts, type Lantern, type Presence, type RoomConnection, type RoomEvent } from "@/lib/metaverse/realtime.ts";
 import { LANTERN_COLORS, WISHES, type WishId } from "@/lib/metaverse/lanterns.ts";
 import { ITEMS, SCARF_COLORS, defaultLook, sanitizeLook, toggleItem, type ItemId, type Look } from "@/lib/metaverse/look.ts";
-import { defaultAvatar, sanitizeAvatar, type Avatar as AvatarLook } from "@/lib/metaverse/outfit.ts";
+import { defaultAvatar, hairsFor, outfitsFor, sanitizeAvatar, type Avatar as AvatarLook } from "@/lib/metaverse/outfit.ts";
 import { CAPACITY, MAX_INSTANCES, isIdle, pickInstance, seatMembers, statusOf } from "@/lib/metaverse/queue.ts";
 import { EMOTES, PHRASES, phraseText } from "@/lib/metaverse/phrases.ts";
+import { cleanChat, guessLang, MAX_CHAT, RateLimit } from "@/lib/metaverse/chat.ts";
+import { canTranslate, translate } from "./translate";
 import { autoName } from "@/lib/metaverse/names.ts";
 import { typeCode, type Answer } from "@/lib/match/match.ts";
 import { QUESTIONS } from "@/lib/match/questions.ts";
 import { useLang } from "@/lib/lang.ts";
 import { Phrases } from "@/components/Phrases";
-import { Avatar, WALK_SPEED, newMotion, type Motion } from "./Avatar";
+import { Avatar, newMotion, type Motion } from "./Avatar";
+import { Joystick, type Stick } from "./Joystick";
 import { heightAt, LampPost, ToonSky } from "./world";
 import { LanternRack } from "./Lanterns";
 import { FallingLeaves } from "./autumn";
 import { Effects } from "./Effects";
 import { chime, setSound, stopSound } from "./sound";
-import { emit } from "./bus";
+import { emit, on } from "./bus";
 import { MapSheet } from "./MapSheet";
+import { framePhoto } from "./photo";
+import { sanitizeStamps, stamp } from "@/lib/metaverse/stamps.ts";
 import { mergeStatic } from "./mergeStatic";
 import type { Poi, RoomConfig } from "./types";
 import styles from "./Metaverse.module.css";
@@ -62,7 +67,25 @@ const UI = {
     mapTitle: "Around Seosulla-gil",
     mapHint: "Tap a place to walk there.",
     you: "You",
-    hint: "Tap the ground to walk. Drag to look around.",
+    hint: "Tap the ground to walk, or use the stick. Drag to look around.",
+    joystick: "Move",
+    photo: "Photo",
+    photoTitle: "Your photo",
+    photoAlt: (room: string) => `A photo taken in the ${room} room`,
+    save: "Save",
+    share: "Share",
+    stampCount: (n: number, total: number) => `Stamps ${n} of ${total}. Walk to each place to collect them.`,
+    stamped: "stamped",
+    stampNew: (place: string, n: number, total: number) => `Stamp collected: ${place} (${n}/${total})`,
+    stampDone: (room: string) => `Every stamp in ${room} collected. Well walked!`,
+    chatPlaceholder: "Type a message",
+    send: "Send",
+    tooSoon: "Give it a moment before the next message.",
+    hide: "Hide",
+    hidden: (n: string) => `Messages from ${n} are hidden.`,
+    original: "Original:",
+    translateOn: "Messages in other languages are translated on this device.",
+    translateOff: "Automatic translation works in Chrome on a computer.",
     connecting: "Finding other travelers…",
     offline: "Couldn't reach other travelers right now. You can still look around.",
     fullTitle: "This room is full",
@@ -106,7 +129,25 @@ const UI = {
     mapTitle: "서순라길 둘러보기",
     mapHint: "가고 싶은 곳을 누르면 걸어가요.",
     you: "나",
-    hint: "바닥을 누르면 걸어가요. 드래그하면 둘러볼 수 있어요.",
+    hint: "바닥을 누르거나 조이스틱으로 걸어요. 드래그하면 둘러볼 수 있어요.",
+    joystick: "이동",
+    photo: "사진",
+    photoTitle: "찍은 사진",
+    photoAlt: (room: string) => `${room} 방에서 찍은 사진`,
+    save: "저장",
+    share: "공유",
+    stampCount: (n: number, total: number) => `도장 ${n}/${total}개. 각 장소로 걸어가면 도장을 받아요.`,
+    stamped: "도장 받음",
+    stampNew: (place: string, n: number, total: number) => `도장을 받았어요: ${place} (${n}/${total})`,
+    stampDone: (room: string) => `${room}의 도장을 모두 모았어요!`,
+    chatPlaceholder: "메시지를 입력하세요",
+    send: "보내기",
+    tooSoon: "조금 뒤에 다시 보내 주세요.",
+    hide: "숨기기",
+    hidden: (n: string) => `${n}님의 메시지를 숨겼어요.`,
+    original: "원문:",
+    translateOn: "다른 언어로 온 메시지는 이 기기에서 번역돼요.",
+    translateOff: "자동 번역은 컴퓨터의 Chrome에서 지원돼요.",
     connecting: "다른 여행자를 찾는 중…",
     offline: "지금은 다른 여행자와 연결되지 않아요. 혼자 둘러볼 수는 있어요.",
     fullTitle: "방이 가득 찼어요",
@@ -165,6 +206,19 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const [status, setStatus] = useState<"connecting" | "live" | "offline">("connecting");
   const [bubbles, setBubbles] = useState<Record<string, string>>({});
   const [near, setNear] = useState<Poi | null>(null);
+  const [sitting, setSitting] = useState(false);
+  // The stamp card: every place in the room except benches and the like.
+  const places = useMemo(() => room.pois.filter((p) => p.stamp !== false).map((p) => p.id), [room]);
+  const [stamps, setStamps] = useState<string[]>([]);
+  const stampKey = `seoul.mv.stamps.${room.slug}`;
+  useEffect(() => {
+    try {
+      setStamps(sanitizeStamps(JSON.parse(localStorage.getItem(stampKey) ?? "[]"), places));
+    } catch {}
+  }, [stampKey, places]);
+  // Photo mode: a framed keepsake of the current view.
+  const [photo, setPhoto] = useState<{ url: string; blob: Blob } | null>(null);
+  const [flashOn, setFlashOn] = useState(false);
   const [sayOpen, setSayOpen] = useState(false);
   const [actsOpen, setActsOpen] = useState(false);
   const [away, setAway] = useState(false);
@@ -197,6 +251,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   // A raised three-quarter view, like looking down on a little town.
   const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.5, dist: 7.4, touchedAt: 0 });
   const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const stick = useRef<Stick>({ x: 0, y: 0, active: false });
   const pinch = useRef(0);
   const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) : 0), [room]);
   // Phones get lighter effects; iPads and computers keep the full set. (An automatic
@@ -205,7 +260,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
 
   // Drag to look around, wheel or pinch to come closer.
   const onPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest("button, a, [role=menu]")) return;
+    if ((e.target as HTMLElement).closest("button, a, [role=menu], [data-stick], input, form")) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
   };
   const onPointerMove = (e: React.PointerEvent) => {
@@ -250,21 +305,54 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     setReady(true);
   }, []);
 
+  const showText = useCallback((id: string, text: string, ms = 4200) => {
+    setBubbles((b) => ({ ...b, [id]: text }));
+    clearTimeout(bubbleTimers.current.get(id));
+    bubbleTimers.current.set(
+      id,
+      setTimeout(() => setBubbles((b) => Object.fromEntries(Object.entries(b).filter(([k]) => k !== id))), ms),
+    );
+  }, []);
   const showBubble = useCallback(
     (id: string, phrase: string) => {
       const text = phraseText(phrase, lang);
-      if (!text) return;
-      setBubbles((b) => ({ ...b, [id]: text }));
-      clearTimeout(bubbleTimers.current.get(id));
-      bubbleTimers.current.set(
-        id,
-        setTimeout(() => setBubbles((b) => Object.fromEntries(Object.entries(b).filter(([k]) => k !== id))), 4200),
-      );
+      if (text) showText(id, text);
     },
-    [lang],
+    [lang, showText],
   );
   const showBubbleRef = useRef(showBubble);
   showBubbleRef.current = showBubble;
+
+  // Free chat: a short log, people you have hidden, and translation into your language.
+  const [chat, setChat] = useState<ChatLine[]>([]);
+  const [draft, setDraft] = useState("");
+  const [muted, setMuted] = useState<Set<string>>(() => new Set());
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const names = useRef(new Map<string, string>());
+  const limit = useRef(new RateLimit());
+  const chatSeq = useRef(0);
+  const hear = useCallback(
+    (id: string, raw: unknown, mine = false) => {
+      const text = cleanChat(raw);
+      if (!text || mutedRef.current.has(id)) return;
+      const key = ++chatSeq.current;
+      const name = mine ? me.current.name : names.current.get(id) ?? "";
+      setChat((list) => [...list.slice(-29), { key, id, name, text, mine }]);
+      showText(id, text, 6500);
+      if (mine) return;
+      translate(text, guessLang(text), langRef.current).then((tr) => {
+        if (!tr) return;
+        setChat((list) => list.map((l) => (l.key === key ? { ...l, translated: tr } : l)));
+        setBubbles((b) => (b[id] === text ? { ...b, [id]: tr } : b));
+      });
+    },
+    [showText],
+  );
+  const hearRef = useRef(hear);
+  hearRef.current = hear;
 
   // Pick the first copy of the room with space (or ?copy=N for a specific one).
   useEffect(() => {
@@ -316,12 +404,16 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
 
     const onEvent = (e: RoomEvent) => {
       const m = motions.current.get(e.id);
-      if (e.kind === "move" && m && e.path.length > 1) {
-        m.path = [{ x: m.x, z: m.z }, ...e.path.slice(1)];
+      const path = e.kind === "move" ? cleanPath(e.path) : null;
+      if (e.kind === "move" && m && path) {
+        m.path = [{ x: m.x, z: m.z }, ...path.slice(1)];
         m.start = performance.now();
+        m.speed = cleanSpeed(e.speed);
         m.sitting = false;
       } else if (e.kind === "say") {
         showBubbleRef.current(e.id, e.phrase);
+      } else if (e.kind === "chat") {
+        hearRef.current(e.id, e.text);
       } else if (e.kind === "emote" && m) {
         m.emote = e.emote;
         m.emoteAt = performance.now();
@@ -338,7 +430,10 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     if (room.lanterns) fetchLanterns(room.slug).then(setLanterns);
     const c = joinRoom(room.slug, instance, presence, {
       onMembers: (list) => {
-        for (const p of list) if (!motions.current.has(p.id)) motions.current.set(p.id, newMotion(p.x, p.z, p.heading));
+        for (const p of list) {
+          if (!motions.current.has(p.id)) motions.current.set(p.id, newMotion(p.x, p.z, p.heading));
+          if (typeof p.name === "string") names.current.set(p.id, p.name.slice(0, 40));
+        }
         setMembers(list);
       },
       onEvent,
@@ -357,6 +452,35 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     // Look changes are sent with update(), not by rejoining.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, webgl, room, session, instance]);
+
+  // ?bots=N: a local crowd for checking performance. Never sent to anyone.
+  const [bots, setBots] = useState<Presence[]>([]);
+  useEffect(() => {
+    if (!ready) return;
+    const n = Math.min(30, Math.max(0, Math.floor(Number(new URLSearchParams(location.search).get("bots")) || 0)));
+    if (!n) return;
+    const list: Presence[] = Array.from({ length: n }, (_, i) => {
+      const gender = i % 2 ? "m" : "f";
+      const outfits = outfitsFor(gender);
+      const hairs = hairsFor(gender);
+      const at = nearestWalkable({ x: room.spawn.x + (Math.random() - 0.5) * 8, z: room.spawn.z - Math.random() * 14 }, room.walk);
+      const avatar = sanitizeAvatar({ gender, outfit: outfits[i % outfits.length].id, colorway: i % 3, hair: hairs[i % hairs.length].id, hairColor: i % 3, skin: i % 4 });
+      return { id: `bot-${i}`, joinedAt: 0, name: `Bot ${i + 1}`, type: null, look: defaultLook(), avatar, x: at.x, z: at.z, heading: 0 };
+    });
+    for (const b of list) motions.current.set(b.id, newMotion(b.x, b.z));
+    setBots(list);
+    const iv = setInterval(() => {
+      for (const b of list) {
+        const m = motions.current.get(b.id);
+        if (!m || m.path || Math.random() < 0.5) continue;
+        const to = nearestWalkable({ x: m.x + (Math.random() - 0.5) * 10, z: m.z + (Math.random() - 0.5) * 10 }, room.walk);
+        m.path = findPath({ x: m.x, z: m.z }, to, room.walk);
+        m.start = performance.now();
+        m.speed = WALK_SPEED;
+      }
+    }, 1500);
+    return () => clearInterval(iv);
+  }, [ready, room]);
 
   // Give the spot away after a long time without input.
   useEffect(() => {
@@ -400,10 +524,15 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       setSayOpen(false);
       setActsOpen(false);
       const path = findPath({ x: m.x, z: m.z }, to, room.walk);
+      // A long way off: run there.
+      let len = 0;
+      for (let i = 1; i < path.length; i++) len += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z);
+      const speed = len > 9 ? RUN_SPEED : WALK_SPEED;
       m.path = path;
       m.start = performance.now();
+      m.speed = speed;
       m.sitting = false;
-      conn.current?.send({ kind: "move", id: me.current.id, path });
+      conn.current?.send({ kind: "move", id: me.current.id, path, speed });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [inside, room],
@@ -416,6 +545,54 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     pending.current = null;
     next?.();
   }, []);
+
+  // A new place reached: stamp it.
+  useEffect(() => {
+    if (!near || !inside) return;
+    setStamps((current) => {
+      const r = stamp(current, near.id, places);
+      if (!r.isNew) return current;
+      try {
+        localStorage.setItem(stampKey, JSON.stringify(r.stamps));
+      } catch {}
+      chime(r.done ? 0.8 : 1.4);
+      flash(r.done ? t.stampDone(room.name[lang]) : t.stampNew(near.title[lang], r.stamps.length, places.length));
+      return r.stamps;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [near, inside]);
+
+  const takePhoto = useCallback(
+    async (shot: string) => {
+      setFlashOn(true);
+      setTimeout(() => setFlashOn(false), 420);
+      try {
+        const blob = await framePhoto(shot, {
+          brand: "Seoul, Curated",
+          place: `${room.name[lang]} · ${room.place[lang]}`,
+          date: new Date().toLocaleDateString(lang === "ko" ? "ko-KR" : "en-GB", { year: "numeric", month: "short", day: "numeric" }),
+        });
+        setPhoto({ url: URL.createObjectURL(blob), blob });
+      } catch {}
+    },
+    [room, lang],
+  );
+  const closePhoto = () => {
+    if (photo) URL.revokeObjectURL(photo.url);
+    setPhoto(null);
+  };
+  const canShare = (blob: Blob) => {
+    try {
+      return typeof navigator.canShare === "function" && navigator.canShare({ files: [new File([blob], "photo.jpg", { type: "image/jpeg" })] });
+    } catch {
+      return false;
+    }
+  };
+  const sharePhoto = async (blob: Blob) => {
+    try {
+      await navigator.share({ files: [new File([blob], `seoul-curated-${room.slug}.jpg`, { type: "image/jpeg" })], title: "Seoul, Curated" });
+    } catch {}
+  };
 
   const flash = (text: string) => {
     setToast(text);
@@ -491,6 +668,27 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     conn.current?.update({ look: next });
   };
 
+  const sendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = cleanChat(draft);
+    if (!text) return;
+    touch();
+    if (!limit.current.take(Date.now())) {
+      flash(t.tooSoon);
+      return;
+    }
+    setDraft("");
+    hear(me.current.id, text, true);
+    conn.current?.send({ kind: "chat", id: me.current.id, text });
+  };
+
+  const hide = (id: string, name: string) => {
+    setMuted((m) => new Set(m).add(id));
+    setChat((list) => list.filter((l) => l.id !== id));
+    setBubbles((b) => Object.fromEntries(Object.entries(b).filter(([k]) => k !== id)));
+    flash(t.hidden(name));
+  };
+
   const say = (phrase: string) => {
     touch();
     setSayOpen(false);
@@ -534,7 +732,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     );
   }
 
-  const others = members.filter((p) => p.id !== me.current.id && seated.has(p.id));
+  const others = [...members.filter((p) => p.id !== me.current.id && seated.has(p.id)), ...bots];
 
   return (
     <div
@@ -553,13 +751,14 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           dpr={lowPower ? [1, 1.25] : [1, 1.5]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
           camera={{ fov: room.world ? 42 : 34, near: 0.3, far: 600, position: [0, 12, 14] }}
-          onCreated={({ gl }) => {
+          onCreated={({ gl, scene, camera }) => {
             // Toon colours are painted as they should look; no film curve on top.
             gl.toneMapping = THREE.NoToneMapping;
             // ?perf: expose the renderer's counters for performance checks.
             if (new URLSearchParams(location.search).has("perf")) {
               gl.info.autoReset = false;
               (window as unknown as { __gl: THREE.WebGLRenderer }).__gl = gl;
+              Object.assign(window, { __mv: { room, scene, camera, motions: motions.current, me: () => me.current.id, isWalkable } });
             }
           }}
         >
@@ -610,8 +809,10 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             );
           })}
           {room.world ? <Rig room={room} motions={motions} meId={me.current.id} view={view} /> : <TopRig room={room} motions={motions} meId={me.current.id} />}
-          <Keys room={room} motions={motions} meId={me.current.id} conn={conn} enabled={inside} onInput={touch} onArrive={arrived} view={view} />
-          <PoiWatch room={room} motions={motions} meId={me.current.id} onNear={setNear} onNearLamp={setNearLamp} />
+          <Keys room={room} motions={motions} meId={me.current.id} conn={conn} enabled={inside} onInput={touch} onArrive={arrived} view={view} stick={stick} />
+          <TapTarget motions={motions} meId={me.current.id} ground={ground} />
+          <PhotoBooth onShot={takePhoto} />
+          <PoiWatch room={room} motions={motions} meId={me.current.id} onNear={setNear} onNearLamp={setNearLamp} onSitting={setSitting} />
         </Canvas>
       )}
 
@@ -682,6 +883,28 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
 
       {toast && <p className={styles.notice}>{toast}</p>}
 
+      {flashOn && <div className={styles.flash} aria-hidden="true" />}
+
+      {photo && (
+        <div className={styles.sheet} role="dialog" aria-label={t.photoTitle}>
+          <h2>{t.photoTitle}</h2>
+          <img className={styles.photo} src={photo.url} alt={t.photoAlt(room.name[lang])} />
+          <div className={styles.sheetActions}>
+            <button type="button" className={styles.ghost} onClick={closePhoto}>
+              {t.close}
+            </button>
+            {canShare(photo.blob) && (
+              <button type="button" className={styles.ghost} onClick={() => sharePhoto(photo.blob)}>
+                {t.share}
+              </button>
+            )}
+            <a className="btn btn-primary" href={photo.url} download={`seoul-curated-${room.slug}.jpg`}>
+              {t.save}
+            </a>
+          </div>
+        </div>
+      )}
+
       {inside && mapOpen && (
         <MapSheet
           room={room}
@@ -694,13 +917,15 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             walkTo(nearestWalkable(p, room.walk));
           }}
           onClose={() => setMapOpen(false)}
+          stamps={stamps}
         />
       )}
 
       {inside && !sayOpen && !actsOpen && !dressOpen && !hangOpen && !mapOpen && (
         <ContextAction
-          poi={near}
+          poi={near?.action === "sit" && sitting ? null : near}
           lamp={nearLamp !== null && !lit[nearLamp] ? nearLamp : null}
+          lang={lang}
           labels={t}
           onLantern={() => (touch(), setHangOpen(true))}
           onSit={() => near && sitHere(near)}
@@ -802,14 +1027,54 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       )}
 
       {inside && sayOpen && (
-        <div className={styles.phrases} role="menu" id="phrase-menu">
-          {PHRASES.map((p) => (
-            <button key={p.id} type="button" role="menuitem" onClick={() => say(p.id)}>
-              {p[lang]}
+        <div className={styles.chatPanel} id="phrase-menu" role="dialog" aria-label={t.say}>
+          {chat.length > 0 && (
+            <ol className={styles.chatLog} aria-live="polite">
+              {chat.slice(-12).map((l) => (
+                <li key={l.key} data-mine={l.mine}>
+                  <span className={styles.chatName}>{l.mine ? t.you : l.name}</span>
+                  <span className={styles.chatText}>{l.translated ?? l.text}</span>
+                  {l.translated && (
+                    <span className={styles.chatOriginal}>
+                      {t.original} {l.text}
+                    </span>
+                  )}
+                  {!l.mine && (
+                    <button type="button" className={styles.chatHide} onClick={() => hide(l.id, l.name)}>
+                      {t.hide}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          <form className={styles.chatForm} onSubmit={sendChat}>
+            <input
+              type="text"
+              value={draft}
+              maxLength={MAX_CHAT}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={t.chatPlaceholder}
+              aria-label={t.chatPlaceholder}
+              enterKeyHint="send"
+              autoComplete="off"
+            />
+            <button type="submit" className="btn btn-primary" disabled={!draft.trim()}>
+              {t.send}
             </button>
-          ))}
+          </form>
+          <div className={styles.phraseGrid}>
+            {PHRASES.map((p) => (
+              <button key={p.id} type="button" onClick={() => say(p.id)}>
+                {p[lang]}
+              </button>
+            ))}
+          </div>
+          <p className={styles.chatNote}>{canTranslate() ? t.translateOn : t.translateOff}</p>
         </div>
       )}
+
+      {inside && <Joystick stick={stick} label={t.joystick} />}
 
       {inside && (
         <nav className={styles.dock} aria-label={t.say}>
@@ -835,6 +1100,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           </button>
           <button type="button" className={styles.dockButton} onClick={() => (setSayOpen(false), setActsOpen(false), setMapOpen(true))}>
             {t.map}
+          </button>
+          <button type="button" className={styles.dockButton} onClick={() => (setSayOpen(false), setActsOpen(false), touch(), emit("photo"))}>
+            {t.photo}
           </button>
         </nav>
       )}
@@ -873,6 +1141,15 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       )}
     </div>
   );
+}
+
+interface ChatLine {
+  key: number;
+  id: string;
+  name: string;
+  text: string;
+  translated?: string;
+  mine: boolean;
 }
 
 /** Where the camera looks from: yaw around the traveler, pitch above the ground, distance. */
@@ -999,10 +1276,8 @@ function Rig({ room, motions, meId, view }: { room: RoomConfig; motions: React.R
     look.current.x += (m.x - look.current.x) * k;
     look.current.y += (ty - look.current.y) * k;
     look.current.z += (m.z - look.current.z) * k;
-    if (m.path && performance.now() - v.touchedAt > 1500) {
-      const behind = m.heading + Math.PI;
-      v.yaw += Math.atan2(Math.sin(behind - v.yaw), Math.cos(behind - v.yaw)) * (1 - Math.exp(-dt * 1.2));
-    }
+    // The camera no longer swings round behind a walk on its own: the place you tapped stays
+    // where you tapped it, so the walk does not seem to overshoot.
     const c = Math.cos(v.pitch);
     // Pull the camera in when something stands between it and the traveler.
     dir.set(Math.sin(v.yaw) * c, Math.sin(v.pitch), Math.cos(v.yaw) * c).normalize();
@@ -1059,6 +1334,7 @@ function Keys({
   onInput,
   onArrive,
   view,
+  stick,
 }: {
   room: RoomConfig;
   motions: React.RefObject<Map<string, Motion>>;
@@ -1068,6 +1344,7 @@ function Keys({
   onInput: () => void;
   onArrive: () => void;
   view: React.RefObject<View>;
+  stick: React.RefObject<Stick>;
 }) {
   const keys = useRef(new Set<string>());
   const lastSend = useRef(0);
@@ -1076,7 +1353,7 @@ function Keys({
     const down = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, textarea, select")) return;
       const k = e.key.toLowerCase();
-      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) {
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(k)) {
         keys.current.add(k);
         if (k.startsWith("arrow")) e.preventDefault();
       }
@@ -1093,12 +1370,20 @@ function Keys({
     const m = motions.current?.get(meId);
     if (!m || !enabled) return;
     const k = keys.current;
-    const dx = (k.has("d") || k.has("arrowright") ? 1 : 0) - (k.has("a") || k.has("arrowleft") ? 1 : 0);
-    const dz = (k.has("s") || k.has("arrowdown") ? 1 : 0) - (k.has("w") || k.has("arrowup") ? 1 : 0);
+    const s = stick.current;
+    let dx = (k.has("d") || k.has("arrowright") ? 1 : 0) - (k.has("a") || k.has("arrowleft") ? 1 : 0);
+    let dz = (k.has("s") || k.has("arrowdown") ? 1 : 0) - (k.has("w") || k.has("arrowup") ? 1 : 0);
+    // Shift runs; on the joystick, pushing it most of the way out runs.
+    let run = k.has("shift");
+    if (s?.active && Math.hypot(s.x, s.y) > 0.15) {
+      dx = s.x;
+      dz = s.y;
+      run = Math.hypot(s.x, s.y) > 0.82;
+    }
     if (!dx && !dz) {
       if (moving.current) {
         moving.current = false;
-        conn.current?.send({ kind: "move", id: meId, path: [{ x: m.x, z: m.z }, { x: m.x, z: m.z }] });
+        conn.current?.send({ kind: "move", id: meId, path: [{ x: m.x, z: m.z }, { x: m.x, z: m.z }], speed: m.speed });
         onArrive();
       }
       return;
@@ -1107,6 +1392,8 @@ function Keys({
     moving.current = true;
     m.path = null;
     m.sitting = false;
+    m.speed = run ? RUN_SPEED : WALK_SPEED;
+    m.steerAt = performance.now();
     // Forward is away from the camera.
     const yaw = view.current?.yaw ?? 0;
     const fx = -Math.sin(yaw);
@@ -1116,7 +1403,8 @@ function Keys({
     const wx = fx * -dz + rx * dx;
     const wz = fz * -dz + rz * dx;
     const len = Math.hypot(wx, wz) || 1;
-    const step = WALK_SPEED * Math.min(dt, 0.05);
+    // Allow longer frames than the renderer does, so slow phones still walk at full speed.
+    const step = m.speed * Math.min(dt, 0.1);
     const nx = m.x + (wx / len) * step;
     const nz = m.z + (wz / len) * step;
     if (isWalkable({ x: nx, z: nz }, room.walk)) (m.x = nx), (m.z = nz);
@@ -1126,8 +1414,8 @@ function Keys({
     const now = performance.now();
     if (now - lastSend.current > 250) {
       lastSend.current = now;
-      const ahead = nearestWalkable({ x: m.x + (wx / len) * WALK_SPEED * 0.3, z: m.z + (wz / len) * WALK_SPEED * 0.3 }, room.walk);
-      conn.current?.send({ kind: "move", id: meId, path: [{ x: m.x, z: m.z }, ahead] });
+      const ahead = nearestWalkable({ x: m.x + (wx / len) * m.speed * 0.3, z: m.z + (wz / len) * m.speed * 0.3 }, room.walk);
+      conn.current?.send({ kind: "move", id: meId, path: [{ x: m.x, z: m.z }, ahead], speed: m.speed });
     }
   });
   return null;
@@ -1139,14 +1427,17 @@ function PoiWatch({
   meId,
   onNear,
   onNearLamp,
+  onSitting,
 }: {
   room: RoomConfig;
   motions: React.RefObject<Map<string, Motion>>;
   meId: string;
   onNear: (p: Poi | null) => void;
   onNearLamp: (i: number | null) => void;
+  onSitting: (sitting: boolean) => void;
 }) {
   const last = useRef<string | null>(null);
+  const wasSitting = useRef(false);
   const lastLamp = useRef<number | null>(null);
   const tick = useRef(0);
   useFrame((_, dt) => {
@@ -1155,6 +1446,10 @@ function PoiWatch({
     tick.current = 0;
     const m = motions.current?.get(meId);
     if (!m) return;
+    if (m.sitting !== wasSitting.current) {
+      wasSitting.current = m.sitting;
+      onSitting(m.sitting);
+    }
     const hit = room.pois.find((p) => Math.hypot(p.at.x - m.x, p.at.z - m.z) < p.radius) ?? null;
     if ((hit?.id ?? null) !== last.current) {
       last.current = hit?.id ?? null;
@@ -1178,6 +1473,7 @@ type Labels = (typeof UI)[keyof typeof UI];
 function ContextAction({
   poi,
   lamp,
+  lang,
   labels,
   onLantern,
   onSit,
@@ -1186,6 +1482,7 @@ function ContextAction({
 }: {
   poi: Poi | null;
   lamp: number | null;
+  lang: "en" | "ko";
   labels: Labels;
   onLantern: () => void;
   onSit: () => void;
@@ -1195,7 +1492,7 @@ function ContextAction({
   let label: string | null = null;
   let run: (() => void) | null = null;
   if (poi?.action === "lantern") (label = labels.hangLantern), (run = onLantern);
-  else if (poi?.action === "sit") (label = labels.sit), (run = onSit);
+  else if (poi?.action === "sit") (label = poi.actionLabel?.[lang] ?? labels.sit), (run = onSit);
   else if (poi?.action === "watch") (label = labels.watch), (run = onWatch);
   else if (lamp !== null) (label = labels.lightLamp), (run = () => onLamp(lamp));
   if (!label || !run) return null;
@@ -1254,4 +1551,43 @@ function Loader({ label }: { label: string }) {
       <p className={styles.loaderPct}>{Math.round(progress)}%</p>
     </div>
   );
+}
+
+/** A soft ring where a tap-to-walk is headed, so you can see exactly where you are going. */
+function TapTarget({ motions, meId, ground }: { motions: React.RefObject<Map<string, Motion>>; meId: string; ground: (x: number, z: number) => number }) {
+  const ring = useRef<THREE.Mesh>(null);
+  const shown = useRef(0);
+  useFrame((state, dt) => {
+    const m = motions.current?.get(meId);
+    const r = ring.current;
+    if (!r) return;
+    const end = m?.path?.[m.path.length - 1];
+    shown.current += ((end ? 1 : 0) - shown.current) * (1 - Math.exp(-dt * 10));
+    r.visible = shown.current > 0.02;
+    if (end) r.position.set(end.x, ground(end.x, end.z) + 0.04, end.z);
+    const pulse = 1 + Math.sin(state.clock.elapsedTime * 6) * 0.06;
+    r.scale.setScalar((0.6 + 0.4 * shown.current) * pulse);
+    (r.material as THREE.MeshBasicMaterial).opacity = 0.8 * shown.current;
+  });
+  return (
+    <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={2}>
+      <ringGeometry args={[0.32, 0.42, 40]} />
+      <meshBasicMaterial color="#ffffff" transparent depthWrite={false} />
+    </mesh>
+  );
+}
+
+/** Listens for the photo button: draws one clean frame of the 3D view and hands it over. */
+function PhotoBooth({ onShot }: { onShot: (dataUrl: string) => void }) {
+  const { gl, scene, camera } = useThree();
+  useEffect(
+    () =>
+      on("photo", () => {
+        // Read right after drawing, before the browser clears the canvas.
+        gl.render(scene, camera);
+        onShot(gl.domElement.toDataURL("image/jpeg", 0.92));
+      }),
+    [gl, scene, camera, onShot],
+  );
+  return null;
 }

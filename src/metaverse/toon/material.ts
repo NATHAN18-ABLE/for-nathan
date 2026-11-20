@@ -57,6 +57,7 @@ export function toon(color: string) {
   let m = cache.get(color);
   if (!m) {
     m = patch(new THREE.MeshToonMaterial({ color, gradientMap: getRamp() }));
+    m.userData.flat = true; // a plain colour: parts using it can be baked together
     cache.set(color, m);
   }
   return m;
@@ -99,4 +100,10 @@ export function shadeOf(color: string, k: number) {
   c.getHSL(hsl);
   c.setHSL(hsl.h, Math.min(1, hsl.s * (k < 1 ? 1.06 : 0.9)), Math.min(1, hsl.l * k));
   return `#${c.getHexString()}`;
+}
+
+let vertexToon: THREE.MeshToonMaterial | null = null;
+/** One material for baked figure parts: each vertex carries its part's colour. */
+export function toonVertex() {
+  return (vertexToon ??= patch(new THREE.MeshToonMaterial({ color: "#ffffff", vertexColors: true, gradientMap: getRamp() })));
 }

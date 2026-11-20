@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findPath, nearestWalkable, positionAt, isWalkable, type Walkable } from "./path.ts";
+import { findPath, nearestWalkable, positionAt, isWalkable, cleanPath, cleanSpeed, WALK_SPEED, RUN_SPEED, type Walkable } from "./path.ts";
 
 // An L-shaped alley: a long east-west strip and a short north arm at its east end.
 const alley: Walkable = {
@@ -96,4 +96,27 @@ test("a tap on a post sends you to its edge", () => {
   const p = nearestWalkable({ x: 0.2, z: 0.1 }, yard);
   assert.ok(isWalkable(p, yard));
   assert.ok(Math.hypot(p.x, p.z) < 1.3);
+});
+
+test("with a body size, a traveler keeps that far from edges and posts but still turns corners", () => {
+  const w: Walkable = { ...alley, holes: [{ x: 0, z: 0, r: 0.4 }], body: 0.3 };
+  assert.ok(!isWalkable({ x: -5, z: 0.85 }, w), "too close to the alley's side");
+  assert.ok(isWalkable({ x: -5, z: 0.65 }, w));
+  assert.ok(!isWalkable({ x: 0.6, z: 0 }, w), "too close to the post");
+  assert.ok(isWalkable({ x: 8, z: 0 }, w), "where the two strips meet");
+  const tap = nearestWalkable({ x: -5, z: 3 }, w);
+  assert.ok(isWalkable(tap, w), "a tap beyond the edge lands where the body fits");
+  const path = findPath({ x: -8, z: 0 }, { x: 8, z: -7 }, w);
+  for (const p of path) assert.ok(isWalkable(p, w), `path point ${JSON.stringify(p)} is too close to an edge`);
+});
+
+test("paths and speeds from the network are cleaned before use", () => {
+  assert.equal(cleanPath(null), null);
+  assert.equal(cleanPath([{ x: 1, z: 1 }]), null, "a single point is not a walk");
+  assert.deepEqual(cleanPath([{ x: 1, z: 1 }, { x: NaN, z: 2 }, { x: 3, z: 4 }, "x"]), [{ x: 1, z: 1 }, { x: 3, z: 4 }]);
+  assert.equal(cleanPath(Array.from({ length: 500 }, (_, i) => ({ x: i, z: 0 })))!.length, 120);
+  assert.equal(cleanPath([{ x: 0, z: 0 }, { x: 1e9, z: 0 }]), null, "points far outside any room are dropped");
+  assert.equal(cleanSpeed(99), RUN_SPEED);
+  assert.equal(cleanSpeed("fast"), WALK_SPEED);
+  assert.equal(cleanSpeed(WALK_SPEED), WALK_SPEED);
 });

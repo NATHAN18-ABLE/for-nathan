@@ -21,7 +21,7 @@ test("a phrase sent by id shows in the reader's language", () => {
 test("emotes are a short fixed list", () => {
   assert.deepEqual(
     EMOTES.map((e) => e.id),
-    ["wave", "bow", "hop", "sit"],
+    ["wave", "bow", "hop", "jegi", "sit"],
   );
 });
 

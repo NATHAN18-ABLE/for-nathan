@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { positionAt, type P } from "@/lib/metaverse/path.ts";
+import { positionAt, WALK_SPEED, RUN_SPEED, type P } from "@/lib/metaverse/path.ts";
 import type { Look } from "@/lib/metaverse/look.ts";
 import { paletteOf, type Avatar as AvatarLook } from "@/lib/metaverse/outfit.ts";
 import { ToonFigure, type Action } from "./toon/ToonFigure";
 import { Detail } from "./toon/part";
 import styles from "./Metaverse.module.css";
 
-export const WALK_SPEED = 1.5; // metres per second, matched to the toon figure's steps
+export { WALK_SPEED, RUN_SPEED };
 // The toon figure is drawn about 1.15 m tall; in the street it stands a little larger.
 const FIGURE_SCALE = 1.35;
 // Seats were placed for a taller figure; a seated toon's hips sit lower, so lift it onto the seat.
@@ -29,12 +29,14 @@ export interface Motion {
   emote: string | null;
   emoteAt: number;
   sitting: boolean;
+  speed: number; // metres per second of the current walk; above walking pace is a run
+  steerAt: number; // performance.now() of the last joystick or key step (no path while steering)
   // Where to sit when sitting on furniture: a spot off the walkable floor, and its height.
   seat?: { x: number; z: number; y: number } | null;
 }
 
 export function newMotion(x: number, z: number, heading = 0): Motion {
-  return { x, z, heading, path: null, start: 0, emote: null, emoteAt: 0, sitting: false };
+  return { x, z, heading, path: null, start: 0, emote: null, emoteAt: 0, sitting: false, speed: WALK_SPEED, steerAt: 0 };
 }
 
 type Props = {
@@ -77,7 +79,7 @@ export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubbl
     const now = performance.now();
     let walking = false;
     if (m.path) {
-      const p = positionAt(m.path, (now - m.start) / 1000, WALK_SPEED);
+      const p = positionAt(m.path, (now - m.start) / 1000, m.speed);
       m.x = p.x;
       m.z = p.z;
       m.heading = p.heading;
@@ -98,11 +100,14 @@ export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubbl
     }
 
     const t = (now - m.emoteAt) / 1000;
-    let next: Action = walking ? "walk" : "idle";
+    if (now - m.steerAt < 150) walking = true;
+    const running = m.speed > (WALK_SPEED + RUN_SPEED) / 2;
+    let next: Action = walking ? (running ? "run" : "walk") : "idle";
     if (!walking && m.emote) {
       if (m.emote === "wave" && t < 2.6) next = "wave";
       else if (m.emote === "bow" && t < 3) next = "bow";
       else if (m.emote === "hop" && t < 1.1) next = "hop";
+      else if (m.emote === "jegi" && t < 4.4) next = "jegi";
       else if (m.emote === "sit") {
         m.sitting = true;
         m.emote = null;

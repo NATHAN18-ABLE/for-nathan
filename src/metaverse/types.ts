@@ -12,6 +12,10 @@ export interface Poi {
   action?: "lantern" | "sit" | "watch";
   // Walk to (x, z), then sit at `on` (off the floor, e.g. on a platform edge) at height y.
   seat?: { x: number; z: number; heading: number; on?: { x: number; z: number; y: number } };
+  // Places on the room's stamp card. Benches and other small spots set this to false.
+  stamp?: boolean;
+  // The button's words when this place has an action (defaults by action).
+  actionLabel?: { en: string; ko: string };
 }
 
 export interface RoomConfig {

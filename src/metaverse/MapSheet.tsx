@@ -6,7 +6,7 @@ import type { Motion } from "./Avatar";
 import type { RoomConfig } from "./types";
 import styles from "./Metaverse.module.css";
 
-type Labels = { mapTitle: string; mapHint: string; close: string; you: string };
+type Labels = { mapTitle: string; mapHint: string; close: string; you: string; stamped: string; stampCount: (n: number, total: number) => string };
 
 /** A small plan of the neighbourhood. Tap a place to walk there. North is up. */
 export function MapSheet({
@@ -17,6 +17,7 @@ export function MapSheet({
   meId,
   onGo,
   onClose,
+  stamps,
 }: {
   room: RoomConfig;
   lang: "en" | "ko";
@@ -25,7 +26,9 @@ export function MapSheet({
   meId: string;
   onGo: (p: P) => void;
   onClose: () => void;
+  stamps: string[];
 }) {
+  const places = room.pois.filter((p) => p.stamp !== false);
   const box = useMemo(() => {
     const xs = room.walk.rects.flatMap((r) => [r.x0, r.x1]);
     const zs = room.walk.rects.flatMap((r) => [r.z0, r.z1]);
@@ -49,6 +52,7 @@ export function MapSheet({
     <div className={styles.sheet} role="dialog" aria-label={labels.mapTitle}>
       <h2>{labels.mapTitle}</h2>
       <p>{labels.mapHint}</p>
+      <p className={styles.stampLine}>{labels.stampCount(stamps.length, places.length)}</p>
       <svg className={styles.map} viewBox={`${box.x0} ${box.z0} ${w} ${h}`} role="img" aria-label={labels.mapTitle}>
         <rect x={box.x0} y={box.z0} width={w} height={h} fill="#eee6d8" />
         {room.map?.green?.map(([x, z, r], i) => <circle key={`g${i}`} cx={x} cy={z} r={r} fill="#c9d8a8" />)}
@@ -61,9 +65,11 @@ export function MapSheet({
         {room.map?.walls?.map(([x0, z0, x1, z1], i) => (
           <line key={`w${i}`} x1={x0} y1={z0} x2={x1} y2={z1} stroke="#6f6559" strokeWidth={1.1} strokeLinecap="round" />
         ))}
-        {room.pois.map((p) => (
-          <g key={p.id} className={styles.mapPlace} onClick={() => onGo(p.at)} role="button" aria-label={p.title[lang]} tabIndex={0}>
-            <circle cx={p.at.x} cy={p.at.z} r={2.2} fill="#22418f" />
+        {places.map((p) => (
+          <g key={p.id} className={styles.mapPlace} onClick={() => onGo(p.at)} role="button" aria-label={`${p.title[lang]}${stamps.includes(p.id) ? ` · ${labels.stamped}` : ""}`} tabIndex={0}>
+            <circle cx={p.at.x} cy={p.at.z} r={2.2} fill={stamps.includes(p.id) ? "#c0463c" : "#22418f"} />
+            {/* a collected stamp: a red seal ring around the place */}
+            {stamps.includes(p.id) && <circle cx={p.at.x} cy={p.at.z} r={3.4} fill="none" stroke="#c0463c" strokeWidth={0.7} />}
             {/* Labels on the right half point left, so they stay inside the map. */}
             <text
               x={p.at.x > (box.x0 + box.x1) / 2 ? p.at.x - 3 : p.at.x + 3}

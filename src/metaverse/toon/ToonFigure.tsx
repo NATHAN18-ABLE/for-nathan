@@ -7,11 +7,12 @@
  * no game's characters are copied.
  */
 
-import { useMemo, useRef } from "react";
+import { useContext, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { toon, toonMapped, shadeOf } from "./material";
-import { Part, Ink } from "./part";
+import { Part, Ink, Detail } from "./part";
+import { bakeFigure } from "./bake";
 import { faceTextures, type Expression } from "./face";
 import { hairGeometry, hairShineGeometry, onHead } from "./hair";
 import type { HairId, OutfitId, Palette } from "@/lib/metaverse/outfit.ts";
@@ -21,7 +22,7 @@ import { Lantern, TaegeukFan, Norigae, Pouch, Scarf, FlowerPin, MaplePin } from 
 export type Outfit = OutfitId;
 export type Hair = HairId;
 export type { Palette };
-export type Action = "idle" | "walk" | "wave" | "bow" | "sit" | "hop";
+export type Action = "idle" | "walk" | "run" | "wave" | "bow" | "sit" | "hop" | "jegi";
 
 const BINYEO = "#d8b25c";
 // Steps per second × π: brisk little steps, so the feet keep up with the walking speed.
@@ -131,6 +132,9 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
   const footL = useRef<THREE.Group>(null);
   const footR = useRef<THREE.Group>(null);
   const holder = useRef<THREE.Group>(null);
+  const root = useRef<THREE.Group>(null);
+  const jegi = useRef<THREE.Group>(null);
+  const detail = useContext(Detail);
   const handItem = look?.items.find((i) => i === "lantern" || i === "fan");
   const state = useRef({ t: seed * 1.7, blinkAt: 1.5 + seed * 0.7, since: 0, face: "open" as Expression });
 
@@ -267,6 +271,22 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
       twist = Math.sin(f) * 0.09;
       headTurn = -twist * 0.7;
       headNod = Math.sin(f * 2) * 0.025;
+    } else if (action === "run") {
+      // Quicker, longer strides, leaning in, arms pumping, a bounce at each push-off.
+      const f = t * WALK_RATE * 1.45;
+      lL = Math.sin(f) * 0.9;
+      lR = -lL;
+      aLx = -Math.sin(f) * 0.95;
+      aRx = -aLx;
+      aL = -0.25;
+      aR = 0.25;
+      bob = Math.abs(Math.sin(f)) * 0.075;
+      squash = 1 - (1 - Math.abs(Math.sin(f))) * 0.06;
+      lean = 0.2;
+      sway = Math.sin(f) * 0.03;
+      twist = Math.sin(f) * 0.12;
+      headTurn = -twist * 0.6;
+      headNod = -0.08 + Math.sin(f * 2) * 0.03;
     } else if (action === "wave") {
       aR = 2.25 + Math.sin(t * 9) * 0.25;
       aRx = -0.4;
@@ -290,6 +310,19 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
       aRx = -0.4;
       headTilt = Math.sin(t * 0.8) * 0.05;
       headTurn = Math.sin(t * 0.4) * 0.15;
+    } else if (action === "jegi") {
+      // Jegichagi: on one foot, the right foot flicks up every beat and the jegi flies up and falls.
+      const beat = 0.62;
+      const ph = (t % beat) / beat;
+      const kick = Math.max(0, Math.sin(ph * Math.PI * 2)) ** 2 * (ph < 0.5 ? 1 : 0);
+      lR = -0.9 * kick;
+      lL = 0.05;
+      aL = -0.55;
+      aR = 0.55;
+      bob = kick * 0.03;
+      lean = -0.04;
+      headNod = 0.12 + Math.sin(ph * Math.PI) * -0.18;
+      sway = Math.sin(t * 2) * 0.02;
     } else if (action === "hop") {
       const ph = (t % 1.1) / 1.1;
       const up = Math.max(0, Math.sin(ph * Math.PI * 1.25));
@@ -303,9 +336,19 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
 
     // Something in the left hand: hold it out in front, swinging a little with the step.
     if (handItem && action !== "hop" && action !== "bow") {
-      const step = action === "walk" ? Math.sin(t * WALK_RATE) * 0.12 : 0;
+      const step = action === "walk" ? Math.sin(t * WALK_RATE) * 0.12 : action === "run" ? Math.sin(t * WALK_RATE * 1.45) * 0.2 : 0;
       aLx = (handItem === "lantern" ? -0.62 : -0.9) + step;
       aL = handItem === "lantern" ? -0.12 : -0.32;
+    }
+
+    const jg = jegi.current;
+    if (jg) {
+      jg.visible = action === "jegi";
+      if (jg.visible) {
+        const ph = (t % 0.62) / 0.62;
+        jg.position.y = 0.14 + Math.sin(ph * Math.PI) * 0.62;
+        jg.rotation.y += d * 6;
+      }
     }
 
     b.position.y = bob - sit * (LEG * 0.62);
@@ -354,6 +397,13 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
   const sole = outfit === "hoodie" ? p.accent : shadeOf(p.shoes, 0.62);
   const bunAt = onHead(R, HEAD, Math.PI, Math.PI * 0.57, 1.16);
   const items = look?.items ?? [];
+  // Bake parts that move together into one mesh per joint (see bake.ts); redo it whenever
+  // what the figure wears, or how much detail it draws, changes.
+  const bakeKey = JSON.stringify([outfit, hair, palette, items, look?.scarf, lashes, detail]);
+  useLayoutEffect(() => {
+    if (!root.current) return;
+    return bakeFigure(root.current, [body.current, torso.current, skirt.current, head.current, armL.current, armR.current, legL.current, legR.current, footL.current, footR.current, holder.current, jegi.current].filter((j): j is THREE.Group => !!j));
+  }, [bakeKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // Waist items hang from the front right; over a skirt or coat they lean out with the cloth.
   const flared = outfit === "chima" || outfit === "dress" || outfit === "durumagi";
   const hipX = 0.075;
@@ -367,7 +417,7 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
   }, []);
 
   return (
-    <group {...group}>
+    <group ref={root} {...group}>
       <group ref={body}>
         {/* legs, pivoting at the hips */}
         {[-1, 1].map((side) => (
@@ -406,6 +456,18 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
             </group>
           </group>
         ))}
+
+        {/* the jegi: a coin wrapped in paper with a tuft of coloured tassels, only while playing */}
+        <group ref={jegi} position={[0.075, 0.14, 0.2]} visible={false} userData={{ live: true }}>
+          <Part color="#d9b25c" rotation={[0, 0, 0]}>
+            <cylinderGeometry args={[0.026, 0.026, 0.012, 16]} />
+          </Part>
+          {["#d4475b", "#3e5aa8", "#e8b84a", "#5d8b70"].map((c, i) => (
+            <Part key={c} color={c} position={[Math.cos((i / 4) * Math.PI * 2) * 0.012, 0.05, Math.sin((i / 4) * Math.PI * 2) * 0.012]} rotation={[Math.sin((i / 4) * Math.PI * 2) * 0.35, 0, -Math.cos((i / 4) * Math.PI * 2) * 0.35]}>
+              <coneGeometry args={[0.014, 0.09, 6]} />
+            </Part>
+          ))}
+        </group>
 
         <group ref={torso} position={[0, HIP, 0]}>
           <Part color={p.top} geometry={geo.torsoShape} />

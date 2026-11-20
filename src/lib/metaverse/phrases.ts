@@ -23,6 +23,7 @@ export const EMOTES = [
   { id: "wave", en: "Wave", ko: "손 흔들기" },
   { id: "bow", en: "Bow", ko: "인사" },
   { id: "hop", en: "Hop", ko: "폴짝" },
+  { id: "jegi", en: "Jegichagi", ko: "제기차기" },
   { id: "sit", en: "Sit", ko: "앉기" },
 ] as const;
 

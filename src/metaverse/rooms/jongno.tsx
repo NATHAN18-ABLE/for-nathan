@@ -153,7 +153,9 @@ const HOLES = [
   ...LAMPS.map(([x, z]) => ({ x, z, r: 0.4 })),
   ...[-8, 3, 14].map((z) => ({ x: 19.15, z, r: 0.35 })),
   ...BENCHES.map(([x, z]) => ({ x, z, r: 1.2 })),
-  { x: 10.8, z: -28.6, r: 1 },
+  { x: 10.8, z: -28.6, r: 1.15 },
+  // the pavilion's stone platform stands up off the hill: walk around it, not through it
+  { x: -37, z: -12, r: 3.5 },
   { x: 1.6, z: 4.8, r: 1.5 },
   { x: 3.6, z: 4.8, r: 1.3 },
   ...[-2, 2].flatMap((dx) => [-2, 2].map((dz) => ({ x: -37 + dx, z: -12 + dz, r: 0.35 }))),
@@ -235,7 +237,7 @@ export const jongno: RoomConfig = {
   name: { en: "Jongno", ko: "종로" },
   place: { en: "Seosulla-gil, along the Jongmyo wall", ko: "서순라길, 종묘 돌담길" },
   hour: { en: "Autumn afternoon", ko: "가을 오후" },
-  walk: { cell: 0.5, rects: RECTS, holes: HOLES },
+  walk: { cell: 0.5, rects: RECTS, holes: HOLES, body: 0.28 },
   spawn: { x: 13, z: 35 },
   spawnHeading: Math.PI,
   // A clear autumn sky over warm haze at the horizon.
@@ -317,12 +319,33 @@ export const jongno: RoomConfig = {
       id: "pavilion",
       at: { x: -37, z: -8 },
       radius: 4,
+      action: "sit",
+      actionLabel: { en: "Sit in the pavilion", ko: "정자에 앉기" },
+      // Sit on the edge of the pavilion floor, legs over the side, facing down the hill.
+      seat: { x: -37, z: -7.9, heading: 0, on: { x: -37, z: -9.75, y: heightAt(-37, -9.75, HILLS) + 0.96 - 0.45 - heightAt(-37, -7.9, HILLS) } },
       title: { en: "The hill pavilion", ko: "언덕 위 정자" },
       line: {
         en: "From up here you can see the hanok roofs and the long roof of Jongmyo's main hall.",
         ko: "여기서는 한옥 지붕들과 종묘 정전의 긴 지붕이 내려다보여요.",
       },
     },
+    // Benches: a place to sit, not a stamp.
+    ...BENCHES.map(([x, z, r], i) => {
+      const along = Math.abs(r) < 0.1; // bench runs east-west, sit facing south
+      const walk = along ? { x, z: z + 1.6 } : { x: x + 1.6, z };
+      const on = along ? { x, z: z + 0.05, y: 0.53 - 0.45 } : { x: x + 0.05, z, y: 0.53 - 0.45 };
+      return {
+        id: `bench-${i}`,
+        at: walk,
+        radius: 2,
+        action: "sit" as const,
+        stamp: false,
+        actionLabel: { en: "Sit on the bench", ko: "벤치에 앉기" },
+        seat: { x: walk.x, z: walk.z, heading: along ? 0 : Math.PI / 2, on },
+        title: { en: "A bench", ko: "벤치" },
+        line: { en: "Sit for a while and watch the street.", ko: "잠시 앉아 거리를 바라보세요." },
+      };
+    }),
   ],
   Scene,
   // The workbench sits in front of the southern workshop, facing the lane.

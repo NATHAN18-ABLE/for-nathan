@@ -52,10 +52,12 @@ const T = {
     actions: {
       idle: "Stand",
       walk: "Walk",
+      run: "Run",
       wave: "Wave",
       bow: "Bow",
       sit: "Sit",
       hop: "Hop",
+      jegi: "Jegichagi",
     },
   },
   ko: {
@@ -81,15 +83,17 @@ const T = {
     actions: {
       idle: "서 있기",
       walk: "걷기",
+      run: "달리기",
       wave: "손 흔들기",
       bow: "인사",
       sit: "앉기",
       hop: "점프",
+      jegi: "제기차기",
     },
   },
 } as const;
 
-const ACTIONS: Action[] = ["idle", "walk", "wave", "bow", "sit", "hop"];
+const ACTIONS: Action[] = ["idle", "walk", "run", "wave", "bow", "sit", "hop", "jegi"];
 const pick = <X,>(xs: readonly X[]) =>
   xs[Math.floor(Math.random() * xs.length)];
 

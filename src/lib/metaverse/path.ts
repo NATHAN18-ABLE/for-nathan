@@ -23,13 +23,27 @@ export interface Walkable {
   cell: number; // grid size in metres used for path finding
   rects: Rect[];
   holes?: Hole[]; // posts, trees and benches standing inside the walkable area
+  body?: number; // how far a traveler's body reaches from its centre; kept clear of edges and posts
 }
+
+export const WALK_SPEED = 2.2; // metres per second
+export const RUN_SPEED = 4.2;
 
 const EPS = 1e-6;
 
+const inRects = (x: number, z: number, w: Walkable) => w.rects.some((r) => x >= r.x0 - EPS && x <= r.x1 + EPS && z >= r.z0 - EPS && z <= r.z1 + EPS);
+
 export function isWalkable(p: P, w: Walkable): boolean {
-  if (!w.rects.some((r) => p.x >= r.x0 - EPS && p.x <= r.x1 + EPS && p.z >= r.z0 - EPS && p.z <= r.z1 + EPS)) return false;
-  return !w.holes?.some((h) => Math.hypot(p.x - h.x, p.z - h.z) < h.r - EPS);
+  const b = w.body ?? 0;
+  if (!inRects(p.x, p.z, w)) return false;
+  // The whole body must fit: check a ring of points around the centre. Each may fall in a
+  // different rectangle, so corners where two streets meet stay open.
+  if (b > 0) {
+    const d = b * Math.SQRT1_2;
+    for (const [dx, dz] of [[b, 0], [-b, 0], [0, b], [0, -b], [d, d], [-d, d], [d, -d], [-d, -d]])
+      if (!inRects(p.x + dx, p.z + dz, w)) return false;
+  }
+  return !w.holes?.some((h) => Math.hypot(p.x - h.x, p.z - h.z) < h.r + b - EPS);
 }
 
 export function nearestWalkable(p: P, w: Walkable): P {
@@ -38,15 +52,17 @@ export function nearestWalkable(p: P, w: Walkable): P {
   for (const h of w.holes ?? []) {
     const d = Math.hypot(p.x - h.x, p.z - h.z);
     if (d < h.r) {
-      const k = (h.r + 0.05) / Math.max(d, 1e-6);
-      const q = d > 1e-6 ? { x: h.x + (p.x - h.x) * k, z: h.z + (p.z - h.z) * k } : { x: h.x + h.r + 0.05, z: h.z };
+      const reach = h.r + (w.body ?? 0) + 0.05;
+      const k = reach / Math.max(d, 1e-6);
+      const q = d > 1e-6 ? { x: h.x + (p.x - h.x) * k, z: h.z + (p.z - h.z) * k } : { x: h.x + reach, z: h.z };
       if (isWalkable(q, w)) return q;
     }
   }
   let best = p;
   let bestD = Infinity;
+  const b = (w.body ?? 0) + (w.body ? 0.01 : 0);
   for (const r of w.rects) {
-    const q = { x: Math.min(r.x1, Math.max(r.x0, p.x)), z: Math.min(r.z1, Math.max(r.z0, p.z)) };
+    const q = { x: Math.min(r.x1 - b, Math.max(r.x0 + b, p.x)), z: Math.min(r.z1 - b, Math.max(r.z0 + b, p.z)) };
     const d = Math.hypot(q.x - p.x, q.z - p.z);
     if (d < bestD) {
       bestD = d;
@@ -213,4 +229,23 @@ export function positionAt(path: P[], t: number, speed: number) {
   }
   const p = path[path.length - 1] ?? { x: 0, z: 0 };
   return { x: p.x, z: p.z, heading: 0, done: true };
+}
+
+const LIMIT = 1000; // metres from the origin; no room is anywhere near this big
+
+/** A walk received from another traveler: finite points inside the world, at most 120 of them. */
+export function cleanPath(raw: unknown): P[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: P[] = [];
+  for (const q of raw.slice(0, 400)) {
+    const x = (q as P)?.x, z = (q as P)?.z;
+    if (typeof x === "number" && typeof z === "number" && Number.isFinite(x) && Number.isFinite(z) && Math.abs(x) < LIMIT && Math.abs(z) < LIMIT) out.push({ x, z });
+    if (out.length === 120) break;
+  }
+  return out.length >= 2 ? out : null;
+}
+
+/** A walking speed received from another traveler: walking or running, nothing faster. */
+export function cleanSpeed(raw: unknown): number {
+  return typeof raw === "number" && Number.isFinite(raw) ? Math.min(RUN_SPEED, Math.max(0.5, raw)) : WALK_SPEED;
 }
