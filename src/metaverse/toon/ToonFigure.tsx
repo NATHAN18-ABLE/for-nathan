@@ -8,24 +8,24 @@
  */
 
 import { useMemo, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
-import { Outlines } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { toon, toonMapped, shadeOf } from "./material";
+import { Part, Ink } from "./part";
 import { faceTextures, type Expression } from "./face";
 import { hairGeometry, hairShineGeometry, onHead } from "./hair";
 import type { HairId, OutfitId, Palette } from "@/lib/metaverse/outfit.ts";
+import { SCARF_COLORS, type Look } from "@/lib/metaverse/look.ts";
+import { Lantern, TaegeukFan, Norigae, Pouch, Scarf, FlowerPin, MaplePin } from "./ToonProps";
 
 export type Outfit = OutfitId;
 export type Hair = HairId;
 export type { Palette };
 export type Action = "idle" | "walk" | "wave" | "bow" | "sit" | "hop";
 
-const LINE = "#3d2d2f";
 const BINYEO = "#d8b25c";
 const DAENGGI = "#c23a4a";
 const WHITE = "#fdfaf3";
-const LINE_PX = 1.7;
 
 // Proportions, in metres of a figure about 1.15 tall.
 const R = 0.25; // head radius
@@ -101,34 +101,21 @@ function pleat(geo: THREE.BufferGeometry, count: number, amount: (y: number) => 
   return geo;
 }
 
-function Part({ color, line = true, children, ...props }: {
-  color: string;
-  line?: boolean;
-  children?: React.ReactNode;
-} & Omit<React.ComponentProps<"mesh">, "children" | "material">) {
-  const dpr = useThree((s) => s.viewport.dpr);
-  return (
-    <mesh castShadow material={toon(color)} {...props}>
-      {children}
-      {line && <Outlines thickness={LINE_PX * dpr} color={LINE} />}
-    </mesh>
-  );
-}
 
 function expressionFor(action: Action): Expression {
   return action === "wave" || action === "hop" ? "smile" : action === "bow" ? "happy" : "open";
 }
 
-export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed = 0, ...group }: {
+export function ToonFigure({ outfit, hair, palette, action, look, lashes = false, seed = 0, ...group }: {
   outfit: Outfit;
   hair: Hair;
   palette: Palette;
   action: Action;
   lashes?: boolean;
+  look?: Look;
   seed?: number;
 } & React.ComponentProps<"group">) {
   const p = palette;
-  const dpr = useThree((st) => st.viewport.dpr);
   const body = useRef<THREE.Group>(null);
   const torso = useRef<THREE.Group>(null);
   const skirt = useRef<THREE.Group>(null);
@@ -139,6 +126,8 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
   const legR = useRef<THREE.Group>(null);
   const footL = useRef<THREE.Group>(null);
   const footR = useRef<THREE.Group>(null);
+  const holder = useRef<THREE.Group>(null);
+  const handItem = look?.items.find((i) => i === "lantern" || i === "fan");
   const state = useRef({ t: seed * 1.7, blinkAt: 1.5 + seed * 0.7, since: 0, face: "open" as Expression });
 
   const faces = useMemo(() => faceTextures(p.skin, shadeOf(p.hair, 1.15), lashes), [p.skin, p.hair, lashes]);
@@ -307,6 +296,13 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
       lR = -up * 0.3;
     }
 
+    // Something in the left hand: hold it out in front, swinging a little with the step.
+    if (handItem && action !== "hop" && action !== "bow") {
+      const step = action === "walk" ? Math.sin(t * 7) * 0.12 : 0;
+      aLx = (handItem === "lantern" ? -0.62 : -0.9) + step;
+      aL = handItem === "lantern" ? -0.12 : -0.32;
+    }
+
     b.position.y = bob - sit * (LEG * 0.62);
     b.scale.set(1 / Math.sqrt(squash), squash, 1 / Math.sqrt(squash));
     b.rotation.z = sway * 0.4;
@@ -315,6 +311,9 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
     tr.scale.y = 1 + breathe;
     hd.rotation.set(headNod, headTurn, headTilt + sway * 0.3);
     al.rotation.set(aLx, 0, aL);
+    // The held thing stays upright whatever the arm and torso are doing.
+    const hold = holder.current;
+    if (hold) hold.quaternion.copy(tr.quaternion).multiply(al.quaternion).invert();
     ar.rotation.set(aRx, 0, aR);
     ll.rotation.x = lL;
     lr.rotation.x = lR;
@@ -349,6 +348,18 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
   const legColor = outfit === "chima" ? WHITE : outfit === "dress" ? p.skin : p.bottom;
   const sole = outfit === "hoodie" ? p.accent : shadeOf(p.shoes, 0.62);
   const bunAt = onHead(R, HEAD, Math.PI, Math.PI * 0.57, 1.16);
+  const items = look?.items ?? [];
+  // Waist items hang from the front right; over a skirt or coat they lean out with the cloth.
+  const flared = outfit === "chima" || outfit === "dress" || outfit === "durumagi";
+  const hipX = 0.075;
+  const hipY = h * (outfit === "chima" ? 0.43 : 0.4);
+  const hipZ = Math.sqrt(0.19 ** 2 - hipX ** 2);
+  // Head pins sit on the hair above the right temple, facing out.
+  const pin = useMemo(() => {
+    const at = onHead(R, HEAD, 0.68, Math.PI * 0.31, 1.1);
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), at.clone().normalize());
+    return { at, q };
+  }, []);
 
   return (
     <group {...group}>
@@ -503,14 +514,30 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
               <Part color={p.skin} position={[0, -ARM - HAND * 0.32, 0.004]} scale={[1, 1.08, 0.9]}>
                 <sphereGeometry args={[HAND, 20, 14]} />
               </Part>
+              {side < 0 && handItem && (
+                <group ref={holder} position={[0, -ARM - HAND * 0.32, 0.004]}>
+                  {handItem === "lantern" ? <Lantern moving={action === "walk"} /> : <TaegeukFan moving={action === "walk"} />}
+                </group>
+              )}
             </group>
           ))}
+
+          {(items.includes("norigae") || items.includes("pouch")) && (
+            <group position={[hipX, hipY, hipZ]} rotation={[flared ? -0.32 : -0.08, 0, 0]}>
+              {items.includes("norigae") ? <Norigae /> : <Pouch />}
+            </group>
+          )}
+          {items.includes("scarf") && (
+            <group position={[0, h * 0.97, 0.004]}>
+              <Scarf color={SCARF_COLORS[look?.scarf ?? 0] ?? SCARF_COLORS[0]} neckR={T_TOP * 0.84} />
+            </group>
+          )}
 
           {/* head */}
           <group ref={head} position={[0, headY, 0]}>
             <mesh castShadow material={faceMat} scale={HEAD}>
               <sphereGeometry args={[R, 64, 48]} />
-              <Outlines thickness={LINE_PX * 1.2 * dpr} color={LINE} />
+              <Ink scale={1.2} />
             </mesh>
             {hair !== "bob" && hair !== "mop" &&
               [-1, 1].map((side) => (
@@ -559,6 +586,11 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
               <Part color={p.hair} position={[0, R * HEAD[1] * 1.08, R * 0.08]} rotation={[0, Math.PI / 2, 0.5]}>
                 <torusGeometry args={[R * 0.11, R * 0.035, 8, 20, Math.PI * 1.25]} />
               </Part>
+            )}
+            {(items.includes("flower") || items.includes("maple")) && (
+              <group position={pin.at} quaternion={pin.q} scale={1.45}>
+                {items.includes("flower") ? <FlowerPin /> : <MaplePin />}
+              </group>
             )}
           </group>
         </group>

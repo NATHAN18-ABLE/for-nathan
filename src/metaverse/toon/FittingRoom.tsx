@@ -19,9 +19,11 @@ import {
   type Avatar,
   type Gender,
 } from "@/lib/metaverse/outfit.ts";
+import { ITEMS, SCARF_COLORS, defaultLook, sanitizeLook, toggleItem, type Look } from "@/lib/metaverse/look.ts";
 import styles from "./FittingRoom.module.css";
 
 const KEY = "seoul.mv.avatar1";
+const LOOK_KEY = "seoul.mv.look2"; // shared with the metaverse room
 
 const T = {
   en: {
@@ -35,6 +37,10 @@ const T = {
     hairColor: "Hair colour",
     skin: "Skin tone",
     skinN: (n: number) => `Skin tone ${n}`,
+    props: "Things to carry",
+    propsHint: "One each in the hand, at the waist, round the neck and in the hair.",
+    scarfColor: "Scarf colour",
+    scarfN: (n: number) => `Scarf colour ${n}`,
     shuffle: "Surprise me",
     saved:
       "Saved on this device. Your traveler will look like this in the metaverse.",
@@ -59,6 +65,10 @@ const T = {
     hairColor: "머리색",
     skin: "피부 톤",
     skinN: (n: number) => `피부 톤 ${n}`,
+    props: "소품",
+    propsHint: "손, 허리, 목, 머리에 하나씩 달 수 있어요.",
+    scarfColor: "목도리 색",
+    scarfN: (n: number) => `목도리 색 ${n}`,
     shuffle: "무작위로 고르기",
     saved: "이 기기에 저장됩니다. 메타버스에서 이 모습으로 걷게 됩니다.",
     preview: "동작 보기",
@@ -82,11 +92,13 @@ export function FittingRoom() {
   const t = T[lang];
   const [av, setAv] = useState<Avatar>(() => defaultAvatar("f"));
   const [action, setAction] = useState<Action>("idle");
+  const [look, setLook] = useState<Look>(defaultLook);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(KEY);
       if (saved) setAv(sanitizeAvatar(JSON.parse(saved)));
+      setLook(sanitizeLook(JSON.parse(localStorage.getItem(LOOK_KEY) ?? "null")));
     } catch {}
   }, []);
 
@@ -94,6 +106,13 @@ export function FittingRoom() {
     setAv(next);
     try {
       localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {}
+  };
+
+  const wear = (next: Look) => {
+    setLook(next);
+    try {
+      localStorage.setItem(LOOK_KEY, JSON.stringify(next));
     } catch {}
   };
 
@@ -137,6 +156,7 @@ export function FittingRoom() {
             palette={palette}
             lashes={av.gender === "f"}
             action={action}
+            look={look}
             position={[0, 0.03, 0]}
           />
           {/* a low round stand, like a shop's fitting podium */}
@@ -315,6 +335,37 @@ export function FittingRoom() {
               />
             ))}
           </div>
+        </section>
+
+        <section aria-labelledby="fr-props">
+          <h2 id="fr-props">{t.props}</h2>
+          <p className={styles.hint}>{t.propsHint}</p>
+          <div className={styles.chips}>
+            {ITEMS.map((it) => (
+              <button key={it.id} type="button" aria-pressed={look.items.includes(it.id)} onClick={() => wear(toggleItem(look, it.id))}>
+                {it[lang]}
+              </button>
+            ))}
+          </div>
+          {look.items.includes("scarf") && (
+            <div className={styles.sub}>
+              <h3>{t.scarfColor}</h3>
+              <div className={styles.swatches}>
+                {SCARF_COLORS.map((c, i) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={styles.swatch}
+                    aria-pressed={look.scarf === i}
+                    aria-label={t.scarfN(i + 1)}
+                    title={t.scarfN(i + 1)}
+                    onClick={() => wear({ ...look, scarf: i })}
+                    style={{ "--a": c, "--b": c } as React.CSSProperties}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <footer className={styles.foot}>

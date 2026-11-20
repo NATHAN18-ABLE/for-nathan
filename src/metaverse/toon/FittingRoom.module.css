@@ -214,6 +214,24 @@
   color: #fff;
 }
 
+.hint {
+  margin: -6px 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.sub {
+  margin-top: 16px;
+}
+
+.sub h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .foot {
   margin-top: auto;
   padding-top: 8px;
