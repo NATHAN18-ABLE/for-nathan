@@ -4,7 +4,7 @@
 // travelers: flat colours, a light painted pattern (roof tiles, paving joints, wall stones)
 // and an ink outline on the main shapes. Everything is made in code; nothing is downloaded.
 
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { createContext, useContext, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -12,6 +12,9 @@ import { toon, toonWith, toonGlow } from "./toon/material";
 import { Ink } from "./toon/part";
 
 type V3 = [number, number, number];
+
+/** How much the device can draw: phones get simpler trees and no tree outlines. */
+export const Quality = createContext({ low: false });
 
 export function rand(seed: number) {
   let s = seed >>> 0;
@@ -427,12 +430,13 @@ const TREE_COLORS = {
 
 /** Many trees in four draw calls: trunks and three layers of soft canopy. */
 export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hills?: Hill[]; seed?: number }) {
+  const { low } = useContext(Quality);
   const trunk = useRef<THREE.InstancedMesh>(null);
   const crown = useRef<THREE.InstancedMesh>(null);
   const crownGeo = useMemo(() => {
     // Weld the sphere first, then push vertices in and out smoothly, so the crown stays
     // one soft mass instead of splitting into loose triangles.
-    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 2).deleteAttribute("normal").deleteAttribute("uv"));
+    const g = mergeVertices(new THREE.IcosahedronGeometry(1, low ? 1 : 2).deleteAttribute("normal").deleteAttribute("uv"));
     const p = g.attributes.position;
     const v = new THREE.Vector3();
     for (let i = 0; i < p.count; i++) {
@@ -442,7 +446,7 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
     }
     g.computeVertexNormals();
     return g;
-  }, [seed]);
+  }, [seed, low]);
   const blobs = useMemo(() => {
     const r = rand(seed + 3);
     return trees.flatMap((t) => {
@@ -501,12 +505,12 @@ export function Forest({ trees, hills = [], seed = 1 }: { trees: TreeSpot[]; hil
   return (
     <group>
       <instancedMesh ref={trunk} args={[undefined, undefined, trees.length]} castShadow material={toon("#7d5a3e")}>
-        <cylinderGeometry args={[0.12, 0.2, 1, 10]} />
-        <Ink />
+        <cylinderGeometry args={[0.12, 0.2, 1, low ? 6 : 10]} />
+        {!low && <Ink />}
       </instancedMesh>
       {/* solid: the camera stops in front of a crown instead of hiding the traveler behind it */}
       <instancedMesh ref={crown} args={[crownGeo, undefined, blobs.length]} castShadow material={toonWith({ color: "#ffffff", key: "tree-crown" })} userData={{ solid: true }}>
-        <Ink />
+        {!low && <Ink />}
       </instancedMesh>
     </group>
   );
@@ -639,21 +643,29 @@ export function ToonSky({ top, horizon }: { top: string; horizon: string }) {
     if (ring.current) ring.current.rotation.y += Math.min(dt, 0.05) * 0.004;
   });
   const cloudMat = useMemo(() => toonWith({ color: "#fffaf1", fog: false, key: "cloud" }), []);
+  // All puffs in one mesh: one draw call for the whole ring of clouds.
+  const cloudGeo = useMemo(() => {
+    const parts: THREE.BufferGeometry[] = [];
+    for (const c of clouds) {
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(c.x, c.y, c.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.atan2(c.z, c.x), 0)), new THREE.Vector3(c.s, c.s * 0.62, c.s));
+      for (const p of c.puffs) {
+        const g = new THREE.SphereGeometry(1, 16, 12);
+        g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(0, p.y, p.x), new THREE.Quaternion(), new THREE.Vector3(p.s, p.s, p.s)));
+        g.applyMatrix4(m);
+        parts.push(g);
+      }
+    }
+    const out = mergeGeometries(parts, false)!;
+    parts.forEach((g) => g.dispose());
+    return out;
+  }, [clouds]);
   return (
     <group>
       <mesh material={material} renderOrder={-1}>
         <sphereGeometry args={[320, 32, 16]} />
       </mesh>
       <group ref={ring}>
-        {clouds.map((c, i) => (
-          <group key={i} position={[c.x, c.y, c.z]} scale={[c.s, c.s * 0.62, c.s]} rotation={[0, -Math.atan2(c.z, c.x), 0]}>
-            {c.puffs.map((p, j) => (
-              <mesh key={j} position={[0, p.y, p.x]} scale={p.s} material={cloudMat}>
-                <sphereGeometry args={[1, 16, 12]} />
-              </mesh>
-            ))}
-          </group>
-        ))}
+        <mesh geometry={cloudGeo} material={cloudMat} />
       </group>
     </group>
   );

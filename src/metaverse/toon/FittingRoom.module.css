@@ -330,8 +330,17 @@
   .moves {
     bottom: 32px;
   }
+  /* eight moves: two rows on a phone instead of a cut-off strip */
+  .moves {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: calc(100% - 24px);
+    max-width: none;
+    border-radius: 22px;
+  }
   .moves button {
-    padding: 0 10px;
+    min-height: 40px;
+    padding: 0 11px;
     font-size: 13px;
   }
 }

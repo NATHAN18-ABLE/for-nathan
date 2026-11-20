@@ -47,9 +47,9 @@ function lift(style: HairStyle, az: number, t: number) {
   return d;
 }
 
-export function hairGeometry(style: HairStyle, r: number, scale: [number, number, number]) {
-  const NA = 144; // around
-  const NO = 22; // crown to hairline
+export function hairGeometry(style: HairStyle, r: number, scale: [number, number, number], low = false) {
+  const NA = low ? 80 : 120; // around
+  const NO = low ? 14 : 20; // crown to hairline
   const profile: { f: number; rho: (az: number, t: number) => number; dt: number }[] = [];
   for (let j = 0; j <= NO; j++) profile.push({ f: j / NO, rho: (az, t) => 1 + lift(style, az, t), dt: 0 });
   profile.push({ f: 1, rho: (az) => 1 + lift(style, az, 1) * 0.55, dt: 0.016 }); // the rounded lip

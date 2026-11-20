@@ -21,7 +21,7 @@ import { useLang } from "@/lib/lang.ts";
 import { Phrases } from "@/components/Phrases";
 import { Avatar, newMotion, type Motion } from "./Avatar";
 import { Joystick, type Stick } from "./Joystick";
-import { heightAt, LampPost, ToonSky } from "./world";
+import { heightAt, LampPost, Quality, ToonSky } from "./world";
 import { LanternRack } from "./Lanterns";
 import { FallingLeaves } from "./autumn";
 import { Effects } from "./Effects";
@@ -256,11 +256,31 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.5, dist: 7.4, touchedAt: 0 });
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const stick = useRef<Stick>({ x: 0, y: 0, active: false });
+  const propCache = useRef(new Map<string, { key: string; look: Look; avatar: AvatarLook; rest: P }>());
+  // The scenery never changes while in a room: build its elements once, so room updates
+  // (chat, notices, stamps) do not walk the whole scene again.
+  const sceneEl = useMemo(
+    () => (
+      <Frozen>
+        <room.Scene />
+      </Frozen>
+    ),
+    [room],
+  );
+  const liveEl = useMemo(() => (room.Live ? <room.Live /> : null), [room]);
   const pinch = useRef(0);
   const ground = useCallback((x: number, z: number) => (room.world ? heightAt(x, z, room.world.hills) + (room.world.floorLift ?? 0) : 0), [room]);
   // Phones get lighter effects; iPads and computers keep the full set. (An automatic
   // step-down tripped on loading hitches and left iPads blurry and jagged, so it is gone.)
-  const [lowPower] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 600);
+  // Drawing budget by device: phones draw simpler (no post effects, lower resolution, shadows
+  // refreshed less often, plainer trees), tablets skip a little, computers get everything.
+  const [tier] = useState<"low" | "mid" | "high">(() => {
+    if (typeof window === "undefined") return "high";
+    if (Math.min(window.innerWidth, window.innerHeight) < 600) return "low";
+    return window.matchMedia("(pointer: coarse)").matches ? "mid" : "high";
+  });
+  const lowPower = tier === "low";
+  const quality = useMemo(() => ({ low: lowPower }), [lowPower]);
 
   // Drag to look around, wheel or pinch to come closer.
   const onPointerDown = (e: React.PointerEvent) => {
@@ -746,6 +766,16 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   }
 
   const others = [...members.filter((p) => p.id !== me.current.id && seated.has(p.id)), ...bots];
+  // Cleaned look and position for each traveler, reused while unchanged so their figures
+  // are not re-rendered on every update from the room.
+  const props = (p: Presence) => {
+    const key = JSON.stringify([p.look, p.avatar, p.x, p.z]);
+    const hit = propCache.current.get(p.id);
+    if (hit && hit.key === key) return hit;
+    const next = { key, look: sanitizeLook(p.look), avatar: sanitizeAvatar(p.avatar), rest: { x: p.x, z: p.z } };
+    propCache.current.set(p.id, next);
+    return next;
+  };
 
   return (
     <div
@@ -761,7 +791,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         <Canvas
           className={styles.canvas}
           shadows
-          dpr={lowPower ? [1, 1.25] : [1, 1.5]}
+          dpr={lowPower ? [1, 1] : [1, 1.5]}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
           camera={{ fov: room.world ? 42 : 34, near: 0.3, far: 600, position: [0, 12, 14] }}
           onCreated={({ gl, scene, camera }) => {
@@ -776,23 +806,22 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           }}
         >
           <Lights room={room} motions={motions} meId={me.current.id} low={lowPower} />
+          <Quality.Provider value={quality}>
           <Walkable room={room} onPick={walkTo}>
-            <Frozen>
-              <room.Scene />
-            </Frozen>
-            {room.Live && <room.Live />}
+            {sceneEl}
+            {liveEl}
             {room.lamps?.map((pos, i) => <LampPost key={i} position={pos} lit={!!lit[i]} hills={room.world?.hills} />)}
             {room.lanterns && <LanternRack lanterns={lanterns} fresh={fresh} />}
           </Walkable>
-          {room.world && <FallingLeaves motions={motions} meId={me.current.id} />}
-          {room.world && <Effects low={lowPower} />}
+          {room.world && <FallingLeaves motions={motions} meId={me.current.id} count={lowPower ? 50 : 140} />}
+          {room.world && !lowPower && <Effects low={tier !== "high"} />}
           {inside && me.current.id && (
             <Avatar
               key="me"
               motion={motions.current.get(me.current.id) ?? newMotion(room.spawn.x, room.spawn.z)}
               look={look}
               avatar={avatar}
-              name={me.current.name}
+              name={shownName(me.current.name, lang)}
               type={me.current.type}
               sameType={false}
               isMe
@@ -809,14 +838,14 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               <Avatar
                 key={p.id}
                 motion={m}
-                look={sanitizeLook(p.look)}
-                avatar={sanitizeAvatar(p.avatar)}
-                name={p.name}
+                look={props(p).look}
+                avatar={props(p).avatar}
+                name={shownName(p.name, lang)}
                 type={p.type}
                 sameType={!!p.type && p.type === me.current.type}
                 isMe={false}
                 bubble={bubbles[p.id] ?? null}
-                rest={{ x: p.x, z: p.z }}
+                rest={props(p).rest}
                 ground={ground}
               />
             );
@@ -826,14 +855,15 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           <TapTarget motions={motions} meId={me.current.id} ground={ground} />
           <PhotoBooth onShot={takePhoto} />
           <PoiWatch room={room} motions={motions} meId={me.current.id} onNear={setNear} onNearLamp={setNearLamp} onSitting={setSitting} />
+          </Quality.Provider>
         </Canvas>
       )}
 
       {ready && <Loader label={t.loading} />}
 
       <header className={styles.top}>
-        <Link href="/metaverse" className={styles.back}>
-          {t.rooms}
+        <Link href="/metaverse" className={styles.back} aria-label={t.rooms}>
+          <span className={styles.backLabel}>{t.rooms}</span>
         </Link>
         <div className={styles.title}>
           <h1>
@@ -844,13 +874,21 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               </button>
             )}
           </h1>
-          <p>
+          <p className={styles.subtitle}>
             <span className="phrase">{room.place[lang]}</span> <span className="phrase">· {room.hour[lang]}</span>
           </p>
         </div>
         <div className={styles.topRight}>
           <span className={styles.count} aria-live="polite">
-            {status === "connecting" ? t.connecting : t.here(count)}
+            <span className={styles.countLong}>{status === "connecting" ? t.connecting : t.here(count)}</span>
+            {/* phones: just "3/30" with a person mark */}
+            <span className={styles.countShort} aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z" />
+              </svg>
+              {status === "connecting" ? "…" : `${count}/${CAPACITY}`}
+            </span>
           </span>
           <button type="button" className={styles.iconButton} aria-pressed={sound} aria-label={sound ? t.soundOff : t.soundOn} title={sound ? t.soundOff : t.soundOn} onClick={toggleSound}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -889,12 +927,27 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         </div>
       )}
 
-      {status === "offline" && !away && offlineLong && <p className={styles.notice}>{t.offline}</p>}
-      {hint && inside && <p className={styles.hint}>{t.hint}</p>}
+      {/* Short messages stack in one place under the header, so they never cover the controls. */}
+      <div className={styles.notices} aria-live="polite">
+        {status === "offline" && !away && offlineLong && (
+          <p className={styles.notice}>
+            <Phrases text={t.offline} />
+          </p>
+        )}
+        {hint && inside && (
+          <p className={styles.hint}>
+            <Phrases text={t.hint} />
+          </p>
+        )}
+        {toast && (
+          <p className={styles.notice}>
+            <Phrases text={toast} />
+          </p>
+        )}
+      </div>
 
       {near && inside && <PoiCard key={near.id} poi={near} lang={lang} />}
 
-      {toast && <p className={styles.notice}>{toast}</p>}
 
       {flashOn && <div className={styles.flash} aria-hidden="true" />}
 
@@ -1046,7 +1099,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             <ol className={styles.chatLog} aria-live="polite">
               {chat.slice(-12).map((l) => (
                 <li key={l.key} data-mine={l.mine}>
-                  <span className={styles.chatName}>{l.mine ? t.you : l.name}</span>
+                  <span className={styles.chatName}>{l.mine ? t.you : shownName(l.name, lang)}</span>
                   <span className={styles.chatText}>{l.translated ?? l.text}</span>
                   {l.translated && (
                     <span className={styles.chatOriginal}>
@@ -1054,7 +1107,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
                     </span>
                   )}
                   {!l.mine && (
-                    <button type="button" className={styles.chatHide} onClick={() => hide(l.id, l.name)}>
+                    <button type="button" className={styles.chatHide} onClick={() => hide(l.id, shownName(l.name, lang))}>
                       {t.hide}
                     </button>
                   )}
@@ -1157,6 +1210,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   );
 }
 
+/** Automatic names read "Traveler 42" on the wire; Korean readers see "여행자 42". */
+const shownName = (name: string, lang: "en" | "ko") => (lang === "ko" ? name.replace(/^Traveler (\d{1,2})$/, "여행자 $1") : name);
+
 interface ChatLine {
   key: number;
   id: string;
@@ -1199,7 +1255,15 @@ function Lights({ room, motions, meId, low }: { room: RoomConfig; motions: React
   const sun = useRef<THREE.DirectionalLight>(null);
   const { scene } = useThree();
   // The sun's shadow box follows the traveler, so a large map keeps crisp shadows nearby.
+  const gl = useThree((st) => st.gl);
+  const frame = useRef(0);
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = !low;
+    gl.shadowMap.needsUpdate = true;
+  }, [gl, low]);
   useFrame(() => {
+    // Phones redraw the shadows every third frame; the sun barely moves between them.
+    if (low && frame.current++ % 3 === 0) gl.shadowMap.needsUpdate = true;
     const l = sun.current;
     const m = motions.current?.get(meId);
     if (!l || !m || !room.world) return;
@@ -1525,7 +1589,8 @@ function ContextAction({
 function PoiCard({ poi, lang }: { poi: Poi; lang: "en" | "ko" }) {
   const [open, setOpen] = useState(true);
   useEffect(() => {
-    const id = setTimeout(() => setOpen(false), 6000);
+    // Phones have little room: fold the note to its title sooner.
+    const id = setTimeout(() => setOpen(false), window.innerWidth < 640 ? 3500 : 6000);
     return () => clearTimeout(id);
   }, []);
   return (

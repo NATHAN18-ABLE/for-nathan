@@ -12,6 +12,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { toon, toonMapped, shadeOf } from "./material";
 import { Part, Ink, Detail } from "./part";
+import { Quality } from "../world";
 import { bakeFigure } from "./bake";
 import { faceTextures, type Expression } from "./face";
 import { hairGeometry, hairShineGeometry, onHead } from "./hair";
@@ -140,7 +141,9 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
 
   const faces = useMemo(() => faceTextures(p.skin, shadeOf(p.hair, 1.15), lashes), [p.skin, p.hair, lashes]);
   const faceMat = useMemo(() => toonMapped(faces.open), [faces]);
-  const hairGeo = useMemo(() => hairGeometry(hair, R, HEAD), [hair]);
+  // Phones draw the head and hair with fewer triangles; the toon shading hides the difference.
+  const { low } = useContext(Quality);
+  const hairGeo = useMemo(() => hairGeometry(hair, R, HEAD, low), [hair, low]);
   const shineGeo = useMemo(() => hairShineGeometry(hair, R, HEAD), [hair]);
 
   const geo = useMemo(() => {
@@ -399,7 +402,7 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
   const items = look?.items ?? [];
   // Bake parts that move together into one mesh per joint (see bake.ts); redo it whenever
   // what the figure wears, or how much detail it draws, changes.
-  const bakeKey = JSON.stringify([outfit, hair, palette, items, look?.scarf, lashes, detail]);
+  const bakeKey = JSON.stringify([outfit, hair, palette, items, look?.scarf, lashes, detail, low]);
   useLayoutEffect(() => {
     if (!root.current) return;
     return bakeFigure(root.current, [body.current, torso.current, skirt.current, head.current, armL.current, armR.current, legL.current, legR.current, footL.current, footR.current, holder.current, jegi.current].filter((j): j is THREE.Group => !!j));
@@ -603,7 +606,7 @@ export function ToonFigure({ outfit, hair, palette, action: actionProp = "idle",
           {/* head */}
           <group ref={head} position={[0, headY, 0]}>
             <mesh castShadow material={faceMat} scale={HEAD}>
-              <sphereGeometry args={[R, 64, 48]} />
+              <sphereGeometry args={low ? [R, 36, 26] : [R, 56, 40]} />
               <Ink scale={1.2} />
             </mesh>
             {hair !== "bob" && hair !== "mop" &&

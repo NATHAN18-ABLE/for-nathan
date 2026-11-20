@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -57,7 +57,8 @@ type Props = {
 
 const shortestAngle = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
-export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubble, meLabel, rest, onArrive, ground }: Props) {
+/** One traveler. Memoized: it only re-renders when its own props change, not on every room update. */
+export const Avatar = memo(function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubble, meLabel, rest, onArrive, ground }: Props) {
   const root = useRef<THREE.Group>(null);
   const tag = useRef<HTMLDivElement>(null);
   const seatBlend = useRef(0);
@@ -174,5 +175,5 @@ export function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubbl
       )}
     </group>
   );
-}
+});
 
