@@ -86,8 +86,8 @@ const UI = {
     hide: "Hide",
     hidden: (n: string) => `Messages from ${n} are hidden.`,
     original: "Original:",
-    translateOn: "Messages in other languages are translated on this device.",
-    translateOff: "Automatic translation works in Chrome on a computer.",
+    translateOn: "Messages in other languages are translated for you. Without a built-in translator, the free MyMemory service is used.",
+    translateOff: "",
     connecting: "Finding other travelers…",
     offline: "Couldn't reach other travelers right now. You can still look around.",
     fullTitle: "This room is full",
@@ -150,8 +150,8 @@ const UI = {
     hide: "숨기기",
     hidden: (n: string) => `${n}님의 메시지를 숨겼어요.`,
     original: "원문:",
-    translateOn: "다른 언어로 온 메시지는 이 기기에서 번역돼요.",
-    translateOff: "자동 번역은 컴퓨터의 Chrome에서 지원돼요.",
+    translateOn: "다른 언어로 온 메시지는 자동으로 번역돼요. 기기에 번역 기능이 없으면 무료 번역 서비스(MyMemory)를 써요.",
+    translateOff: "",
     connecting: "다른 여행자를 찾는 중…",
     offline: "지금은 다른 여행자와 연결되지 않아요. 혼자 둘러볼 수는 있어요.",
     fullTitle: "방이 가득 찼어요",
@@ -367,7 +367,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       setChat((list) => [...list.slice(-29), { key, id, name, text, mine }]);
       showText(id, text, 6500);
       if (mine) return;
-      translate(text, guessLang(text), langRef.current).then((tr) => {
+      translate(text, guessLang(text), langRef.current).then((raw) => {
+        // A translation is still a message: it goes through the same filter.
+        const tr = raw ? cleanChat(raw) : null;
         if (!tr) return;
         setChat((list) => list.map((l) => (l.key === key ? { ...l, translated: tr } : l)));
         setBubbles((b) => (b[id] === text ? { ...b, [id]: tr } : b));
@@ -1137,7 +1139,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               </button>
             ))}
           </div>
-          <p className={styles.chatNote}>{canTranslate() ? t.translateOn : t.translateOff}</p>
+          <p className={styles.chatNote}>
+            <Phrases text={canTranslate() ? t.translateOn : t.translateOff} />
+          </p>
         </div>
       )}
 

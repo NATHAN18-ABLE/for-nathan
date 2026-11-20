@@ -18,3 +18,25 @@ export function wanted(center: number, direction: 1 | -1, total: number, behind:
   }
   return out.filter((i) => i >= 0 && i < total);
 }
+
+/**
+ * Which frame to download next (`got[i]` is non-zero once frame i is fetched or on its way).
+ * First the opening of the film, every frame, so the first scroll is smooth; then the frames
+ * just ahead of where the visitor is (and a few behind); then a coarse pass over the whole
+ * film so a fast fling still has something close to show; then everything else in order.
+ */
+export function nextToFetch(got: ArrayLike<number>, center: number, direction: 1 | -1, opening = 80, ahead = 160, behind = 24): number | undefined {
+  const n = got.length;
+  for (let i = 0; i < Math.min(n, opening); i++) if (!got[i]) return i;
+  for (let d = 0; d < ahead; d++) {
+    const i = center + direction * d;
+    if (i >= 0 && i < n && !got[i]) return i;
+    if (d > 0 && d <= behind) {
+      const j = center - direction * d;
+      if (j >= 0 && j < n && !got[j]) return j;
+    }
+  }
+  for (let i = 0; i < n; i += 8) if (!got[i]) return i;
+  for (let i = 0; i < n; i++) if (!got[i]) return i;
+  return undefined;
+}

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
-import { evictions, wanted } from "@/lib/hero/frame-cache.ts";
+import { evictions, nextToFetch, wanted } from "@/lib/hero/frame-cache.ts";
 import { COPY, type Lang } from "@/lib/hero/copy.ts";
 import { useLang } from "@/lib/lang.ts";
 import { BuildTag } from "./BuildTag";
@@ -40,15 +40,6 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const frameUrl = (set: string, i: number) => asset(`/hero/${set}/${String(i + 1).padStart(4, "0")}.webp`);
 
-function loadOrder(n: number): number[] {
-  const seen = new Set<number>();
-  const order: number[] = [];
-  for (const step of [16, 8, 4, 2, 1]) {
-    for (let i = 0; i < n; i += step) if (!seen.has(i)) (seen.add(i), order.push(i));
-  }
-  if (!seen.has(n - 1)) order.push(n - 1);
-  return order;
-}
 
 type Frame = HTMLImageElement | ImageBitmap;
 
@@ -295,7 +286,9 @@ export function HeroScroll() {
     resize();
     window.addEventListener("resize", resize);
 
-    // Download every frame as a compressed blob, coarse frames first, a few at a time.
+    // Download every frame as a compressed blob, a few at a time: the opening first, then
+    // always the stretch just ahead of where the visitor is scrolling (see nextToFetch).
+    // Fetching in a fixed coarse-to-fine order left gaps right where the first scroll went.
     fetch(asset("/hero/timing.json"))
       .then((r) => r.json())
       .then(async (data: Timing) => {
@@ -304,9 +297,10 @@ export function HeroScroll() {
         windows = scrollWindows(data, FRAMES_FROM, FRAMES_TO);
         blobs.length = data.frames;
         blobs.fill(null);
-        const queue = loadOrder(data.frames);
+        const got = new Uint8Array(data.frames);
         const worker = async () => {
-          for (let i = queue.shift(); i !== undefined && !cancelled; i = queue.shift()) {
+          for (let i = nextToFetch(got, lastFrame, direction); i !== undefined && !cancelled; i = nextToFetch(got, lastFrame, direction)) {
+            got[i] = 1;
             try {
               const r = await fetch(frameUrl(set, i));
               blobs[i] = await r.blob();
@@ -314,7 +308,7 @@ export function HeroScroll() {
             } catch {}
           }
         };
-        await Promise.all(Array.from({ length: 6 }, worker));
+        await Promise.all(Array.from({ length: portrait ? 4 : 6 }, worker));
       })
       .catch(() => {});
 
