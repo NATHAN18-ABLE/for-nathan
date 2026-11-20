@@ -1,7 +1,7 @@
-import { CharacterLab } from "@/metaverse/toon/CharacterLab";
+import { FittingRoom } from "@/metaverse/toon/FittingRoom";
 
-export const metadata = { title: "Character lab · Seoul, Curated", robots: { index: false, follow: false } };
+export const metadata = { title: "Fitting room · Seoul, Curated", robots: { index: false, follow: false } };
 
 export default function Page() {
-  return <CharacterLab />;
+  return <FittingRoom />;
 }

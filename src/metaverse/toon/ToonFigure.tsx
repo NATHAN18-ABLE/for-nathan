@@ -13,30 +13,18 @@ import { Outlines } from "@react-three/drei";
 import * as THREE from "three";
 import { toon, toonMapped, shadeOf } from "./material";
 import { faceTextures, type Expression } from "./face";
-import { hairGeometry, hairShineGeometry, onHead, type HairStyle } from "./hair";
+import { hairGeometry, hairShineGeometry, onHead } from "./hair";
+import type { HairId, OutfitId, Palette } from "@/lib/metaverse/outfit.ts";
 
-export type Outfit = "chima" | "baji" | "hoodie";
-export type Hair = HairStyle;
+export type Outfit = OutfitId;
+export type Hair = HairId;
+export type { Palette };
 export type Action = "idle" | "walk" | "wave" | "bow" | "sit" | "hop";
-
-export interface Palette {
-  skin: string;
-  hair: string;
-  top: string; // jeogori / hoodie
-  bottom: string; // chima / baji / trousers
-  accent: string; // goreum and sleeve ends, vest, soles
-  trim: string; // collar band, buttons, pins
-  shoes: string;
-}
-
-export const PALETTES: Palette[] = [
-  { skin: "#f7dac7", hair: "#2f2421", top: "#f7d5d8", bottom: "#4462b0", accent: "#d4475b", trim: "#d4475b", shoes: "#f4c9d0" },
-  { skin: "#eec8ab", hair: "#33261f", top: "#f7f0e2", bottom: "#5d8b70", accent: "#2f4270", trim: "#d9a843", shoes: "#463935" },
-  { skin: "#f7dfcc", hair: "#6b4532", top: "#f1b546", bottom: "#3b4459", accent: "#e8665b", trim: "#f6f1e7", shoes: "#f8f4ec" },
-];
 
 const LINE = "#3d2d2f";
 const BINYEO = "#d8b25c";
+const DAENGGI = "#c23a4a";
+const WHITE = "#fdfaf3";
 const LINE_PX = 1.7;
 
 // Proportions, in metres of a figure about 1.15 tall.
@@ -67,16 +55,29 @@ const TORSO_PTS: [number, number][] = [
   [T_TOP * 0.82, TORSO * 0.96],
   [0, TORSO],
 ];
-function torsoAt(y: number) {
-  for (let i = 1; i < TORSO_PTS.length; i++) {
-    const [r1, y1] = TORSO_PTS[i];
+/** Radius of a lathe profile (points listed bottom to top) at height y. */
+function radiusAt(pts: [number, number][], y: number) {
+  for (let i = 1; i < pts.length; i++) {
+    const [r1, y1] = pts[i];
     if (y <= y1) {
-      const [r0, y0] = TORSO_PTS[i - 1];
+      const [r0, y0] = pts[i - 1];
       return r0 + ((r1 - r0) * (y - y0)) / Math.max(1e-6, y1 - y0);
     }
   }
   return 0;
 }
+const torsoAt = (y: number) => radiusAt(TORSO_PTS, y);
+// Durumagi: a long coat that follows the body and falls to the shins.
+const COAT_HEM = -LEG * 0.6;
+const COAT_PTS: [number, number][] = [
+  [0, COAT_HEM],
+  [T_BOT * 1.34, COAT_HEM],
+  [T_BOT * 1.37, COAT_HEM + 0.02],
+  [T_BOT * 1.24, -LEG * 0.25],
+  [T_BOT * 1.13, 0],
+  ...TORSO_PTS.slice(2, -1).map(([r, y]): [number, number] => [r + 0.016, y]),
+  [0, TORSO + 0.01],
+];
 /** A band of cloth over the torso between two heights, standing `pad` off the body. */
 function shell(y0: number, y1: number, pad: number, flare = 0, arc?: [number, number]) {
   const pts: [number, number][] = [[torsoAt(y0) * 0.85, y0]];
@@ -170,6 +171,32 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
     const hips = shell(0, h * 0.13, 0.012);
     const hem2 = shell(0, h * 0.1, 0.01, 0.004);
     const pocket = shell(h * 0.15, h * 0.44, 0.011, 0, [-0.62, 1.24]);
+    const sash = shell(h * 0.3, h * 0.38, 0.008);
+    const coat = lathe(COAT_PTS, 64);
+    // A knee-length dress skirt from the waist.
+    const dressHem = -LEG * 0.42;
+    const dress = pleat(
+      lathe([
+        [0, dressHem],
+        [T_BOT * 1.5, dressHem],
+        [T_BOT * 1.56, dressHem + 0.02],
+        [T_BOT * 1.3, -LEG * 0.12],
+        [T_BOT * 1.12, h * 0.12],
+        [T_BOT * 1.03, h * 0.3],
+        [0, h * 0.32],
+      ], 80),
+      12,
+      (y) => 0.03 * Math.min(1, Math.max(0, (h * 0.2 - y) / (h * 0.2 - dressHem))),
+    );
+    const puff = lathe([
+      [0, -ARM * 0.4],
+      [ARM_R * 0.95, -ARM * 0.4],
+      [ARM_R * 1.25, -ARM * 0.36],
+      [ARM_R * 1.5, -ARM * 0.2],
+      [ARM_R * 1.3, -ARM * 0.02],
+      [ARM_R * 0.8, ARM_R * 0.55],
+      [0, ARM_R * 0.85],
+    ], 28);
     // Sleeves: a gentle belly for hanbok (the baerae curve), straight and cuffed for the hoodie.
     const sleeve = (cuff: number, belly: number) =>
       lathe([
@@ -195,8 +222,16 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
       return new THREE.Vector3(x, y, Math.sqrt(Math.max(0, rr * rr - x * x)) + 0.003);
     });
     const git = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(gitPts), 24, 0.011, 8, false);
+    // Where the durumagi's front panels overlap: a seam from the tie down to the hem.
+    const seamPts = Array.from({ length: 10 }, (_, i) => {
+      const y = gitPts[8].y - ((gitPts[8].y - COAT_HEM - 0.025) * i) / 9;
+      const x = 0.038 + 0.03 * (i / 9);
+      const rr = radiusAt(COAT_PTS, y);
+      return new THREE.Vector3(x, y, Math.sqrt(Math.max(0, rr * rr - x * x)) + 0.002);
+    });
+    const seam = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(seamPts), 30, 0.006, 6, false);
     return {
-      torsoShape, chima, jeogori, vest, hips, hem2, pocket, git,
+      torsoShape, chima, jeogori, vest, hips, hem2, pocket, git, sash, coat, dress, puff, seam,
       sleeveHanbok: sleeve(cuffHanbok, 0.35),
       sleeveHoodie: sleeve(cuffHoodie, 0),
       kkeutdong: band(cuffHanbok * 0.8, cuffHanbok + 0.004, -ARM, -ARM + 0.045),
@@ -308,8 +343,10 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
 
   const h = TORSO;
   const headY = h + 0.02 + R * HEAD[1] * 0.88;
-  const hanbok = outfit !== "hoodie";
-  const legColor = outfit === "chima" ? "#fbf7f0" : p.bottom; // beoseon socks under the chima
+  const hanbok = outfit === "chima" || outfit === "baji" || outfit === "durumagi";
+  const wide = outfit === "baji" || outfit === "durumagi";
+  // beoseon socks under the chima, bare legs under the dress
+  const legColor = outfit === "chima" ? WHITE : outfit === "dress" ? p.skin : p.bottom;
   const sole = outfit === "hoodie" ? p.accent : shadeOf(p.shoes, 0.62);
   const bunAt = onHead(R, HEAD, Math.PI, Math.PI * 0.57, 1.16);
 
@@ -320,10 +357,15 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
         {[-1, 1].map((side) => (
           <group key={side} ref={side < 0 ? legL : legR} position={[side * 0.075, HIP, 0]}>
             <Part color={legColor} position={[0, -LEG / 2 + 0.01, 0]}>
-              <capsuleGeometry args={[outfit === "baji" ? LEG_R * 1.32 : LEG_R, LEG - LEG_R * 1.6, 6, 18]} />
+              <capsuleGeometry args={[wide ? LEG_R * 1.32 : outfit === "dress" ? LEG_R * 0.85 : LEG_R, LEG - LEG_R * 1.6, 6, 18]} />
             </Part>
-            {outfit === "baji" && (
-              <Part color={p.accent} position={[0, -LEG + 0.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            {outfit === "dress" && (
+              <Part color={WHITE} position={[0, -LEG + 0.04, 0]}>
+                <cylinderGeometry args={[LEG_R * 0.98, LEG_R * 0.92, 0.07, 20]} />
+              </Part>
+            )}
+            {wide && (
+              <Part color={outfit === "baji" ? p.accent : p.trim} position={[0, -LEG + 0.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
                 <torusGeometry args={[LEG_R * 1.05, 0.014, 8, 24]} />
               </Part>
             )}
@@ -352,12 +394,38 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
         <group ref={torso} position={[0, HIP, 0]}>
           <Part color={p.top} geometry={geo.torsoShape} />
 
-          {outfit === "chima" && (
+          {outfit === "dress" && (
             <>
               <group ref={skirt}>
-                <Part color={p.bottom} geometry={geo.chima} />
+                <Part color={p.top} geometry={geo.dress} />
               </group>
-              <Part color={p.top} geometry={geo.jeogori} />
+              <Part color={p.accent} geometry={geo.sash} />
+              {/* a round white collar lying on the shoulders */}
+              <Part color={p.trim} position={[0, h * 0.94, 0.006]} rotation={[Math.PI / 2 + 0.28, 0, 0]} scale={[1, 1, 0.42]}>
+                <torusGeometry args={[T_TOP * 0.78, 0.032, 10, 36]} />
+              </Part>
+            </>
+          )}
+
+          {outfit === "durumagi" && (
+            <>
+              <group ref={skirt}>
+                <Part color={p.top} geometry={geo.coat} />
+              </group>
+              <Part color={shadeOf(p.top, 0.82)} geometry={geo.seam} line={false} />
+            </>
+          )}
+
+          {(outfit === "chima" || outfit === "durumagi") && (
+            <>
+              {outfit === "chima" && (
+                <>
+                  <group ref={skirt}>
+                    <Part color={p.bottom} geometry={geo.chima} />
+                  </group>
+                  <Part color={p.top} geometry={geo.jeogori} />
+                </>
+              )}
               <Part color={p.trim} geometry={geo.git} />
               {/* goreum: a knot and two long ribbons */}
               <group position={geo.knot}>
@@ -420,7 +488,16 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
           {/* arms, pivoting at the shoulders; the hand tucks into the cuff */}
           {[-1, 1].map((side) => (
             <group key={side} ref={side < 0 ? armL : armR} position={[side * SHOULDER, h * 0.84, 0]}>
-              <Part color={p.top} geometry={hanbok ? geo.sleeveHanbok : geo.sleeveHoodie} />
+              {outfit === "dress" ? (
+                <>
+                  <Part color={p.skin} position={[0, -ARM / 2, 0]}>
+                    <capsuleGeometry args={[ARM_R * 0.78, ARM - ARM_R * 1.2, 4, 14]} />
+                  </Part>
+                  <Part color={p.top} geometry={geo.puff} />
+                </>
+              ) : (
+                <Part color={p.top} geometry={hanbok ? geo.sleeveHanbok : geo.sleeveHoodie} />
+              )}
               {outfit === "chima" && <Part color={p.accent} geometry={geo.kkeutdong} />}
               {outfit === "hoodie" && <Part color={shadeOf(p.top, 0.9)} geometry={geo.ribCuff} />}
               <Part color={p.skin} position={[0, -ARM - HAND * 0.32, 0.004]} scale={[1, 1.08, 0.9]}>
@@ -435,7 +512,7 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
               <sphereGeometry args={[R, 64, 48]} />
               <Outlines thickness={LINE_PX * 1.2 * dpr} color={LINE} />
             </mesh>
-            {hair !== "bob" &&
+            {hair !== "bob" && hair !== "mop" &&
               [-1, 1].map((side) => (
                 <Part key={side} color={p.skin} position={[side * R * HEAD[0] * 0.98, -R * 0.06, -0.01]} scale={[0.5, 1, 0.78]}>
                   <sphereGeometry args={[R * 0.17, 16, 12]} />
@@ -455,6 +532,27 @@ export function ToonFigure({ outfit, hair, palette, action, lashes = false, seed
                 <Part color={p.accent} position={[-R * 0.52, -R * 0.06, -R * 0.06]}>
                   <sphereGeometry args={[R * 0.07, 14, 10]} />
                 </Part>
+              </group>
+            )}
+            {hair === "braid" && (
+              <group position={[0, -R * 0.36, -R * 1.0]} rotation={[0.12, 0, 0]}>
+                {/* a plait down the back, tied with a red daenggi ribbon */}
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <Part key={i} color={p.hair} position={[(i % 2 ? 1 : -1) * 0.011, -i * 0.052, -i * 0.004]} scale={[1, 0.88, 0.82]}>
+                    <sphereGeometry args={[0.046 - i * 0.0026, 18, 12]} />
+                  </Part>
+                ))}
+                <group position={[0, -0.32, -0.02]}>
+                  <Part color={DAENGGI}>
+                    <sphereGeometry args={[0.022, 12, 10]} />
+                  </Part>
+                  <Part color={DAENGGI} position={[-0.016, -0.05, -0.006]} rotation={[0.1, 0, -0.18]} scale={[1, 1, 0.38]}>
+                    <capsuleGeometry args={[0.017, 0.07, 4, 10]} />
+                  </Part>
+                  <Part color={DAENGGI} position={[0.018, -0.045, -0.006]} rotation={[0.1, 0, 0.22]} scale={[1, 1, 0.38]}>
+                    <capsuleGeometry args={[0.016, 0.06, 4, 10]} />
+                  </Part>
+                </group>
               </group>
             )}
             {hair === "short" && (

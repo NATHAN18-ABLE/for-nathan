@@ -9,7 +9,7 @@ import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
  * a solid mass with a soft edge rather than a painted cap.
  */
 
-export type HairStyle = "bob" | "bun" | "short";
+export type HairStyle = "bob" | "bun" | "braid" | "short" | "mop";
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -22,12 +22,16 @@ function hairline(style: HairStyle, az: number) {
   let e: number;
   if (style === "short") {
     const locks = Math.pow(0.5 + 0.5 * Math.cos(az * 9), 1.6) * (1 - 0.5 * smooth(1.4, 2.6, a));
-    e = 0.3 + 0.17 * smooth(0.35, 1.35, a) + 0.24 * smooth(1.75, 2.9, a) + 0.045 * locks;
+    e = 0.3 + 0.17 * smooth(0.35, 1.35, a) + 0.24 * smooth(1.25, 2.4, a) + 0.045 * locks;
   } else if (style === "bob") {
     const tips = Math.pow(0.5 + 0.5 * Math.cos(az * 20), 2);
     e = 0.335 + 0.335 * smooth(0.6, 1.05, a) + 0.09 * smooth(1.9, 3, a) + 0.02 * tips;
+  } else if (style === "mop") {
+    const tips = Math.pow(0.5 + 0.5 * Math.cos(az * 16), 2);
+    e = 0.36 + 0.17 * smooth(0.55, 1.2, a) + 0.2 * smooth(1.3, 2.4, a) + 0.018 * tips;
   } else {
-    e = 0.25 + 0.2 * smooth(0, 1.1, a) + 0.24 * smooth(1.75, 2.9, a);
+    // bun and braid: parted in the middle and combed back
+    e = 0.25 + 0.2 * smooth(0, 1.1, a) + 0.26 * smooth(1.2, 2.3, a);
   }
   return e * Math.PI;
 }
@@ -37,8 +41,9 @@ function lift(style: HairStyle, az: number, t: number) {
   const a = Math.abs(az);
   let d = 0.07 + 0.035 * Math.sin(Math.PI * Math.min(1, t * 1.2)) - 0.015 * t ** 4;
   if (style === "bob") d += 0.07 * smooth(0.55, 1, t) * smooth(0.5, 1.1, a);
-  if (style === "bun") d -= 0.028 * Math.exp(-((az / 0.06) ** 2)) * smooth(0.15, 0.5, t); // the parting
+  if (style === "bun" || style === "braid") d -= 0.028 * Math.exp(-((az / 0.06) ** 2)) * smooth(0.15, 0.5, t); // the parting
   if (style === "short") d += 0.012;
+  if (style === "mop") d += 0.02 + 0.03 * smooth(0.6, 1, t);
   return d;
 }
 
@@ -102,7 +107,7 @@ export function hairShineGeometry(style: HairStyle, r: number, scale: [number, n
   for (let i = 0; i <= NA; i++) {
     const az = -span + (2 * span * i) / NA;
     const w = Math.cos((az / span) * (Math.PI / 2)) ** 0.7; // tapers at both ends
-    const mid = style === "bob" ? 0.42 : 0.4;
+    const mid = style === "bob" || style === "mop" ? 0.42 : 0.4;
     for (let j = 0; j <= NT; j++) {
       const t = mid + (j / NT - 0.5) * 0.11 * w;
       const th = hairline(style, az) * t;
