@@ -19,7 +19,7 @@ import styles from "./Districts.module.css";
 
 const T = {
   en: {
-    lede: (n: number) => `Find your district with the test, then follow its day from morning to night. ${n === 12 ? "All twelve courses are ready." : `${n} of the twelve courses are ready; the rest are on the way.`}`,
+    lede: "Find your district with the test, then follow its day from morning to night.",
     ready: "Courses you can follow now",
     soon: "Coming next",
     open: "See the day",
@@ -39,7 +39,7 @@ const T = {
     test: "Take the test",
   },
   ko: {
-    lede: (n: number) => `테스트로 나와 맞는 지역을 찾고, 그 지역의 하루를 아침부터 밤까지 따라가 보세요. ${n === 12 ? "12개 지역의 코스를 모두 공개했습니다." : `12개 지역 중 ${n}곳의 코스를 공개했고, 나머지도 준비하고 있습니다.`}`,
+    lede: "테스트로 나와 맞는 지역을 찾고, 그 지역의 하루를 아침부터 밤까지 따라가 보세요.",
     ready: "지금 따라갈 수 있는 코스",
     soon: "준비 중인 지역",
     open: "하루 코스 보기",
@@ -88,7 +88,7 @@ export function DistrictsIndex() {
       <main className={styles.main}>
         <header className={styles.indexHead}>
           <h1 className={styles.indexTitle}>{COPY[lang].nav.districts}</h1>
-          <p className={styles.lede}><Phrases text={t.lede(COURSES.length)} /></p>
+          <p className={styles.lede}><Phrases text={t.lede} /></p>
         </header>
 
         <section aria-labelledby="ready-heading">

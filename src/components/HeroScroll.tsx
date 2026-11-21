@@ -68,6 +68,7 @@ export function HeroScroll() {
   const set = portrait ? "m" : "d";
 
   const trackRef = useRef<HTMLElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nightRef = useRef<HTMLDivElement>(null);
@@ -433,6 +434,14 @@ export function HeroScroll() {
       },
     });
     target = st.progress;
+    // Once the film is over the page scrolls on to the footer, and the welcome and the footer
+    // pass under the see-through bar: give the bar the night behind it from then on.
+    const past = ScrollTrigger.create({
+      trigger: track,
+      start: "bottom bottom-=2",
+      end: "max",
+      onToggle: (self) => rootRef.current?.toggleAttribute("data-past", self.isActive),
+    });
     raf = requestAnimationFrame(tick);
 
     return () => {
@@ -443,6 +452,7 @@ export function HeroScroll() {
       clearTimeout(goneTimer);
       window.removeEventListener("resize", resize);
       st.kill();
+      past.kill();
       for (const f of bitmaps.values()) release(f);
       bitmaps.clear();
     };
@@ -554,7 +564,7 @@ export function HeroScroll() {
   }
 
   return (
-    <div className={loading && !reduced ? `${styles.root} ${styles.gate}` : styles.root} data-reveal={splash === "leaving" || splash === "done" || undefined}>
+    <div ref={rootRef} className={loading && !reduced ? `${styles.root} ${styles.gate}` : styles.root} data-reveal={splash === "leaving" || splash === "done" || undefined}>
       {opening}
       {nav}
       <section ref={trackRef} className={styles.track} aria-label={t.headline}>

@@ -6,7 +6,7 @@ export const CAPACITY = 30;
 export const MAX_INSTANCES = 5;
 export const IDLE_MS = 120_000;
 // Districts with a metaverse room. Add a slug here once its scene exists.
-export const ROOMS = ["jongno", "seodaemun", "yongsan", "gangnam", "yeongdeungpo"];
+export const ROOMS = ["seodaemun", "yongsan", "jongno", "gangnam", "yeongdeungpo"]; // also the order of the room list
 
 export interface Member {
   id: string;

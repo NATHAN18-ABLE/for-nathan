@@ -3,6 +3,15 @@
   background: var(--night);
 }
 
+/* past the film, the bar takes on the night so nothing reads through it */
+.root :global(header) {
+  transition: background-color 240ms ease-out;
+}
+
+.root[data-past] :global(header) {
+  background-color: color-mix(in oklab, var(--night) 94%, transparent);
+}
+
 .root :global(.site-footer) {
   color: rgb(251 251 249 / 0.66);
 }

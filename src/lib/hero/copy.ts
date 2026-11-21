@@ -4,7 +4,7 @@ export const COPY = {
   en: {
     nav: {
       test: "The Test",
-      districts: "12 Districts",
+      districts: "Seoul, 12 Districts",
       story: "Seoul Story",
       metaverse: "Metaverse",
       about: "About Us",
@@ -35,7 +35,7 @@ export const COPY = {
   ko: {
     nav: {
       test: "테스트",
-      districts: "12개의 지역",
+      districts: "서울, 12개의 지역",
       story: "서울 이야기",
       metaverse: "메타버스",
       about: "팀 소개",
