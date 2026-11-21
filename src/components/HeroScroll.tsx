@@ -38,7 +38,7 @@ const SMOOTH_MS = 120; // time constant of the scroll follow; frame-rate indepen
 // (briefly) until the frames already here plus those still arriving keep ahead of a visitor
 // going through the film in about SCROLL_SECS. On a fast line that is only the opening.
 const SCROLL_SECS = 5;
-const GATE_MAX_MS = 2500; // never hold the page longer than this
+const GATE_MAX_MS = 3000; // never hold the page longer than this, counted from the page request
 
 const PORTRAIT = "(max-aspect-ratio: 4/5)"; // phones held upright get the tall film
 
@@ -328,7 +328,9 @@ export function HeroScroll() {
       window.removeEventListener("keydown", block);
       setLoading(false);
     };
-    // Starts at once, so nothing scrolls before the timing file is in; `watch` begins once it is.
+    // The server-rendered page already holds scrolling (.gate, see the CSS), so a visitor
+    // cannot scroll ahead while the scripts are still on their way; this keeps it held until the
+    // film is ready and then lets go. `watch` begins once the timing file is in.
     const holding = window.scrollY <= 10; // coming back mid-page: nothing to wait for
     const began = performance.now();
     if (holding) {
@@ -344,19 +346,20 @@ export function HeroScroll() {
       const check = () => {
         if (cancelled) return;
         const t = performance.now() - began;
+        const sinceOpen = performance.now(); // ms since the page was requested
         let run = 0;
         while (run < total && blobs[run]) run++;
         const have = blobs.reduce((n, b) => n + (b ? 1 : 0), 0);
         const rate = have >= 6 ? (have / t) * 1000 : 0; // frames a second, once it can be told
         const need = Math.min(total, Math.max(24, Math.ceil(total - rate * SCROLL_SECS)));
         if (cueFillRef.current) cueFillRef.current.style.transform = `scaleY(${Math.min(1, run / need)})`;
-        if (run >= need || t >= GATE_MAX_MS) return openGate();
+        if (run >= need || sinceOpen >= GATE_MAX_MS) return openGate();
         gateTimer = requestAnimationFrame(check);
       };
       check();
     };
     // the hard limit holds even if the timing file never comes
-    const gateLimit = window.setTimeout(openGate, GATE_MAX_MS + 100);
+    const gateLimit = window.setTimeout(openGate, Math.max(0, GATE_MAX_MS + 100 - performance.now()));
 
     // Download every frame as a compressed blob, a few at a time: the opening first, then
     // always the stretch just ahead of where the visitor is scrolling (see nextToFetch).
@@ -478,7 +481,7 @@ export function HeroScroll() {
   }
 
   return (
-    <div className={styles.root}>
+    <div className={loading && !reduced ? `${styles.root} ${styles.gate}` : styles.root}>
       {nav}
       <section ref={trackRef} className={styles.track} aria-label={t.headline}>
         <div className={styles.stage}>

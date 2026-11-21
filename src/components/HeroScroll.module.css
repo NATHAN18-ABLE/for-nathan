@@ -35,6 +35,21 @@
   background-position: center;
 }
 
+/* Scrolling waits at the top while the film loads (HeroScroll lifts this when it is ready).
+   The page gets it from the server, before any script runs; should the scripts never arrive,
+   it lets go by itself after six seconds. The gutter stays, so nothing shifts when it lifts. */
+:global(html):has(.gate) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  animation: heroGateRelease 0s linear 6s forwards;
+}
+
+@keyframes heroGateRelease {
+  to {
+    overflow: auto;
+  }
+}
+
 .poster {
   background-image: var(--poster-d);
 }
