@@ -1266,7 +1266,7 @@ export const COURSES: Course[] = [
   {
     slug: "gwanak",
     area: { en: "Gwanaksan and Seoul National University", ko: "관악산·서울대" },
-    title: { en: "A mountain valley, a campus town and sundae alley", ko: "관악산 계곡과 대학가, 순대타운" },
+    title: { en: "A mountain valley, a campus town and sundae alley", ko: "관악산 계곡, 대학가와 순대타운" },
     intro: {
       en: "Gwanak is the town of Seoul National University. Walk up a mountain valley in the morning, eat where the students eat, pass the birthplace of a Goryeo general, and finish in Sillim-dong's sundae town.",
       ko: "관악은 서울대학교가 있는 대학 동네입니다. 아침에는 관악산 계곡을 따라 걷고, 학생들이 찾는 골목에서 점심을 먹고, 고려의 명장이 태어난 터를 지나, 신림동 순대타운에서 저녁을 먹습니다.",

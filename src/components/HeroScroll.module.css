@@ -345,7 +345,7 @@
   place-items: center;
   padding: 0 var(--gutter);
   color: var(--white);
-  background: #0d1226 var(--night-d) center / cover no-repeat;
+  background: var(--night) var(--night-d) center / cover no-repeat;
   transition:
     opacity 760ms cubic-bezier(0.22, 1, 0.36, 1) 140ms,
     visibility 0s linear 900ms;

@@ -108,9 +108,11 @@ export function RoomList() {
                     {name(slug)}
                     {isMine && <span className={styles.badge}>{t.yours}</span>}
                   </h2>
+                  {/* the hour on its own line: run on after the place, it wrapped as a stray "· Night" */}
                   <p>
-                    <span className="phrase">{plan.place[lang]}</span> <span className="phrase">· {plan.hour[lang]}</span>
+                    <Phrases text={plan.place[lang]} />
                   </p>
+                  <p className={styles.hour}>{plan.hour[lang]}</p>
                   {isMine && mine?.from && <p className={styles.note}>{t.near(name(mine.from))}</p>}
                 </div>
                 <div className={styles.action}>

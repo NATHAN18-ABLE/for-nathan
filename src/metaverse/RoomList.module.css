@@ -92,6 +92,12 @@
   color: var(--ink-soft);
 }
 
+.text p.hour {
+  margin-top: 2px;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
 .note {
   font-size: 15px;
 }
