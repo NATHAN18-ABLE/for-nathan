@@ -18,9 +18,16 @@ export const viewport: Viewport = {
   themeColor: "#ebe8e1",
 };
 
+// Runs before the first paint: the language the visitor chose (so a Korean visitor never sees the
+// opening card in English first) and whether the opening card was already shown in this visit.
+const EARLY = `try{var d=document.documentElement,q=new URLSearchParams(location.search).get("lang"),l=q==="ko"||q==="en"?q:localStorage.getItem("seoul.lang");if(l==="ko"||l==="en")d.dataset.lang=l;if(sessionStorage.getItem("seoul.intro"))d.dataset.intro="seen"}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: EARLY }} />
+      </head>
       <body>
         {children}
         <PointerHalo />

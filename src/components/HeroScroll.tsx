@@ -40,6 +40,9 @@ const SMOOTH_MS = 120; // time constant of the scroll follow; frame-rate indepen
 const SCROLL_SECS = 5;
 const EARLY_FRAMES = 16; // fetched alongside the page, before any script runs
 const GATE_MAX_MS = 3000; // never hold the page longer than this, counted from the page request
+// The opening card (first visit only): long enough to read its one line, then it lifts.
+const SPLASH_MIN_MS = 1400; // from the page request
+const SPLASH_OUT_MS = 900; // how long it takes to lift
 
 const PORTRAIT = "(max-aspect-ratio: 4/5)"; // phones held upright get the tall film
 
@@ -70,7 +73,10 @@ export function HeroScroll() {
   const nightRef = useRef<HTMLDivElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
   const cueRef = useRef<HTMLDivElement>(null);
-  const cueFillRef = useRef<HTMLSpanElement>(null);
+  const splashFillRef = useRef<HTMLSpanElement>(null);
+  // the opening card: on, lifting, gone
+  // on → leaving → done; "gone" when it was never shown (seen earlier in this visit)
+  const [splash, setSplash] = useState<"on" | "leaving" | "done" | "gone">("on");
   const startRef = useRef<HTMLDivElement>(null);
   const welcomeRef = useRef<HTMLHeadingElement>(null);
   const captionRefs = useRef<(HTMLParagraphElement | null)[]>([]);
@@ -324,13 +330,31 @@ export function HeroScroll() {
       e.preventDefault();
     };
     let gateTimer = 0;
+    let lifted = false;
+    let liftTimer = 0;
+    let goneTimer = 0;
     const openGate = () => {
+      if (lifted) return;
+      lifted = true;
       cancelAnimationFrame(gateTimer);
       clearTimeout(gateLimit);
-      window.removeEventListener("wheel", block);
-      window.removeEventListener("touchmove", block);
-      window.removeEventListener("keydown", block);
-      setLoading(false);
+      if (splashFillRef.current) splashFillRef.current.style.transform = "scaleX(1)";
+      const seen = document.documentElement.dataset.intro === "seen";
+      const lift = () => {
+        window.removeEventListener("wheel", block);
+        window.removeEventListener("touchmove", block);
+        window.removeEventListener("keydown", block);
+        setLoading(false);
+        if (seen) return setSplash("gone");
+        setSplash("leaving");
+        try {
+          sessionStorage.setItem("seoul.intro", "1");
+        } catch {}
+        goneTimer = window.setTimeout(() => setSplash("done"), SPLASH_OUT_MS);
+      };
+      const wait = seen || cancelled ? 0 : Math.max(0, SPLASH_MIN_MS - performance.now());
+      if (wait) liftTimer = window.setTimeout(lift, wait);
+      else lift();
     };
     // The server-rendered page already holds scrolling (.gate, see the CSS), so a visitor
     // cannot scroll ahead while the scripts are still on their way; this keeps it held until the
@@ -344,6 +368,7 @@ export function HeroScroll() {
       window.addEventListener("keydown", block);
     } else {
       setLoading(false);
+      setSplash("gone");
     }
     const watch = (total: number) => {
       if (!holding) return;
@@ -358,7 +383,7 @@ export function HeroScroll() {
         const have = blobs.reduce((n, b, i) => n + (b && i >= EARLY_FRAMES ? 1 : 0), 0);
         const rate = have >= 8 ? (have / t) * 1000 : 0;
         const need = Math.min(total, Math.max(24, Math.ceil(total - rate * SCROLL_SECS)));
-        if (cueFillRef.current) cueFillRef.current.style.transform = `scaleY(${Math.min(1, run / need)})`;
+        if (splashFillRef.current) splashFillRef.current.style.transform = `scaleX(${Math.min(1, run / need)})`;
         if (run >= need || sinceOpen >= GATE_MAX_MS) return openGate();
         gateTimer = requestAnimationFrame(check);
       };
@@ -414,6 +439,8 @@ export function HeroScroll() {
       cancelled = true;
       cancelAnimationFrame(raf);
       openGate();
+      clearTimeout(liftTimer);
+      clearTimeout(goneTimer);
       window.removeEventListener("resize", resize);
       st.kill();
       for (const f of bitmaps.values()) release(f);
@@ -436,6 +463,7 @@ export function HeroScroll() {
     preload(frameUrl("m", i), { as: "fetch", crossOrigin: "anonymous", media: PORTRAIT, fetchPriority: "low" });
     preload(frameUrl("d", i), { as: "fetch", crossOrigin: "anonymous", media: `not all and ${PORTRAIT}`, fetchPriority: "low" });
   }
+  const nights = { "--night-d": `url(${asset("/hero/night-d.jpg")})`, "--night-m": `url(${asset("/hero/night-m.jpg")})` } as React.CSSProperties;
   const posters = { "--poster-d": `url(${posterD})`, "--poster-m": `url(${posterM})` } as React.CSSProperties;
 
   const nav = <SiteNav lang={lang} onLang={chooseLang} />;
@@ -451,11 +479,42 @@ export function HeroScroll() {
 
   // Tells first-time visitors the page is driven by scrolling.
   const cue = (
-    <div ref={cueRef} className={styles.cue} data-loading={(loading && !reduced) || undefined} aria-hidden="true">
-      <span className={styles.cueText}>{loading && !reduced ? t.loadingCue : t.scrollCue}</span>
+    <div ref={cueRef} className={styles.cue} aria-hidden="true">
+      <span className={styles.cueText}>{t.scrollCue}</span>
       <span className={styles.cueTrack}>
-        {loading && !reduced ? <span ref={cueFillRef} className={styles.cueFill} /> : <span className={styles.cueDot} />}
+        <span className={styles.cueDot} />
       </span>
+    </div>
+  );
+
+  // The opening card, first visit only. Both languages are in the page and CSS shows the one
+  // chosen (set before the first paint, see the layout), so it never flips language on screen.
+  const opening = (splash === "on" || splash === "leaving") && (
+    <div className={styles.splash} style={nights} data-leaving={splash === "leaving" || undefined} role="status">
+      <div className={styles.splashBody}>
+        <img
+          className={styles.splashLogo}
+          src={asset("/brand/logo-128.png")}
+          srcSet={`${asset("/brand/logo-128.png")} 1x, ${asset("/brand/logo-256.png")} 2x`}
+          alt=""
+          width={56}
+          height={56}
+        />
+        <p className={styles.splashWord} translate="no">
+          <span className={styles.splashStrong}>Seoul,</span> Curated
+        </p>
+        <p className={styles.splashLine}>
+          <span lang="en" className={styles.inEn}>
+            {COPY.en.opening}
+          </span>
+          <span lang="ko" className={styles.inKo}>
+            {COPY.ko.opening}
+          </span>
+        </p>
+        <span className={styles.splashTrack} aria-hidden="true">
+          <span ref={splashFillRef} className={styles.splashFill} />
+        </span>
+      </div>
     </div>
   );
 
@@ -495,7 +554,8 @@ export function HeroScroll() {
   }
 
   return (
-    <div className={loading && !reduced ? `${styles.root} ${styles.gate}` : styles.root}>
+    <div className={loading && !reduced ? `${styles.root} ${styles.gate}` : styles.root} data-reveal={splash === "leaving" || splash === "done" || undefined}>
+      {opening}
       {nav}
       <section ref={trackRef} className={styles.track} aria-label={t.headline}>
         <div className={styles.stage}>

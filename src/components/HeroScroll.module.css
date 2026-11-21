@@ -322,21 +322,6 @@
   animation: cueRun 1.8s cubic-bezier(0.77, 0, 0.175, 1) infinite;
 }
 
-/* while the film loads, the line fills from the top instead of running */
-.cueFill {
-  position: absolute;
-  inset: 0;
-  border-radius: 2px;
-  background: var(--white);
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: transform 160ms linear;
-}
-
-.cue[data-loading] .cueText {
-  opacity: 0.86;
-}
-
 @keyframes cueRun {
   0% { transform: translateY(-18px); }
   70%, 100% { transform: translateY(56px); }
@@ -346,5 +331,179 @@
   .cueDot {
     animation: none;
     transform: translateY(19px);
+  }
+}
+
+/* ---------- The opening card (first visit only) ----------
+   Seoul's lights, out of focus and dimmed, the mark, one line, and a hairline that fills as the
+   film arrives. When it is ready the card lifts and the first scene settles into place. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 0 var(--gutter);
+  color: var(--white);
+  background: #0d1226 var(--night-d) center / cover no-repeat;
+  transition:
+    opacity 760ms cubic-bezier(0.22, 1, 0.36, 1) 140ms,
+    visibility 0s linear 900ms;
+  /* should the scripts never arrive, it lifts by itself, with the scroll hold */
+  animation: splashFailsafe 500ms ease-out 6s forwards;
+}
+
+@media (max-aspect-ratio: 4/5) {
+  .splash {
+    background-image: var(--night-m);
+  }
+}
+
+/* darker at the edges, so the line reads on any part of the picture */
+.splash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 46%, rgb(10 14 32 / 0.38), rgb(6 8 18 / 0.78));
+}
+
+.splashBody {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  transition:
+    opacity 380ms ease-out,
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.splashLogo {
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2), 0 6px 24px rgb(4 6 14 / 0.4);
+  animation: splashRise 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.splashWord {
+  margin: 0 0 34px;
+  font-size: 15px;
+  font-weight: 340;
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+  color: rgb(251 251 249 / 0.86);
+  animation: splashRise 900ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+.splashStrong {
+  font-weight: 560;
+}
+
+.splashLine {
+  max-width: 22ch;
+  margin: 0 0 32px;
+  font-size: clamp(24px, 3.1vw, 36px);
+  font-weight: 300;
+  line-height: 1.32;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+  word-break: keep-all;
+  text-shadow: 0 2px 24px rgb(4 6 14 / 0.45);
+  animation: splashRise 1100ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
+}
+
+.inKo {
+  display: none;
+}
+
+:global(html[data-lang="ko"]) .inKo {
+  display: inline;
+}
+
+:global(html[data-lang="ko"]) .inEn {
+  display: none;
+}
+
+.splashTrack {
+  position: relative;
+  width: 120px;
+  height: 1px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.2);
+  animation: splashFade 800ms ease-out 420ms both;
+}
+
+.splashFill {
+  position: absolute;
+  inset: 0;
+  background: rgb(255 255 255 / 0.9);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms linear;
+}
+
+.splash[data-leaving] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.splash[data-leaving] .splashBody {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* already shown in this visit: never drawn (known before the first paint) */
+:global(html[data-intro="seen"]) .splash {
+  display: none;
+}
+
+@keyframes splashRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes splashFade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes splashFailsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* as the card lifts, the first scene settles in and the headline rises */
+.root[data-reveal] .canvas {
+  animation: sceneSettle 1700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.root[data-reveal] .intro {
+  animation: introRise 1200ms cubic-bezier(0.16, 1, 0.3, 1) 160ms backwards;
+}
+
+@keyframes sceneSettle {
+  from {
+    transform: scale(1.045);
+  }
+}
+
+@keyframes introRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash {
+    display: none;
   }
 }
