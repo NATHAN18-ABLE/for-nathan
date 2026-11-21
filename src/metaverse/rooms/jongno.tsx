@@ -293,7 +293,7 @@ export const jongno: RoomConfig = {
     },
     {
       id: "workshop",
-      at: { x: 12, z: -28.6 },
+      at: { x: 12.6, z: -28.6 },
       radius: 3.5,
       action: "watch",
       title: { en: "Jewelry workshops", ko: "귀금속 공방" },
@@ -307,7 +307,7 @@ export const jongno: RoomConfig = {
       at: { x: 6, z: 1 },
       radius: 3.2,
       action: "sit",
-      seat: { x: 5.3, z: 1, heading: Math.PI / 2, on: { x: 4.25, z: 1, y: 0.16 } },
+      seat: { x: 5.6, z: 1, heading: Math.PI / 2, on: { x: 4.25, z: 1, y: 0.16 } },
       title: { en: "A courtyard and a pyeongsang", ko: "마당과 평상" },
       line: {
         en: "Neighbors rest on a wooden platform under the persimmon tree. Sit down for a while.",

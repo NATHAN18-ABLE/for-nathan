@@ -84,7 +84,7 @@ for (let x = -54; x <= 54; x += 12) LIGHTS.push([x, -8.6, Math.PI], [x + 6, 8.6,
 
 const HOLES = [
   { x: STATUE.x, z: STATUE.z, r: 3.1 },
-  { x: BELL.x, z: BELL.z, r: 3.0 }, // the bell pavilion on its stone base
+  { x: BELL.x, z: BELL.z, r: 3.4 }, // the bell pavilion on its stone base, corners and all
   ...[-2, 0, 2].map((dx) => ({ x: SHELTER.x + dx, z: SHELTER.z - 0.2, r: 0.75 })),
   ...[-2, -1, 0, 1, 2].map((dx) => ({ x: BIKES.x + dx * 0.75, z: BIKES.z, r: 0.45 })),
   ...PLAZA_BENCHES.map(([x, z]) => ({ x, z, r: 1.2 })),
