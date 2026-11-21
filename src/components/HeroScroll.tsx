@@ -38,6 +38,7 @@ const SMOOTH_MS = 120; // time constant of the scroll follow; frame-rate indepen
 // (briefly) until the frames already here plus those still arriving keep ahead of a visitor
 // going through the film in about SCROLL_SECS. On a fast line that is only the opening.
 const SCROLL_SECS = 5;
+const EARLY_FRAMES = 16; // fetched alongside the page, before any script runs
 const GATE_MAX_MS = 3000; // never hold the page longer than this, counted from the page request
 
 const PORTRAIT = "(max-aspect-ratio: 4/5)"; // phones held upright get the tall film
@@ -56,6 +57,8 @@ export function HeroScroll() {
   const [lang, chooseLang] = useLang();
   const [reduced, setReduced] = useState(false);
   const [portrait, setPortrait] = useState(false);
+  // The server cannot know the screen's shape; nothing loads until the browser has said.
+  const [measured, setMeasured] = useState(false);
   // The first screen says the film is loading until the effect below knows otherwise.
   const [loading, setLoading] = useState(true);
   const t = COPY[lang];
@@ -79,6 +82,7 @@ export function HeroScroll() {
     const sync = () => {
       setReduced(rm.matches);
       setPortrait(pm.matches);
+      setMeasured(true);
     };
     sync();
     rm.addEventListener("change", sync);
@@ -98,7 +102,7 @@ export function HeroScroll() {
 
   // Main scroll-driven scene.
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || !measured) return;
     const canvas = canvasRef.current;
     const track = trackRef.current;
     if (!canvas || !track) return;
@@ -413,7 +417,7 @@ export function HeroScroll() {
       for (const f of bitmaps.values()) release(f);
       bitmaps.clear();
     };
-  }, [reduced, portrait, set]);
+  }, [reduced, portrait, set, measured]);
 
   const nightBg = { backgroundImage: `url(${asset(`/hero/night-${set}.jpg`)})` };
   // The opening picture, chosen by CSS (not by state, which the server cannot know), so a phone
@@ -422,6 +426,14 @@ export function HeroScroll() {
   const posterM = asset("/hero/poster-m.jpg");
   preload(posterM, { as: "image", media: PORTRAIT, fetchPriority: "high" });
   preload(posterD, { as: "image", media: `not all and ${PORTRAIT}`, fetchPriority: "high" });
+  // The opening frames and the timing file start downloading with the page itself, before the
+  // scripts: on a slow line the scripts alone can take seconds. The script's own fetch() of the
+  // same files is then served from this download (same mode: cors, same-origin credentials).
+  preload(asset("/hero/timing.json"), { as: "fetch", crossOrigin: "anonymous", fetchPriority: "low" });
+  for (let i = 0; i < EARLY_FRAMES; i++) {
+    preload(frameUrl("m", i), { as: "fetch", crossOrigin: "anonymous", media: PORTRAIT, fetchPriority: "low" });
+    preload(frameUrl("d", i), { as: "fetch", crossOrigin: "anonymous", media: `not all and ${PORTRAIT}`, fetchPriority: "low" });
+  }
   const posters = { "--poster-d": `url(${posterD})`, "--poster-m": `url(${posterM})` } as React.CSSProperties;
 
   const nav = <SiteNav lang={lang} onLang={chooseLang} />;
