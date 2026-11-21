@@ -415,14 +415,15 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   useEffect(() => {
     if (!ready || !webgl || instance === null) return;
     const { id, type, name } = me.current;
-    // ?at=x,z starts somewhere else (for checking a spot); the point is snapped onto the walkable area.
+    // ?at=x,z[,heading] starts somewhere else (for checking a spot); the point is snapped onto the walkable area.
     const at = new URLSearchParams(location.search).get("at")?.split(",").map(Number);
     const spawn = lastSpot.current
       ? lastSpot.current
-      : at && at.length === 2 && at.every(Number.isFinite)
+      : at && at.length >= 2 && at.every(Number.isFinite)
         ? nearestWalkable({ x: at[0], z: at[1] }, room.walk)
         : { x: room.spawn.x + (Math.random() - 0.5) * 3, z: room.spawn.z + (Math.random() - 0.5) * 1.5 };
-    motions.current.set(id, newMotion(spawn.x, spawn.z, lastSpot.current?.heading ?? room.spawnHeading ?? 0));
+    const atHeading = !lastSpot.current && at?.length === 3 && Number.isFinite(at[2]) ? at[2] : undefined;
+    motions.current.set(id, newMotion(spawn.x, spawn.z, lastSpot.current?.heading ?? atHeading ?? room.spawnHeading ?? 0));
     lastSpot.current = null;
     const presence: Presence = { id, joinedAt: Date.now(), name, type, look, avatar, x: spawn.x, z: spawn.z, heading: 0 };
     lastInput.current = Date.now();

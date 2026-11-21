@@ -219,3 +219,72 @@ export function Sign({ position, rotation = 0, text, color, vertical = false }: 
     </mesh>
   );
 }
+
+/* ---------- the city at night ---------- */
+
+const towerMats = new Map<string, THREE.MeshToonMaterial>();
+/**
+ * Curtain-wall glass for a tower at night: a grid of panes, some lit warm or cool from inside.
+ * The lit panes glow (emissive map), so they read as light even without bloom on phones.
+ */
+export function towerMaterial(glass: string, seed: number) {
+  const key = `${glass}|${seed % 4}`;
+  let m = towerMats.get(key);
+  if (m) return m;
+  const c = document.createElement("canvas");
+  const e = document.createElement("canvas");
+  c.width = e.width = 256;
+  c.height = e.height = 256;
+  const g = c.getContext("2d")!;
+  const ge = e.getContext("2d")!;
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, 256, 256);
+  ge.fillStyle = "#000000";
+  ge.fillRect(0, 0, 256, 256);
+  let s = (seed % 4) * 97 + 13;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  // 8 floors x 8 panes per tile, mullions between
+  for (let y = 0; y < 8; y++)
+    for (let x = 0; x < 8; x++) {
+      const lit = rnd() < 0.42;
+      const warm = rnd() < 0.7;
+      g.fillStyle = lit ? (warm ? "#ffe3a6" : "#cfe6ff") : "#9aa6b8";
+      g.fillRect(x * 32 + 3, y * 32 + 4, 26, 24);
+      if (lit) {
+        ge.fillStyle = warm ? "#ffd27a" : "#a8d4ff";
+        ge.fillRect(x * 32 + 3, y * 32 + 4, 26, 24);
+      }
+    }
+  const tex = new THREE.CanvasTexture(c);
+  const em = new THREE.CanvasTexture(e);
+  for (const t of [tex, em]) {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(1 / 16, 1 / 28); // a tile: 8 panes of 2 m across, 8 floors of 3.5 m up
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+  }
+  m = toonWith({ color: glass, map: tex, key: `tower|${key}` });
+  m.emissive = new THREE.Color("#ffffff");
+  m.emissiveMap = em;
+  m.emissiveIntensity = 0.9;
+  towerMats.set(key, m);
+  return m;
+}
+
+/** A modern street light with a glowing head. */
+export function StreetLight({ position, facing = 0 }: { position: V3; facing?: number }) {
+  return (
+    <group position={position} rotation={[0, facing, 0]}>
+      <mesh position={[0, 3.2, 0]} material={toon("#4a4f5a")} castShadow>
+        <cylinderGeometry args={[0.07, 0.1, 6.4, 8]} />
+        <Ink />
+      </mesh>
+      <mesh position={[0, 6.35, 0.7]} rotation={[Math.PI / 2, 0, 0]} material={toon("#4a4f5a")}>
+        <cylinderGeometry args={[0.05, 0.05, 1.4, 6]} />
+      </mesh>
+      <mesh position={[0, 6.25, 1.35]} material={toonWith({ color: "#fff4d6", emissive: "#ffe2a0", emissiveIntensity: 1.6, key: "lamp-head" })}>
+        <boxGeometry args={[0.36, 0.12, 0.7]} />
+      </mesh>
+    </group>
+  );
+}

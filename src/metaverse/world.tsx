@@ -26,7 +26,7 @@ export function rand(seed: number) {
 
 /* ---------- surfaces ---------- */
 
-const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass", "deck", "facade", "brick", "shop"] as const;
+const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass", "deck", "facade", "brick", "shop", "books"] as const;
 export type TexName = (typeof TEX)[number];
 
 // Base colours: an autumn afternoon, softened.
@@ -42,6 +42,7 @@ const BASE: Record<TexName, string> = {
   facade: "#ffffff",
   brick: "#ffffff",
   shop: "#ffffff",
+  books: "#ffffff",
 };
 
 /**
@@ -118,6 +119,23 @@ function paintPattern(name: TexName): HTMLCanvasElement | null {
     g.fillRect(80, 76, 44, 42);
     g.fillStyle = "#efe9de";
     g.fillRect(66, 174, 124, 9);
+  } else if (name === "books") {
+    // Shelves of book spines: four shelves per tile, spines of many colours and heights.
+    const spines = ["#c8463c", "#2f5aa8", "#e0a53a", "#3e7d5b", "#f2eee6", "#7a4f8c", "#d9692c", "#5a6878", "#b3895e"];
+    g.fillStyle = "#6b4a33";
+    g.fillRect(0, 0, 256, 256);
+    for (let row = 0; row < 4; row++) {
+      let x = 4;
+      while (x < 252) {
+        const w = 5 + r() * 9;
+        const h = 40 + r() * 18;
+        g.fillStyle = spines[Math.floor(r() * spines.length)];
+        g.fillRect(x, row * 64 + 62 - h, Math.min(w, 252 - x), h);
+        x += w + 1;
+      }
+      g.fillStyle = "#8a6446";
+      g.fillRect(0, row * 64 + 60, 256, 4);
+    }
   } else if (name === "shop") {
     // A shopfront: a wide glass window and a glass door in a light frame.
     g.fillStyle = "#f4f1ea";
