@@ -286,6 +286,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button, a, [role=menu], [data-stick], input, form")) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    lastInput.current = Date.now(); // looking around counts as being here
   };
   const onPointerMove = (e: React.PointerEvent) => {
     const prev = pointers.current.get(e.pointerId);
@@ -308,6 +309,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     if (pointers.current.size < 2) pinch.current = 0;
   };
   const onWheel = (e: React.WheelEvent) => {
+    lastInput.current = Date.now();
     if (!room.world) return;
     view.current.dist = Math.min(14, Math.max(3.4, view.current.dist * Math.exp(e.deltaY * 0.0012)));
   };
@@ -424,6 +426,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
         : { x: room.spawn.x + (Math.random() - 0.5) * 3, z: room.spawn.z + (Math.random() - 0.5) * 1.5 };
     const atHeading = !lastSpot.current && at?.length === 3 && Number.isFinite(at[2]) ? at[2] : undefined;
     motions.current.set(id, newMotion(spawn.x, spawn.z, lastSpot.current?.heading ?? atHeading ?? room.spawnHeading ?? 0));
+    if (atHeading !== undefined) view.current.yaw = atHeading + Math.PI; // look the same way
     lastSpot.current = null;
     const presence: Presence = { id, joinedAt: Date.now(), name, type, look, avatar, x: spawn.x, z: spawn.z, heading: 0 };
     lastInput.current = Date.now();
@@ -440,7 +443,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       } else if (e.kind === "say") {
         showBubbleRef.current(e.id, e.phrase);
       } else if (e.kind === "signal") {
-        emit("signal");
+        if (!spam(e.id, "signal")) emit("signal");
+      } else if (e.kind === "use") {
+        if (typeof e.effect === "string" && EFFECT.test(e.effect) && !spam(e.id, e.effect)) emit(`use:${e.effect}`);
       } else if (e.kind === "chat") {
         hearRef.current(e.id, e.text);
       } else if (e.kind === "emote" && m) {
@@ -668,6 +673,21 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       emote("sit");
     };
     walkTo({ x: seat.x, z: seat.z });
+  };
+
+  // The room's own interaction: it plays here at once and for everyone else in the room.
+  const usedAt = useRef(0);
+  const use = (poi: Poi) => {
+    if (!poi.effect || !EFFECT.test(poi.effect)) return;
+    touch();
+    const now = performance.now();
+    if (now - usedAt.current < 1200) return; // one press at a time
+    usedAt.current = now;
+    const m = motions.current.get(me.current.id);
+    if (m && poi.face) m.heading = Math.atan2(poi.face.x - m.x, poi.face.z - m.z);
+    if (poi.gesture) emote(poi.gesture);
+    emit(`use:${poi.effect}`);
+    conn.current?.send({ kind: "use", id: me.current.id, effect: poi.effect });
   };
 
   // A smoke signal (봉수): everyone in the room sees the smoke rise.
@@ -1000,6 +1020,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
           onSit={() => near && sitHere(near)}
           onWatch={watch}
           onSignal={signal}
+          onUse={use}
           onLamp={lightLamp}
         />
       )}
@@ -1533,7 +1554,13 @@ function PoiWatch({
       wasSitting.current = m.sitting;
       onSitting(m.sitting);
     }
-    const hit = room.pois.find((p) => Math.hypot(p.at.x - m.x, p.at.z - m.z) < p.radius) ?? null;
+    // where several places overlap, the one the traveler stands closest to wins
+    let hit: Poi | null = null;
+    let best = Infinity;
+    for (const p of room.pois) {
+      const d = Math.hypot(p.at.x - m.x, p.at.z - m.z);
+      if (d < p.radius && d < best) (best = d), (hit = p);
+    }
     if ((hit?.id ?? null) !== last.current) {
       last.current = hit?.id ?? null;
       onNear(hit);
@@ -1552,6 +1579,19 @@ function PoiWatch({
 
 type Labels = (typeof UI)[keyof typeof UI];
 
+// Effect names a room may define; anything else arriving over the network is dropped.
+const EFFECT = /^[a-z0-9-]{1,24}$/;
+// The same traveler setting off the same effect again within a second and a half is ignored,
+// so one visitor cannot flood everyone's screen.
+const lastUse = new Map<string, number>();
+function spam(id: string, effect: string) {
+  const key = `${id}:${effect}`;
+  const now = performance.now();
+  const before = lastUse.get(key) ?? -Infinity;
+  lastUse.set(key, now);
+  return now - before < 1500;
+}
+
 /** One clear thing to do where the traveler stands. */
 function ContextAction({
   poi,
@@ -1562,6 +1602,7 @@ function ContextAction({
   onSit,
   onWatch,
   onSignal,
+  onUse,
   onLamp,
 }: {
   poi: Poi | null;
@@ -1572,6 +1613,7 @@ function ContextAction({
   onSit: () => void;
   onWatch: () => void;
   onSignal: () => void;
+  onUse: (poi: Poi) => void;
   onLamp: (i: number) => void;
 }) {
   let label: string | null = null;
@@ -1580,6 +1622,7 @@ function ContextAction({
   else if (poi?.action === "sit") (label = poi.actionLabel?.[lang] ?? labels.sit), (run = onSit);
   else if (poi?.action === "watch") (label = labels.watch), (run = onWatch);
   else if (poi?.action === "signal") (label = poi.actionLabel?.[lang] ?? labels.signal), (run = onSignal);
+  else if (poi?.action === "use" && poi.actionLabel) (label = poi.actionLabel[lang]), (run = () => onUse(poi));
   else if (poi?.action === "photo") (label = poi.actionLabel?.[lang] ?? labels.photoHere), (run = () => emit("photo"));
   else if (lamp !== null) (label = labels.lightLamp), (run = () => onLamp(lamp));
   if (!label || !run) return null;

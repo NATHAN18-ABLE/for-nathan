@@ -536,7 +536,7 @@ export function HeroScroll() {
       <button type="button" className="btn btn-light" onClick={startTest}>
         {t.start}
       </button>
-      <Link className={styles.walkFirst} href="/metaverse/jongno">
+      <Link className={styles.walkFirst} href="/metaverse">
         {t.walkFirst}
       </Link>
     </div>

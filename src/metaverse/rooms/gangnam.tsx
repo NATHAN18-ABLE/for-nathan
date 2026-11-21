@@ -7,7 +7,9 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { Boardwalk, CityView, Forest, GableRoof, Mountains, TexBox, rand, worldBox, type Hill, type TreeSpot } from "../world";
 import { toon, toonVertex, toonWith } from "../toon/material";
 import { Ink, Part } from "../toon/part";
-import { StreetLight, towerMaterial } from "./props";
+import { Sign, StreetLight, towerMaterial } from "./props";
+import { Burst, Flowers, Neighbor } from "../life";
+import { on } from "../bus";
 import type { RoomConfig } from "../types";
 
 // Samseong-dong on an autumn night, about 120 m x 120 m and flat. Yeongdong-daero runs east-west
@@ -41,6 +43,10 @@ const SCREEN = { x0: 32, z0: -36, x1: 52, z1: -16 }; // the corner tower with th
 const HALL = { x: 0, z: 49 };
 const BUDDHA = { x: 18, z: 50 };
 const TABLE = { x: 0, z: -40 };
+const BELL = { x: -17, z: 31 }; // Bongeunsa's bell pavilion
+const SHELTER = { x: -32, z: -14.4 }; // a bus stop on the north sidewalk
+const BIKES = { x: 22, z: -14.9 }; // a rack of shared bikes
+const PLAZA_BENCHES: [number, number][] = [[8, -29.5], [16, -29.5]];
 
 // Towers around the plaza: glass, lit from inside.
 const TOWERS: { x0: number; z0: number; x1: number; z1: number; h: number; glass: string }[] = [
@@ -78,6 +84,11 @@ for (let x = -54; x <= 54; x += 12) LIGHTS.push([x, -8.6, Math.PI], [x + 6, 8.6,
 
 const HOLES = [
   { x: STATUE.x, z: STATUE.z, r: 3.1 },
+  { x: BELL.x, z: BELL.z, r: 3.0 }, // the bell pavilion on its stone base
+  ...[-2, 0, 2].map((dx) => ({ x: SHELTER.x + dx, z: SHELTER.z - 0.2, r: 0.75 })),
+  ...[-2, -1, 0, 1, 2].map((dx) => ({ x: BIKES.x + dx * 0.75, z: BIKES.z, r: 0.45 })),
+  ...PLAZA_BENCHES.map(([x, z]) => ({ x, z, r: 1.2 })),
+  { x: -4.7, z: 8.9, r: 0.25 }, // the crossing button's pole
   { x: TABLE.x, z: TABLE.z, r: 1.6 },
   ...[-4.5, 4.5].flatMap((x) => [-54.6, -52, -49.4].map((z) => ({ x, z, r: 1.35 }))), // the free-standing shelves
   { x: BUDDHA.x, z: BUDDHA.z, r: 3.2 },
@@ -260,6 +271,8 @@ function WaveScreen() {
     return { tex: t, mat: m };
   }, []);
   const last = useRef(0);
+  const surgeAt = useRef(-1e9);
+  useEffect(() => on("use:wave", () => (surgeAt.current = performance.now())), []);
   useFrame((state) => {
     const time = state.clock.elapsedTime;
     if (time - last.current < 0.08) return;
@@ -272,19 +285,20 @@ function WaveScreen() {
     g.fillStyle = grad;
     g.fillRect(0, 0, 512, 256);
     // three rolling crests, the front one rising and curling
+    const surge = Math.max(0, 1 - (performance.now() - surgeAt.current) / 4500); // after "make a wave"
     for (let k = 0; k < 3; k++) {
-      const phase = (time * 0.35 + k / 3) % 1;
+      const phase = (time * (0.35 + surge * 0.5) + k / 3) % 1;
       const y = 230 - phase * 170;
       g.fillStyle = `rgba(${170 + k * 20}, ${225}, 255, ${0.35 + phase * 0.5})`;
       g.beginPath();
       g.moveTo(0, 256);
-      for (let x = 0; x <= 512; x += 8) g.lineTo(x, y + Math.sin(x / 40 + time * 2 + k) * (10 + phase * 26));
+      for (let x = 0; x <= 512; x += 8) g.lineTo(x, y - surge * 60 + Math.sin(x / 40 + time * 2 + k) * (10 + phase * 26) * (1 + surge * 1.6));
       g.lineTo(512, 256);
       g.fill();
       g.strokeStyle = `rgba(255,255,255,${0.4 + phase * 0.6})`;
       g.lineWidth = 3 + phase * 5;
       g.beginPath();
-      for (let x = 0; x <= 512; x += 8) g.lineTo(x, y + Math.sin(x / 40 + time * 2 + k) * (10 + phase * 26));
+      for (let x = 0; x <= 512; x += 8) g.lineTo(x, y - surge * 60 + Math.sin(x / 40 + time * 2 + k) * (10 + phase * 26) * (1 + surge * 1.6));
       g.stroke();
     }
     tex.needsUpdate = true;
@@ -444,6 +458,121 @@ function LotusLanterns() {
   );
 }
 
+/** Bongeunsa's bell pavilion: four red posts, a tiled roof, the bronze bell and its log striker (Live). */
+function BellPavilion() {
+  return (
+    <group position={[BELL.x, 0, BELL.z]}>
+      <TexBox size={[5.2, 0.45, 5.2]} position={[0, 0.22, 0]} name="granite" tile={1.2} tint="#cfc8bb" />
+      {[-1.9, 1.9].flatMap((dx) =>
+        [-1.9, 1.9].map((dz) => (
+          <mesh key={`${dx}${dz}`} position={[dx, 2.3, dz]} castShadow material={toon("#a8382c")}>
+            <cylinderGeometry args={[0.17, 0.19, 3.8, 12]} />
+            <Ink />
+          </mesh>
+        )),
+      )}
+      <mesh position={[0, 4.3, 0]} material={toon("#3f7d6b")}>
+        <boxGeometry args={[4.4, 0.3, 4.4]} />
+        <Ink />
+      </mesh>
+      <GableRoof length={6.4} depth={6.4} height={2} position={[0, 4.45, 0]} lift={0.6} />
+      {/* the beam the bell hangs from */}
+      <mesh position={[0, 4.0, 0]} rotation={[0, 0, Math.PI / 2]} material={toon("#7a4a2a")}>
+        <cylinderGeometry args={[0.12, 0.12, 4.0, 10]} />
+      </mesh>
+    </group>
+  );
+}
+
+/** A glass bus stop with a lit advert at one end and a bench inside. */
+function BusShelter() {
+  return (
+    <group position={[SHELTER.x, LIFT, SHELTER.z]}>
+      <mesh position={[0, 2.5, -0.1]} material={toon("#3a3f4a")}>
+        <boxGeometry args={[5.6, 0.14, 1.8]} />
+        <Ink />
+      </mesh>
+      {[-2.7, 2.7].map((x) => (
+        <mesh key={x} position={[x, 1.25, -0.8]} material={toon("#5d6573")}>
+          <boxGeometry args={[0.1, 2.5, 0.1]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 1.4, -0.85]} material={toonWith({ color: "#a9c4dc", emissive: "#5f84a8", emissiveIntensity: 0.12, key: "shelter-glass" })}>
+        <boxGeometry args={[5.3, 1.9, 0.04]} />
+      </mesh>
+      <mesh position={[2.55, 1.35, -0.3]} material={toonWith({ color: "#f5e9ff", emissive: "#d9b8ff", emissiveIntensity: 1.1, key: "shelter-ad" })}>
+        <boxGeometry args={[0.16, 1.8, 1.0]} />
+        <Ink />
+      </mesh>
+      <TexBox size={[3.6, 0.1, 0.45]} position={[-0.4, 0.46, -0.55]} name="wood" tile={0.8} />
+      <Sign position={[-2.55, 2.1, -0.1]} rotation={Math.PI / 2} text="146 · 341 · 4318" color="#2f5aa8" />
+    </group>
+  );
+}
+
+/** Shared bikes in their rack: green frames, silver baskets. */
+function Bikes() {
+  return (
+    <group>
+      {[-2, -1, 0, 1, 2].map((k) => (
+        <group key={k} position={[BIKES.x + k * 0.75, LIFT, BIKES.z]} rotation={[0, Math.PI / 2, 0]}>
+          {[-0.5, 0.5].map((z) => (
+            <mesh key={z} position={[0, 0.34, z]} rotation={[0, Math.PI / 2, 0]} material={toon("#2b2f38")}>
+              <torusGeometry args={[0.3, 0.035, 8, 20]} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.55, 0]} rotation={[Math.PI / 2 - 0.2, 0, 0]} material={toon("#3fa45a")}>
+            <boxGeometry args={[0.07, 1.0, 0.07]} />
+            <Ink />
+          </mesh>
+          <mesh position={[0, 0.78, -0.35]} material={toon("#3fa45a")}>
+            <boxGeometry args={[0.07, 0.5, 0.07]} />
+          </mesh>
+          <mesh position={[0, 0.88, 0.48]} material={toon("#c9ced4")}>
+            <boxGeometry args={[0.32, 0.2, 0.26]} />
+            <Ink />
+          </mesh>
+          <mesh position={[0, 1.02, -0.38]} material={toon("#2b2f38")}>
+            <boxGeometry args={[0.16, 0.06, 0.26]} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** The crossing button on its pole, at the south end of the crosswalk. */
+function CrossButton() {
+  return (
+    <group position={[-4.7, LIFT, 8.9]}>
+      <mesh position={[0, 0.65, 0]} material={toon("#8d9298")}>
+        <cylinderGeometry args={[0.05, 0.05, 1.3, 8]} />
+        <Ink />
+      </mesh>
+      <mesh position={[0, 1.2, 0.06]} material={toon("#e0b23c")}>
+        <boxGeometry args={[0.24, 0.32, 0.12]} />
+        <Ink />
+      </mesh>
+      <mesh position={[0, 1.2, 0.13]} rotation={[Math.PI / 2, 0, 0]} material={toonWith({ color: "#ffffff", emissive: "#ffe9a8", emissiveIntensity: 0.6, key: "cross-button" })}>
+        <cylinderGeometry args={[0.06, 0.06, 0.03, 14]} />
+      </mesh>
+    </group>
+  );
+}
+
+function PlazaBenches() {
+  return (
+    <>
+      {PLAZA_BENCHES.map(([x, z]) => (
+        <group key={x} position={[x, LIFT, z]}>
+          <TexBox size={[2.4, 0.12, 0.6]} position={[0, 0.46, 0]} name="wood" tile={0.8} />
+          <TexBox size={[2.4, 0.42, 0.6]} position={[0, 0.2, 0]} name="granite" tile={1} tint="#8d8c94" />
+        </group>
+      ))}
+    </>
+  );
+}
+
 function Scene() {
   return (
     <group>
@@ -462,10 +591,95 @@ function Scene() {
       <GangnamStyle />
       <Temple />
       <LotusLanterns />
+      <BellPavilion />
+      <BusShelter />
+      <Bikes />
+      <PlazaBenches />
+      <CrossButton />
+      <Flowers kind="chrysanthemum" seed={17} spots={[{ x: -6, z: 23.4, r: 0.9, n: 14 }, { x: 6, z: 23.4, r: 0.9, n: 14 }, { x: -24, z: -17.4, r: 1, n: 12 }, { x: 28, z: -17.4, r: 1, n: 12 }]} />
       {LIGHTS.map(([x, z, f], i) => (
         <StreetLight key={i} position={[x, 0, z]} facing={f} />
       ))}
       <Forest trees={TREES} hills={HILLS} seed={3} />
+    </group>
+  );
+}
+
+/** The bell and its log striker: struck, the log swings in, the bell sways, rings of light spread. */
+function Bell() {
+  const log = useRef<THREE.Group>(null);
+  const bell = useRef<THREE.Group>(null);
+  const rings = useRef<(THREE.Mesh | null)[]>([]);
+  const at = useRef(-1e9);
+  const ringMats = useMemo(() => [0, 1, 2].map(() => new THREE.MeshBasicMaterial({ color: "#ffd98a", transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })), []);
+  useEffect(() => on("use:bell", () => (at.current = performance.now())), []);
+  useFrame(() => {
+    const t = (performance.now() - at.current) / 1000;
+    if (log.current) log.current.position.x = t < 0.35 ? 1.25 - (t / 0.35) * 0.55 : t < 1.2 ? 0.7 + ((t - 0.35) / 0.85) * 0.55 : 1.25;
+    if (bell.current) bell.current.rotation.z = t < 4 ? Math.sin(t * 7) * 0.06 * Math.max(0, 1 - t / 4) : 0;
+    rings.current.forEach((m, i) => {
+      if (!m) return;
+      const k = t - 0.35 - i * 0.45;
+      const live = k > 0 && k < 2.4;
+      m.visible = live;
+      if (!live) return;
+      m.scale.setScalar(1 + k * 4);
+      ringMats[i].opacity = 0.55 * (1 - k / 2.4);
+    });
+  });
+  return (
+    <group position={[BELL.x, 0, BELL.z]}>
+      <group ref={bell} position={[0, 4.0, 0]}>
+        <mesh position={[0, -1.15, 0]} material={toon("#6f5a3a")} castShadow>
+          <cylinderGeometry args={[0.62, 0.95, 2.1, 24]} />
+          <Ink />
+        </mesh>
+        <mesh position={[0, -0.05, 0]} material={toon("#5e4c32")}>
+          <sphereGeometry args={[0.62, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        </mesh>
+      </group>
+      <group ref={log} position={[1.25, 2.7, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]} material={toon("#9a7652")} castShadow>
+          <cylinderGeometry args={[0.16, 0.16, 1.3, 12]} />
+          <Ink />
+        </mesh>
+      </group>
+      {[0, 1, 2].map((i) => (
+        <mesh key={i} ref={(el) => void (rings.current[i] = el)} position={[0, 2.8, 0]} rotation={[Math.PI / 2, 0, 0]} material={ringMats[i]} visible={false}>
+          <torusGeometry args={[0.9, 0.04, 6, 40]} />
+        </mesh>
+      ))}
+      <Burst effect="bell" kind="note" at={[0, 3.2, 0]} count={8} spread={0.7} rise={1.1} />
+    </group>
+  );
+}
+
+/** Coloured spotlights that sweep over the statue when someone does the horse dance in front of it. */
+function StatueLights() {
+  const beams = useRef<(THREE.Mesh | null)[]>([]);
+  const until = useRef(0);
+  const mats = useMemo(() => ["#ff5fa8", "#5fd0ff", "#ffe15f"].map((c) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })), []);
+  useEffect(() => on("use:dance", () => (until.current = performance.now() + 5200)), []);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    const on_ = performance.now() < until.current;
+    beams.current.forEach((m, i) => {
+      if (!m) return;
+      m.visible = on_;
+      if (!on_) return;
+      m.rotation.z = Math.sin(t * 2.2 + i * 2) * 0.45;
+      mats[i].opacity = 0.15 + Math.sin(t * 9 + i) * 0.05;
+    });
+  });
+  return (
+    <group position={[STATUE.x, 0, STATUE.z]}>
+      {/* lamps behind the statue, shining up past it */}
+      {[-2.8, 0, 2.8].map((x, i) => (
+        <mesh key={i} ref={(el) => void (beams.current[i] = el)} position={[x, 3.9, -2.4]} rotation={[Math.PI, 0, 0]} material={mats[i]} visible={false}>
+          <coneGeometry args={[0.85, 7.4, 16, 1, true]} />
+        </mesh>
+      ))}
+      <Burst effect="dance" kind="note" at={[0, 7.4, 0]} count={10} spread={1.1} rise={1.4} />
     </group>
   );
 }
@@ -531,9 +745,21 @@ function Traffic() {
   const signals = useMemo(() => ["#3be07a", "#ff4b3e"].map((c, k) => toonWith({ color: c, emissive: c, emissiveIntensity: 0.05, key: `signal-${k}` })), []);
   // Distance travelled along the lane (0..200, the lane runs from -100 to 100 in its direction).
   const pos = useMemo(() => cars.map((c) => c.offset), [cars]);
+  // The crosswalk button: pressed while cars have green, the lights move on to the people's turn.
+  const shift = useRef(0);
+  const clock = useRef(0);
+  useEffect(
+    () =>
+      on("use:cross", () => {
+        const c = (clock.current + shift.current) % CYCLE;
+        if (c < 11) shift.current += 11 - c; // three more seconds of green for cars, then red
+      }),
+    [],
+  );
   useFrame((state, dt) => {
     const d = Math.min(dt, 0.05);
-    const red = state.clock.elapsedTime % CYCLE > 14; // red for cars, green for people
+    clock.current = state.clock.elapsedTime;
+    const red = (state.clock.elapsedTime + shift.current) % CYCLE > 14; // red for cars, green for people
     LANES.forEach((lane, li) => {
       // front car first; each one keeps a gap behind the car ahead
       const order = cars.map((_, i) => i).filter((i) => cars[i].lane === li).sort((a, b) => pos[b] - pos[a]);
@@ -619,20 +845,65 @@ export const gangnam: RoomConfig = {
       id: "statue",
       at: { x: -18, z: -20.5 },
       radius: 3.5,
-      action: "photo",
+      action: "use",
+      effect: "dance",
+      gesture: "hop",
+      face: STATUE,
+      actionLabel: { en: "Do the horse dance", ko: "말춤 추기" },
       title: { en: "The Gangnam Style statue", ko: "강남스타일 동상" },
       line: {
-        en: "Two giant crossed wrists doing the horse-riding dance from PSY's 2012 hit. Strike the pose for a photo.",
-        ko: "2012년 싸이의 히트곡 '강남스타일'의 말춤 손목을 크게 만든 동상이에요. 같은 포즈로 사진을 찍어 보세요.",
+        en: "Two giant crossed wrists doing the horse-riding dance from PSY's 2012 hit. Dance in front of it and the lights come up.",
+        ko: "2012년 싸이의 히트곡 '강남스타일'의 말춤 손목을 크게 만든 동상이에요. 앞에서 말춤을 추면 조명이 켜져요.",
       },
     },
+    {
+      id: "crosswalk",
+      at: { x: -5, z: 10.4 },
+      radius: 1.8,
+      action: "use",
+      effect: "cross",
+      face: { x: -4.7, z: 8.9 },
+      stamp: false,
+      actionLabel: { en: "Press the crossing button", ko: "보행 신호 버튼 누르기" },
+      title: { en: "Crossing button", ko: "보행 신호 버튼" },
+      line: {
+        en: "Press it and the lights turn for people a little sooner. Everyone at the crossing sees the change.",
+        ko: "누르면 보행 신호가 조금 더 빨리 켜져요. 건널목의 모두에게 같은 신호가 보여요.",
+      },
+    },
+    {
+      id: "bell",
+      at: { x: BELL.x, z: BELL.z + 3.9 },
+      radius: 2.6,
+      action: "use",
+      effect: "bell",
+      gesture: "bow",
+      face: BELL,
+      actionLabel: { en: "Strike the temple bell", ko: "범종 치기" },
+      title: { en: "The bell pavilion", ko: "범종각" },
+      line: {
+        en: "Temple bells are struck at dawn and dusk, the sound meant to reach every being that hears it. Here you can ring it once for everyone in the room.",
+        ko: "절의 범종은 새벽과 저녁에 울려, 소리를 듣는 모든 존재에게 닿기를 바라요. 여기서는 방 안 모두를 위해 한 번 울릴 수 있어요.",
+      },
+    },
+    ...PLAZA_BENCHES.slice(0, 1).map(([x, z], i) => ({
+      id: `bench-${i}`,
+      at: { x, z: z + 1.6 },
+      radius: 2,
+      action: "sit" as const,
+      stamp: false,
+      actionLabel: { en: "Sit on the bench", ko: "벤치에 앉기" },
+      seat: { x, z: z + 1.6, heading: 0, on: { x, z: z + 0.05, y: 0.52 - 0.45 } },
+      title: { en: "A bench", ko: "벤치" },
+      line: { en: "Sit for a while and watch the plaza.", ko: "잠시 앉아 광장을 바라보세요." },
+    })),
     {
       id: "library",
       at: { x: 0, z: -38 },
       radius: 3,
       action: "sit",
       actionLabel: { en: "Sit at the reading table", ko: "열람 테이블에 앉기" },
-      seat: { x: 0, z: -38.3, heading: Math.PI, on: { x: 0, z: -39.05, y: 0.46 - 0.45 } },
+      seat: { x: 0, z: -37.75, heading: Math.PI, on: { x: 0, z: -39.05, y: 0.46 - 0.45 } },
       title: { en: "Starfield Library", ko: "별마당 도서관" },
       line: {
         en: "In the middle of COEX Mall, bookshelves rise thirteen metres under a glass roof. Anyone can sit and read, for free.",
@@ -643,6 +914,11 @@ export const gangnam: RoomConfig = {
       id: "wave",
       at: { x: 26, z: -20 },
       radius: 5,
+      action: "use",
+      effect: "wave",
+      gesture: "wave",
+      face: { x: SCREEN.x0, z: -26 },
+      actionLabel: { en: "Make a big wave", ko: "큰 파도 일으키기" },
       title: { en: "The wave screen", ko: "파도 미디어 파사드" },
       line: {
         en: "A giant screen wraps round the corner of the tower, and the sea inside it seems ready to spill onto the street.",
@@ -665,6 +941,12 @@ export const gangnam: RoomConfig = {
     <>
       <WaveScreen />
       <Traffic />
+      <Bell />
+      <StatueLights />
+      <Burst effect="wave" kind="drop" at={[SCREEN.x0 - 0.6, 7.5, -26]} count={14} spread={1.2} rise={1.6} />
+      <Burst effect="cross" kind="spark" at={[-4.7, 1.5, 9.1]} count={6} spread={0.3} rise={0.7} />
+      <Neighbor avatar={{ gender: "f", outfit: "dress", colorway: 1, hair: "bob", hairColor: 0, skin: 0 }} position={[PLAZA_BENCHES[1][0] + 0.5, LIFT + 0.26 + 0.53 - 0.45, PLAZA_BENCHES[1][1]]} heading={0} pose="sit" seed={3} />
+      <Neighbor avatar={{ gender: "m", outfit: "hoodie", colorway: 0, hair: "mop", hairColor: 2, skin: 2 }} position={[SHELTER.x - 1.2, LIFT + 0.26 + 0.52 - 0.45, SHELTER.z - 0.55]} heading={0} pose="sit" seed={4} />
     </>
   ),
 };

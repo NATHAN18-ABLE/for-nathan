@@ -1,6 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Burst, Flowers, Neighbor } from "../life";
+import { on } from "../bus";
 import * as THREE from "three";
 import { Boardwalk, CityView, Forest, Mountains, SeoulTower, Stairs, TexBox, Terrain, heightAt, rand, surface, worldBox, type Hill, type TreeSpot } from "../world";
 import { LeafLitter } from "../autumn";
@@ -23,6 +26,9 @@ const HILLS: Hill[] = [
 const ground = (x: number, z: number) => heightAt(x, z, HILLS);
 
 const STAIRS = { x0: 6, z0: -32, x1: 9.5, z1: -6 };
+// The east metre of the steps carries the slope lift's rail; people climb the rest.
+const STAIRS_WALK = { ...STAIRS, x1: 8.4 };
+const LIFT_X = 9.0;
 const RECTS = [
   { x0: -14, z0: 26, x1: 14, z1: 36 }, // the five-way junction
   { x0: -2.5, z0: 6, x1: 2.5, z1: 26 }, // main street, lower
@@ -31,11 +37,11 @@ const RECTS = [
   { x0: -28, z0: -6, x1: -12, z1: 8 }, // Sinheung Market
   { x0: -22, z0: -10, x1: 2.5, z1: -6 }, // main street turns west
   { x0: 2.5, z0: -6, x1: 9.5, z1: -2 }, // the foot of the steps
-  STAIRS, // the 108 steps
+  STAIRS_WALK, // the 108 steps
   { x0: -22, z0: -32, x1: -17.5, z1: -10 }, // main street, upper
   { x0: -24, z0: -40, x1: 22, z1: -32 }, // the ridge street
 ];
-const PAVED = RECTS.filter((r) => r !== STAIRS);
+const PAVED = RECTS.filter((r) => r !== STAIRS_WALK);
 // Sidewalks: the paving widened to the house fronts, laid a touch lower than the street.
 const SIDEWALKS = PAVED.map((r) => ({ x0: r.x0 - 0.8, z0: r.z0 - 0.8, x1: r.x1 + 0.8, z1: r.z1 + 0.8 }));
 const MARKET = RECTS[4];
@@ -65,7 +71,7 @@ const LOTS: Lot[] = (() => {
   const r = rand(31);
   const out: Lot[] = [];
   // The view south from the ridge stays open.
-  const free = (lot: Omit<Lot, "floors" | "color" | "tank" | "awning" | "brick" | "seed">, m = 0.45) => !inView(lot) && !RECTS.some((q) => overlaps(lot, q, m)) && !out.some((q) => overlaps(lot, q, 0.2));
+  const free = (lot: Omit<Lot, "floors" | "color" | "tank" | "awning" | "brick" | "seed">, m = 0.45) => !inView(lot) && ![...RECTS, STAIRS].some((q) => overlaps(lot, q, m)) && !out.some((q) => overlaps(lot, q, 0.2));
   const dress = (lot: Omit<Lot, "floors" | "color" | "tank" | "awning" | "brick" | "seed">, facing: { dx: number; dz: number } | null): Lot => {
     const cz = (lot.z0 + lot.z1) / 2;
     return {
@@ -129,6 +135,10 @@ const TREES: TreeSpot[] = (() => {
 })();
 
 const TABLE = { x: -20, z: 0 };
+const CART = { x: 8.6, z: 30.2 }; // a hotteok cart at the junction
+const CAT = { x: -6.2, z: 28.4 }; // the neighbourhood cat, on the warm paving
+const STOP = { x: -12.6, z: 34.6 }; // the village bus stop
+const GRANNY = { x: -26.6, z: 6.4 };
 const CAFE = { x: -14, z: -39 };
 
 // Utility poles along the streets, just outside the walkable edge, with wires between them.
@@ -186,6 +196,12 @@ const SCOOTERS: [number, number, number][] = [
 ];
 
 const HOLES = [
+  { x: CART.x, z: CART.z, r: 1.45 },
+  { x: CART.x, z: CART.z - 1.1, r: 0.5 }, // the vendor behind it
+  { x: CAT.x, z: CAT.z, r: 0.8 }, // the cat's planter
+  { x: STOP.x, z: STOP.z, r: 0.3 },
+  { x: STOP.x + 1.5, z: STOP.z + 0.6, r: 1.1 }, // the stop's bench
+  { x: GRANNY.x, z: GRANNY.z, r: 0.6 },
   ...SCOOTERS.map(([x, z]) => ({ x, z, r: 0.75 })),
   ...[0.25, 5.75].map((z) => ({ x: -12, z, r: 0.25 })), // the market arch
   ...TREES.filter((t) => RECTS.some((q) => t.x > q.x0 - 1 && t.x < q.x1 + 1 && t.z > q.z0 - 1 && t.z < q.z1 + 1)).map((t) => ({ x: t.x, z: t.z, r: 0.45 * t.s + 0.25 })),
@@ -413,6 +429,98 @@ function CafeBench() {
   );
 }
 
+/** A hotteok cart: a striped canopy over a griddle, with the day's prices on the side. */
+function Cart() {
+  const y = ground(CART.x, CART.z) + LIFT;
+  return (
+    <group position={[CART.x, y, CART.z]}>
+      <TexBox size={[2.3, 0.9, 1.1]} position={[0, 0.65, 0]} name="wood" tile={1} tint="#e8e2d6" />
+      <mesh position={[0, 1.12, 0]} material={toon("#5a5f66")}>
+        <boxGeometry args={[1.9, 0.06, 0.8]} />
+        <Ink />
+      </mesh>
+      {[-0.5, 0, 0.5].map((x) => (
+        <mesh key={x} position={[x, 1.17, 0.05]} scale={[1, 0.3, 1]} material={toon("#d99a4a")}>
+          <cylinderGeometry args={[0.17, 0.17, 0.1, 14]} />
+          <Ink />
+        </mesh>
+      ))}
+      {[-1.05, 1.05].map((x) => (
+        <mesh key={x} position={[x, 1.6, -0.45]} material={toon("#8d9298")}>
+          <cylinderGeometry args={[0.03, 0.03, 1.5, 8]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 2.38, -0.05]} rotation={[0.18, 0, 0]} material={toon("#d84a3a")}>
+        <boxGeometry args={[2.6, 0.08, 1.5]} />
+        <Ink />
+      </mesh>
+      {[-1, -0.33, 0.33, 1].map((x) => (
+        <mesh key={x} position={[x, 2.39, -0.05]} rotation={[0.18, 0, 0]} material={toon("#f6efe2")}>
+          <boxGeometry args={[0.32, 0.09, 1.52]} />
+        </mesh>
+      ))}
+      <Sign position={[0, 0.72, 0.57]} text="호떡 1,500원" color="#c8463c" />
+      {[-0.85, 0.85].map((x) => (
+        <mesh key={x} position={[x, 0.16, 0.42]} rotation={[0, 0, Math.PI / 2]} material={toon("#2b2f38")}>
+          <cylinderGeometry args={[0.16, 0.16, 0.1, 14]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** The village bus stop: a pole with the route number, and a bench beside it. */
+function BusStop() {
+  const y = ground(STOP.x, STOP.z) + LIFT;
+  const by = ground(STOP.x + 1.5, STOP.z + 0.6) + LIFT;
+  return (
+    <group>
+      <group position={[STOP.x, y, STOP.z]}>
+        <mesh position={[0, 1.3, 0]} material={toon("#8d9298")}>
+          <cylinderGeometry args={[0.05, 0.05, 2.6, 8]} />
+          <Ink />
+        </mesh>
+        <mesh position={[0, 2.55, 0]} rotation={[Math.PI / 2, 0, 0]} material={toon("#3e9b5a")}>
+          <cylinderGeometry args={[0.36, 0.36, 0.06, 20]} />
+          <Ink />
+        </mesh>
+        <Sign position={[0, 2.0, 0.06]} text="용산 02" color="#3e9b5a" />
+      </group>
+      <group position={[STOP.x + 1.5, by, STOP.z + 0.6]}>
+        <TexBox size={[1.9, 0.1, 0.5]} position={[0, 0.46, 0]} name="wood" tile={0.8} />
+        {[-0.8, 0.8].map((x) => (
+          <TexBox key={x} size={[0.1, 0.44, 0.44]} position={[x, 0.22, 0]} name="granite" tile={0.6} />
+        ))}
+      </group>
+    </group>
+  );
+}
+
+/** The slope lift beside the 108 steps: a rail on short posts the whole way up. The car is live. */
+function LiftRail() {
+  const posts = useMemo(() => Array.from({ length: 10 }, (_, i) => STAIRS.z1 - 0.4 - i * ((STAIRS.z1 - STAIRS.z0 - 0.8) / 9)), []);
+  return (
+    <group>
+      {posts.map((z) => (
+        <mesh key={z} position={[LIFT_X, ground(LIFT_X, z) + 0.35, z]} material={toon("#9aa3ad")}>
+          <boxGeometry args={[0.16, 0.7, 0.16]} />
+          <Ink />
+        </mesh>
+      ))}
+      {posts.slice(1).map((z, i) => {
+        const z0 = posts[i];
+        const y0 = ground(LIFT_X, z0) + 0.72, y1 = ground(LIFT_X, z) + 0.72;
+        const len = Math.hypot(z - z0, y1 - y0);
+        return (
+          <mesh key={z} position={[LIFT_X, (y0 + y1) / 2, (z0 + z) / 2]} rotation={[Math.atan2(y1 - y0, z0 - z), 0, 0]} material={toon("#c8463c")}>
+            <boxGeometry args={[0.2, 0.1, len]} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 function Scene() {
   const towerY = ground(12, -125);
   return (
@@ -439,6 +547,14 @@ function Scene() {
         <Scooter key={k} position={[x, ground(x, z) + LIFT, z]} rotation={rot} color={["#e8e3d8", "#c8463c", "#2f5aa8"][k % 3]} />
       ))}
       <CafeBench />
+      <Cart />
+      <BusStop />
+      {/* the planter the cat sleeps on */}
+      <TexBox size={[1.3, 0.5, 0.7]} position={[CAT.x, ground(CAT.x, CAT.z) + LIFT + 0.25, CAT.z]} name="granite" tile={0.8} tint="#b8ad9c" />
+      {/* the stool where a grandmother sits watching the market */}
+      <TexBox size={[0.42, 0.45, 0.42]} position={[GRANNY.x, ground(GRANNY.x, GRANNY.z) + LIFT + 0.225, GRANNY.z]} name="wood" tile={0.6} tint="#b08a5c" />
+      <LiftRail />
+      <Flowers kind="chrysanthemum" hills={HILLS} seed={7} spots={[{ x: -13.4, z: 27, r: 0.6, n: 8 }, { x: 13.4, z: 27, r: 0.6, n: 8 }, { x: -3.1, z: 18, r: 0.4, n: 5 }, { x: 3.1, z: 11, r: 0.4, n: 5 }, { x: -11.4, z: -39.6, r: 0.5, n: 6 }]} />
       <SeoulTower position={[12, towerY - 1, -125]} scale={1.5} />
       <LeafLitter
         hills={HILLS}
@@ -450,6 +566,119 @@ function Scene() {
         ]}
       />
       <Forest trees={TREES} hills={HILLS} seed={13} />
+    </group>
+  );
+}
+
+/** Steam curling off the griddle all afternoon. */
+function Steam() {
+  const N = 8;
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  const mats = useMemo(() => Array.from({ length: N }, () => new THREE.MeshToonMaterial({ color: "#ffffff", transparent: true, opacity: 0.6, depthWrite: false })), []);
+  const y = ground(CART.x, CART.z) + LIFT + 1.25;
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    refs.current.forEach((m, i) => {
+      if (!m) return;
+      const f = (t * 0.45 + i / N) % 1;
+      m.position.set(CART.x - 0.5 + (i % 3) * 0.5 + Math.sin(t + i) * 0.08, y + f * 1.1, CART.z + 0.05);
+      m.scale.setScalar(0.08 + f * 0.22);
+      (m.material as THREE.MeshToonMaterial).opacity = 0.55 * (1 - f);
+    });
+  });
+  return (
+    <>
+      {Array.from({ length: N }, (_, i) => (
+        <mesh key={i} ref={(el) => void (refs.current[i] = el)} material={mats[i]}>
+          <sphereGeometry args={[1, 10, 8]} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
+/** The neighbourhood cat. Pet it and it gets up, stretches, and flicks its tail. */
+function Cat() {
+  const body = useRef<THREE.Group>(null);
+  const tail = useRef<THREE.Group>(null);
+  const head = useRef<THREE.Group>(null);
+  const until = useRef(0);
+  useEffect(() => on("use:cat", () => (until.current = performance.now() + 3200)), []);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    const up = performance.now() < until.current ? 1 : 0;
+    const b = body.current;
+    if (b) b.position.y += ((up ? 0.2 : 0.1) - b.position.y) * 0.12;
+    if (tail.current) tail.current.rotation.x = up ? -1.1 + Math.sin(t * 8) * 0.25 : -0.2 + Math.sin(t * 1.5) * 0.15;
+    if (head.current) head.current.rotation.y = up ? Math.sin(t * 4) * 0.3 : Math.sin(t * 0.6) * 0.4;
+  });
+  const y = ground(CAT.x, CAT.z) + LIFT + 0.5; // on its planter
+  const fur = "#e09a4a";
+  return (
+    <group position={[CAT.x, y, CAT.z]} rotation={[0, 0.6, 0]} scale={1.6}>
+      <group ref={body} position={[0, 0.1, 0]}>
+        <mesh scale={[0.75, 0.62, 1.2]} material={toon(fur)}>
+          <sphereGeometry args={[0.16, 14, 10]} />
+          <Ink />
+        </mesh>
+        <group ref={head} position={[0, 0.14, 0.17]}>
+          <mesh material={toon(fur)}>
+            <sphereGeometry args={[0.11, 14, 10]} />
+            <Ink />
+          </mesh>
+          {[-1, 1].map((sd) => (
+            <mesh key={sd} position={[sd * 0.06, 0.1, 0]} rotation={[0, 0, sd * -0.3]} material={toon(fur)}>
+              <coneGeometry args={[0.04, 0.08, 4]} />
+            </mesh>
+          ))}
+          {[-1, 1].map((sd) => (
+            <mesh key={sd} position={[sd * 0.04, 0.02, 0.095]} material={toon("#2b2622")}>
+              <sphereGeometry args={[0.014, 6, 6]} />
+            </mesh>
+          ))}
+        </group>
+        <group ref={tail} position={[0, 0.04, -0.17]}>
+          <mesh position={[0, 0.12, -0.02]} material={toon(fur)}>
+            <capsuleGeometry args={[0.03, 0.22, 4, 8]} />
+            <Ink />
+          </mesh>
+        </group>
+      </group>
+      <Burst effect="cat" kind="heart" at={[0, 0.5, 0]} count={7} spread={0.35} rise={0.9} />
+    </group>
+  );
+}
+
+/** The slope lift's car: it waits at the bottom; called, it rides up, pauses, and comes back down. */
+function LiftCar() {
+  const ref = useRef<THREE.Group>(null);
+  const start = useRef(-Infinity);
+  useEffect(() => on("use:lift", () => (start.current = performance.now() > start.current + 19000 ? performance.now() : start.current)), []);
+  useFrame(() => {
+    const g = ref.current;
+    if (!g) return;
+    const t = (performance.now() - start.current) / 1000;
+    // up for 8 s, wait 3 s at the top, down for 8 s
+    const ease = (k: number) => k * k * (3 - 2 * k);
+    const f = t < 0 || t > 19 ? 0 : t < 8 ? ease(t / 8) : t < 11 ? 1 : ease(1 - (t - 11) / 8);
+    const z = STAIRS.z1 - 1 - f * (STAIRS.z1 - STAIRS.z0 - 2);
+    g.position.set(LIFT_X, ground(LIFT_X, z) + 0.8, z);
+  });
+  return (
+    <group ref={ref}>
+      <TexBox size={[0.95, 0.12, 1.3]} position={[0, 0, 0]} name="granite" tile={0.8} tint="#9aa3ad" />
+      <mesh position={[0, 0.95, 0]} material={toon("#f2f0ea")} castShadow>
+        <boxGeometry args={[0.95, 1.8, 1.3]} />
+        <Ink />
+      </mesh>
+      {[-1, 1].map((sd) => (
+        <mesh key={sd} position={[sd * 0.48, 1.15, 0]} material={toonWith({ color: "#9fc4dc", emissive: "#6aa6cc", emissiveIntensity: 0.15, key: "lift-glass" })}>
+          <boxGeometry args={[0.02, 0.9, 1.05]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 1.9, 0]} material={toon("#c8463c")}>
+        <boxGeometry args={[1.0, 0.12, 1.36]} />
+      </mesh>
     </group>
   );
 }
@@ -503,9 +732,45 @@ export const yongsan: RoomConfig = {
       },
     },
     {
+      id: "hotteok",
+      at: { x: CART.x, z: CART.z + 1.9 },
+      radius: 2,
+      action: "use",
+      effect: "snack",
+      gesture: "bow",
+      face: CART,
+      actionLabel: { en: "Buy a hotteok", ko: "호떡 하나 사기" },
+      title: { en: "Hotteok cart", ko: "호떡 리어카" },
+      line: {
+        en: "Hotteok are griddled pancakes filled with brown sugar, cinnamon and nuts. Hold one by the paper cup and mind the hot syrup.",
+        ko: "호떡은 흑설탕과 계피, 견과를 넣고 철판에 구운 간식이에요. 종이컵째 들고, 뜨거운 시럽을 조심하세요.",
+      },
+    },
+    {
+      id: "cat",
+      at: { x: CAT.x + 0.3, z: CAT.z + 1.5 },
+      radius: 1.7,
+      action: "use",
+      effect: "cat",
+      gesture: "bow",
+      face: CAT,
+      stamp: false,
+      actionLabel: { en: "Pet the cat", ko: "고양이 쓰다듬기" },
+      title: { en: "The neighbourhood cat", ko: "동네 고양이" },
+      line: {
+        en: "Haebangchon's alleys belong to their cats as much as to anyone. This one is used to visitors.",
+        ko: "해방촌 골목은 고양이들의 동네이기도 해요. 이 녀석은 사람을 잘 따라요.",
+      },
+    },
+    {
       id: "steps",
-      at: { x: 7.75, z: -4 },
+      at: { x: 7.4, z: -4 },
       radius: 3,
+      action: "use",
+      effect: "lift",
+      gesture: "wave",
+      face: { x: LIFT_X, z: -7 },
+      actionLabel: { en: "Call the slope lift", ko: "경사형 엘리베이터 부르기" },
       title: { en: "The 108 steps", ko: "108계단" },
       line: {
         en: "Built in the 1940s to reach a shrine of the colonial government on Namsan. The shrine is long gone; the steps now carry neighbours up the hill, with a small slope lift beside them.",
@@ -538,4 +803,14 @@ export const yongsan: RoomConfig = {
     },
   ],
   Scene,
+  Live: () => (
+    <>
+      <Steam />
+      <Burst effect="snack" kind="heart" at={[CART.x, ground(CART.x, CART.z) + LIFT + 1.9, CART.z]} count={8} spread={0.45} rise={1} />
+      <Neighbor avatar={{ gender: "m", outfit: "hoodie", colorway: 2, hair: "short", hairColor: 1, skin: 1 }} position={[CART.x, ground(CART.x, CART.z - 1.1) + LIFT, CART.z - 1.1]} heading={0} react="snack" seed={2} />
+      <Neighbor avatar={{ gender: "f", outfit: "chima", colorway: 2, hair: "bun", hairColor: 3, skin: 1 }} position={[GRANNY.x, ground(GRANNY.x, GRANNY.z) + LIFT + 0.26, GRANNY.z]} heading={Math.PI * 0.85} pose="sit" seed={5} />
+      <Cat />
+      <LiftCar />
+    </>
+  ),
 };

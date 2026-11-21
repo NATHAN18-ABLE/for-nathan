@@ -30,6 +30,8 @@ export type RoomEvent =
   | { kind: "say"; id: string; phrase: string }
   | { kind: "chat"; id: string; text: string }
   | { kind: "signal"; id: string }
+  // a room's own interaction (ring the bell, feed the magpies...): every traveler sees it play
+  | { kind: "use"; id: string; effect: string }
   | { kind: "emote"; id: string; emote: string }
   | { kind: "lantern"; id: string; lantern: Lantern }
   | { kind: "lamp"; id: string; lamp: number };

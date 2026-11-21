@@ -10,7 +10,11 @@ export interface Poi {
   line: { en: string; ko: string };
   // What the traveler can do here: hang a wish lantern, sit down, or watch a craftsperson.
   // signal: send up a smoke signal everyone sees; photo: take a keepsake photo here.
-  action?: "lantern" | "sit" | "watch" | "signal" | "photo";
+  // use: the room's own interaction, named by `effect`; the room's Live scene plays it for all.
+  action?: "lantern" | "sit" | "watch" | "signal" | "photo" | "use";
+  effect?: string; // with action "use": the effect name, lowercase letters, digits and dashes
+  gesture?: string; // with action "use": an emote the traveler does while using it (wave, bow, hop)
+  face?: P; // with action "use": the point the traveler turns to
   // Walk to (x, z), then sit at `on` (off the floor, e.g. on a platform edge) at height y.
   seat?: { x: number; z: number; heading: number; on?: { x: number; z: number; y: number } };
   // Places on the room's stamp card. Benches and other small spots set this to false.
