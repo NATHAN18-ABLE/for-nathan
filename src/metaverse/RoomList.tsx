@@ -6,7 +6,7 @@ import { SiteNav } from "@/components/SiteNav";
 import { Phrases } from "@/components/Phrases";
 import { useLang } from "@/lib/lang.ts";
 import { COPY } from "@/lib/hero/copy.ts";
-import { MAX_INSTANCES, ROOMS, nearestRoom } from "@/lib/metaverse/queue.ts";
+import { MAX_INSTANCES, ROOMS } from "@/lib/metaverse/queue.ts";
 import { matchDistricts, scoreAnswers, type Answer } from "@/lib/match/match.ts";
 import { QUESTIONS } from "@/lib/match/questions.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
@@ -53,8 +53,8 @@ export function RoomList() {
       const a = JSON.parse(sessionStorage.getItem("seoul.answers") ?? "[]") as Answer[];
       if (Array.isArray(a) && a.length >= QUESTIONS.length) {
         const best = matchDistricts(scoreAnswers(a)).best.slug;
-        const room = nearestRoom(best);
-        setMine({ room, from: room === best ? null : best });
+        // Mark only the visitor's own district; a stand-in room would feel arbitrary.
+        if (ROOMS.includes(best)) setMine({ room: best, from: null });
       }
     } catch {}
   }, []);

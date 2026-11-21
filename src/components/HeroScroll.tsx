@@ -6,7 +6,7 @@ import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { frameAt, scrollWindows, type Timing } from "@/lib/hero/timeline.ts";
-import { evictions, nextToFetch, wanted } from "@/lib/hero/frame-cache.ts";
+import { evictions, nearestAvailable, nextToFetch, wanted } from "@/lib/hero/frame-cache.ts";
 import { COPY, type Lang } from "@/lib/hero/copy.ts";
 import { useLang } from "@/lib/lang.ts";
 import { BuildTag } from "./BuildTag";
@@ -166,18 +166,20 @@ export function HeroScroll() {
       }
     };
 
-    const nearestDecoded = (i: number) => {
-      let best: Frame | null = null;
+    const nearestDecoded = (i: number): [number, Frame] | null => {
+      let best: [number, Frame] | null = null;
       let dist = Infinity;
       for (const [k, f] of bitmaps) {
         const d = Math.abs(k - i);
         if (d < dist) {
           dist = d;
-          best = f;
+          best = [k, f];
         }
       }
       return best;
     };
+    // ?perf: how far the frame on screen is from the one the scroll asks for.
+    const stats = new URLSearchParams(location.search).has("perf") ? ((window as unknown as { __hero: object }).__hero = { want: 0, shown: -1, blobs: 0, decoded: 0 }) as { want: number; shown: number; blobs: number; decoded: number } : null;
 
     const cover = (img: Frame, alpha: number) => {
       const cw = canvas.width;
@@ -210,6 +212,12 @@ export function HeroScroll() {
         const i0 = Math.floor(f);
         if (i0 !== lastFrame) direction = i0 > lastFrame ? 1 : -1;
         lastFrame = i0;
+        // The exact frame has not arrived yet: decode the closest one that has, so the film
+        // keeps moving instead of holding a frame from far back.
+        if (!blobs[i0]) {
+          const k = nearestAvailable(i0, (j) => j >= 0 && j < blobs.length && !!blobs[j], 60);
+          if (k !== null) decode(k);
+        }
         for (const i of wanted(i0, direction, timing.frames, 6, 16)) {
           if (decoding.size >= 3) break;
           decode(i);
@@ -218,7 +226,14 @@ export function HeroScroll() {
         if (key !== drawn) {
           const a = f - i0;
           const exact = bitmaps.get(i0);
-          const base = exact ?? nearestDecoded(i0);
+          const near = exact ? null : nearestDecoded(i0);
+          const base = exact ?? near?.[1];
+          if (stats) {
+            stats.want = i0;
+            stats.shown = exact ? i0 : (near?.[0] ?? -1);
+            stats.blobs = blobs.filter(Boolean).length;
+            stats.decoded = bitmaps.size;
+          }
           if (base) {
             cover(base, 1);
             const next = bitmaps.get(i0 + 1);
@@ -298,14 +313,19 @@ export function HeroScroll() {
         blobs.length = data.frames;
         blobs.fill(null);
         const got = new Uint8Array(data.frames);
+        const tries = new Uint8Array(data.frames);
         const worker = async () => {
           for (let i = nextToFetch(got, lastFrame, direction); i !== undefined && !cancelled; i = nextToFetch(got, lastFrame, direction)) {
             got[i] = 1;
             try {
               const r = await fetch(frameUrl(set, i));
+              if (!r.ok) throw new Error(String(r.status));
               blobs[i] = await r.blob();
               drawn = -1;
-            } catch {}
+            } catch {
+              // A dropped download on a shaky connection: try that frame again later (twice at most).
+              if (++tries[i] < 3) got[i] = 0;
+            }
           }
         };
         await Promise.all(Array.from({ length: portrait ? 4 : 6 }, worker));

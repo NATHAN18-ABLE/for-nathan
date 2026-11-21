@@ -21,22 +21,34 @@ export function wanted(center: number, direction: 1 | -1, total: number, behind:
 
 /**
  * Which frame to download next (`got[i]` is non-zero once frame i is fetched or on its way).
- * First the opening of the film, every frame, so the first scroll is smooth; then the frames
- * just ahead of where the visitor is (and a few behind); then a coarse pass over the whole
- * film so a fast fling still has something close to show; then everything else in order.
+ * Scrolling runs through frames faster than a phone can download them, so the order matters:
+ * 1. the opening, every frame, so the first moment of scrolling is smooth;
+ * 2. a thin skeleton, every 24th frame, so wherever the visitor scrolls something close exists;
+ * 3. the stretch just ahead of the visitor (and a little behind), every frame;
+ * 4. finer passes over the whole film, then everything else.
  */
-export function nextToFetch(got: ArrayLike<number>, center: number, direction: 1 | -1, opening = 80, ahead = 160, behind = 24): number | undefined {
+export function nextToFetch(got: ArrayLike<number>, center: number, direction: 1 | -1, opening = 24, skeleton = 24, ahead = 120, behind = 16): number | undefined {
   const n = got.length;
   for (let i = 0; i < Math.min(n, opening); i++) if (!got[i]) return i;
-  for (let d = 0; d < ahead; d++) {
-    const i = center + direction * d;
-    if (i >= 0 && i < n && !got[i]) return i;
-    if (d > 0 && d <= behind) {
-      const j = center - direction * d;
-      if (j >= 0 && j < n && !got[j]) return j;
-    }
-  }
-  for (let i = 0; i < n; i += 8) if (!got[i]) return i;
-  for (let i = 0; i < n; i++) if (!got[i]) return i;
+  for (let i = 0; i < n; i += skeleton) if (!got[i]) return i;
+  if (n > 0 && !got[n - 1]) return n - 1;
+  const at = (d: number) => {
+    const i = center + d;
+    return i >= 0 && i < n && !got[i] ? i : undefined;
+  };
+  // the next stretch in the scroll direction first, then a little behind, then further ahead
+  for (let d = 0; d < Math.min(40, ahead); d++) if (at(direction * d) !== undefined) return at(direction * d);
+  for (let d = 1; d <= behind; d++) if (at(-direction * d) !== undefined) return at(-direction * d);
+  for (let d = 40; d < ahead; d++) if (at(direction * d) !== undefined) return at(direction * d);
+  for (const step of [8, 4, 2, 1]) for (let i = 0; i < n; i += step) if (!got[i]) return i;
   return undefined;
+}
+
+/** The closest frame to `i` that has arrived, within `reach`; null if there is none. */
+export function nearestAvailable(i: number, have: (k: number) => boolean, reach: number): number | null {
+  for (let d = 0; d <= reach; d++) {
+    if (have(i + d)) return i + d;
+    if (d && have(i - d)) return i - d;
+  }
+  return null;
 }

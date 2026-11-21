@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { evictions, nextToFetch, wanted } from "./frame-cache.ts";
+import { evictions, nearestAvailable, nextToFetch, wanted } from "./frame-cache.ts";
 
 test("nothing is evicted while the cache is within its limit", () => {
   assert.deepEqual(evictions([1, 2, 3], 2, 5), []);
@@ -26,35 +26,48 @@ test("wanted frames stay inside the sequence", () => {
   assert.deepEqual([...wanted(1, -1, 5, 2, 4)].sort((a, b) => a - b), [0, 1, 2, 3]);
 });
 
-test("downloads start with the opening of the film, every frame in order", () => {
+test("downloads start with the opening, then a thin skeleton across the whole film", () => {
   const got = new Uint8Array(500);
   const order: number[] = [];
-  for (let k = 0; k < 10; k++) {
+  for (let k = 0; k < 24 + 21; k++) {
     const i = nextToFetch(got, 0, 1)!;
     got[i] = 1;
     order.push(i);
   }
-  assert.deepEqual(order, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.deepEqual(order.slice(0, 24), Array.from({ length: 24 }, (_, i) => i), "the opening, every frame");
+  assert.deepEqual(order.slice(24, 30), [24, 48, 72, 96, 120, 144], "then every 24th frame, so any scroll position has something close");
+  assert.ok(order.includes(480));
 });
 
-test("after the opening, the frames just ahead of the visitor come first", () => {
+test("after the skeleton, the frames just ahead of the visitor come first", () => {
   const got = new Uint8Array(500);
-  got.fill(1, 0, 80); // the opening is in
-  assert.equal(nextToFetch(got, 200, 1), 200);
+  got.fill(1, 0, 24);
+  for (let i = 0; i < 500; i += 24) got[i] = 1;
+  got[499] = 1; // the last frame comes with the skeleton
+  assert.equal(nextToFetch(got, 200, 1), 200, "where the visitor is");
   got[200] = 1;
-  assert.equal(nextToFetch(got, 200, 1), 201, "forward, in the scroll direction");
+  assert.equal(nextToFetch(got, 200, 1), 201);
+  got[201] = 1;
+  assert.equal(nextToFetch(got, 200, 1), 202, "forward, in the scroll direction");
   got.fill(1, 200, 400);
   assert.equal(nextToFetch(got, 200, -1), 199, "scrolling back fetches backwards");
 });
 
-test("with nothing near the visitor missing, a coarse pass then the rest fill in; then nothing is left", () => {
+test("with nothing near the visitor missing, finer passes then the rest fill in; then nothing is left", () => {
   const got = new Uint8Array(300);
   got.fill(1, 0, 300);
   got[250] = 0;
   got[5] = 0;
-  assert.equal(nextToFetch(got, 0, 1), 5);
+  assert.equal(nextToFetch(got, 100, 1), 5);
   got[5] = 1;
-  assert.equal(nextToFetch(got, 0, 1), 250);
+  assert.equal(nextToFetch(got, 100, 1), 250);
   got[250] = 1;
-  assert.equal(nextToFetch(got, 0, 1), undefined);
+  assert.equal(nextToFetch(got, 100, 1), undefined);
+});
+
+test("the nearest frame that has arrived stands in for one that has not", () => {
+  const have = (i: number) => [10, 40, 41].includes(i);
+  assert.equal(nearestAvailable(38, have, 60), 40);
+  assert.equal(nearestAvailable(20, have, 60), 10);
+  assert.equal(nearestAvailable(200, have, 60), null);
 });

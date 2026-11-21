@@ -26,7 +26,7 @@ export function rand(seed: number) {
 
 /* ---------- surfaces ---------- */
 
-const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass", "deck", "facade"] as const;
+const TEX = ["roof", "granite", "stonewall", "plaster", "wood", "ground", "grass", "deck", "facade", "brick", "shop"] as const;
 export type TexName = (typeof TEX)[number];
 
 // Base colours: an autumn afternoon, softened.
@@ -40,6 +40,8 @@ const BASE: Record<TexName, string> = {
   grass: "#b2c77f",
   deck: "#c39467",
   facade: "#ffffff",
+  brick: "#ffffff",
+  shop: "#ffffff",
 };
 
 /**
@@ -98,6 +100,36 @@ function paintPattern(name: TexName): HTMLCanvasElement | null {
         x += w;
       }
     }
+  } else if (name === "brick") {
+    // Red-brown brick in running bond, with a window per storey like the plain facade.
+    g.fillStyle = "#b8664c";
+    g.fillRect(0, 0, 256, 256);
+    for (let row = 0; row < 16; row++) {
+      const off = row % 2 ? 16 : 0;
+      for (let x = -32; x < 256; x += 32) {
+        const tone = 0.9 + r() * 0.2;
+        g.fillStyle = `rgb(${Math.round(186 * tone)},${Math.round(104 * tone)},${Math.round(78 * tone)})`;
+        g.fillRect(x + off + 1, row * 16 + 1, 30, 14);
+      }
+    }
+    g.fillStyle = "#4f5c6c";
+    g.fillRect(74, 70, 108, 104);
+    g.fillStyle = "#7f93a8";
+    g.fillRect(80, 76, 44, 42);
+    g.fillStyle = "#efe9de";
+    g.fillRect(66, 174, 124, 9);
+  } else if (name === "shop") {
+    // A shopfront: a wide glass window and a glass door in a light frame.
+    g.fillStyle = "#f4f1ea";
+    g.fillRect(0, 0, 256, 256);
+    g.fillStyle = "#3d4b5c";
+    g.fillRect(14, 40, 150, 196);
+    g.fillRect(180, 40, 62, 216);
+    g.fillStyle = "#6d849c";
+    g.fillRect(22, 48, 64, 84);
+    g.fillRect(188, 48, 22, 90);
+    g.fillStyle = "#e8b04a";
+    g.fillRect(226, 140, 6, 26);
   } else if (name === "facade") {
     // One storey of a small house: a window with a frame and a sill, the rest plain wall.
     g.fillStyle = "#5f6f82";

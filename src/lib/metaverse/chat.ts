@@ -55,3 +55,20 @@ export class RateLimit {
     return true;
   }
 }
+
+/**
+ * Whether a translation looks like one: not the same text, in the script of the language asked
+ * for, not mostly loose Korean letters (what English typed on a Korean keyboard looks like,
+ * which shared translation memories sometimes hand back), and not wildly longer than the message.
+ */
+export function plausibleTranslation(out: string, text: string, to: string): boolean {
+  const o = out.trim();
+  if (!o || o.toLowerCase() === text.trim().toLowerCase()) return false;
+  if (o.length > text.length * 4 + 24) return false;
+  const syllables = (o.match(/[가-힣]/g) ?? []).length;
+  const jamo = (o.match(/[ㄱ-ㆎ]/g) ?? []).length;
+  if (to === "ko") return syllables > 0 && jamo <= syllables;
+  if (syllables + jamo > 0 && to !== "ko") return false;
+  if (to === "en") return /[a-z]/i.test(o);
+  return true;
+}

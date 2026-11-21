@@ -816,7 +816,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
             {room.lanterns && <LanternRack lanterns={lanterns} fresh={fresh} />}
           </Walkable>
           {room.world && <FallingLeaves motions={motions} meId={me.current.id} count={lowPower ? 50 : 140} />}
-          {room.world && !lowPower && <Effects low={tier !== "high"} />}
+          {room.world && !lowPower && <Effects low={tier !== "high"} ao={tier === "high"} />}
           {inside && me.current.id && (
             <Avatar
               key="me"

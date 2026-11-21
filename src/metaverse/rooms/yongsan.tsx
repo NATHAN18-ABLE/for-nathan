@@ -1,9 +1,12 @@
 "use client";
 
-import { Boardwalk, CityView, Forest, Mountains, SeoulTower, Stairs, TexBox, Terrain, heightAt, rand, type Hill, type TreeSpot } from "../world";
+import { useMemo } from "react";
+import * as THREE from "three";
+import { Boardwalk, CityView, Forest, Mountains, SeoulTower, Stairs, TexBox, Terrain, heightAt, rand, surface, worldBox, type Hill, type TreeSpot } from "../world";
 import { LeafLitter } from "../autumn";
-import { toon } from "../toon/material";
+import { toon, toonWith } from "../toon/material";
 import { Ink } from "../toon/part";
+import { AcUnit, Basin, CornerMirror, LaundryLine, Poles, Pot, Scooter, Sign } from "./props";
 import type { RoomConfig } from "../types";
 
 // Haebangchon on the southern slope of Namsan, on a bright autumn afternoon; about 70 m x 80 m.
@@ -53,6 +56,8 @@ interface Lot {
   tank: string | null;
   // a shop awning over the face toward the street: dx/dz is the way that face looks
   awning: { dx: number; dz: number; color: string } | null;
+  brick: boolean;
+  seed: number;
 }
 const AWNINGS = ["#c8463c", "#3e7d5b", "#2f5aa8", "#e0a53a", "#7a4f8c"];
 const inView = (l: { x0: number; z0: number; x1: number; z1: number }) => overlaps(l, { x0: 11, z0: -31, x1: 24, z1: -14 }, 0);
@@ -60,8 +65,8 @@ const LOTS: Lot[] = (() => {
   const r = rand(31);
   const out: Lot[] = [];
   // The view south from the ridge stays open.
-  const free = (lot: Omit<Lot, "floors" | "color" | "tank" | "awning">, m = 0.45) => !inView(lot) && !RECTS.some((q) => overlaps(lot, q, m)) && !out.some((q) => overlaps(lot, q, 0.2));
-  const dress = (lot: Omit<Lot, "floors" | "color" | "tank" | "awning">, facing: { dx: number; dz: number } | null): Lot => {
+  const free = (lot: Omit<Lot, "floors" | "color" | "tank" | "awning" | "brick" | "seed">, m = 0.45) => !inView(lot) && !RECTS.some((q) => overlaps(lot, q, m)) && !out.some((q) => overlaps(lot, q, 0.2));
+  const dress = (lot: Omit<Lot, "floors" | "color" | "tank" | "awning" | "brick" | "seed">, facing: { dx: number; dz: number } | null): Lot => {
     const cz = (lot.z0 + lot.z1) / 2;
     return {
       ...lot,
@@ -69,6 +74,8 @@ const LOTS: Lot[] = (() => {
       color: PALETTE[Math.floor(r() * PALETTE.length)],
       tank: r() < 0.55 ? (r() < 0.7 ? "#4f9a77" : "#4c7fb8") : null,
       awning: facing && r() < 0.65 ? { ...facing, color: AWNINGS[Math.floor(r() * AWNINGS.length)] } : null,
+      brick: r() < 0.28,
+      seed: Math.floor(r() * 1e6),
     };
   };
   // First a row of houses right along every street, shopfronts facing it.
@@ -124,7 +131,63 @@ const TREES: TreeSpot[] = (() => {
 const TABLE = { x: -20, z: 0 };
 const CAFE = { x: -14, z: -39 };
 
+// Utility poles along the streets, just outside the walkable edge, with wires between them.
+const POLES: [number, number, number][] = (() => {
+  const out: [number, number, number][] = [];
+  const line = (x0: number, z0: number, x1: number, z1: number, step = 9) => {
+    const n = Math.max(1, Math.round(Math.hypot(x1 - x0, z1 - z0) / step));
+    for (let k = 0; k <= n; k++) {
+      const x = x0 + ((x1 - x0) * k) / n, z = z0 + ((z1 - z0) * k) / n;
+      out.push([x, ground(x, z), z]);
+    }
+  };
+  line(-2.85, 25, -2.85, -5.5); // main street, west side
+  line(-21.5, -10.35, 2, -10.35); // along the turn west
+  line(-17.15, -11, -17.15, -31); // upper main street, east side
+  line(-23, -40.35, 21, -40.35, 11); // ridge street, north side
+  return out;
+})();
+const WIRES: [[number, number, number], [number, number, number]][] = (() => {
+  const out: [[number, number, number], [number, number, number]][] = [];
+  for (let k = 1; k < POLES.length; k++) {
+    const a = POLES[k - 1], b = POLES[k];
+    if (Math.hypot(a[0] - b[0], a[2] - b[2]) > 14) continue; // a new line starts
+    for (const h of [7.4, 6.9]) out.push([[a[0], a[1] + h, a[2]], [b[0], b[1] + h, b[2]]]);
+  }
+  // a few drops from the poles to the nearest roof
+  const r = rand(5);
+  for (const [x, y, z] of POLES) {
+    if (r() < 0.5) continue;
+    let best: Lot | null = null, bd = Infinity;
+    for (const l of LOTS) {
+      const d = Math.hypot((l.x0 + l.x1) / 2 - x, (l.z0 + l.z1) / 2 - z);
+      if (d < bd) (bd = d), (best = l);
+    }
+    if (best && bd < 9) out.push([[x, y + 6.9, z], [(best.x0 + best.x1) / 2, ground((best.x0 + best.x1) / 2, (best.z0 + best.z1) / 2) + best.floors * 3 - 0.4, (best.z0 + best.z1) / 2]]);
+  }
+  return out;
+})();
+// Pots and red basins by the house fronts along the lower main street.
+const CLUTTER: { x: number; z: number; kind: "pot" | "basin" | "greens" }[] = (() => {
+  const r = rand(9);
+  const out: { x: number; z: number; kind: "pot" | "basin" | "greens" }[] = [];
+  for (let z = 7; z < 25; z += 2.2)
+    for (const x of [-2.95, 2.95]) {
+      const k = r();
+      if (k < 0.45) continue;
+      out.push({ x, z: z + r(), kind: k < 0.75 ? "pot" : k < 0.88 ? "basin" : "greens" });
+    }
+  return out;
+})();
+const SCOOTERS: [number, number, number][] = [
+  [-11, 28.4, 0.3],
+  [-9.8, 28.6, 0.2],
+  [11, 28.2, -0.4],
+];
+
 const HOLES = [
+  ...SCOOTERS.map(([x, z]) => ({ x, z, r: 0.75 })),
+  ...[0.25, 5.75].map((z) => ({ x: -12, z, r: 0.25 })), // the market arch
   ...TREES.filter((t) => RECTS.some((q) => t.x > q.x0 - 1 && t.x < q.x1 + 1 && t.z > q.z0 - 1 && t.z < q.z1 + 1)).map((t) => ({ x: t.x, z: t.z, r: 0.45 * t.s + 0.25 })),
   { x: TABLE.x, z: TABLE.z, r: 1.05 }, // the market table and its stools
   { x: CAFE.x, z: CAFE.z, r: 1.2 }, // the café bench
@@ -132,33 +195,137 @@ const HOLES = [
   ...[-25, -21, -17].map((x) => ({ x, z: -4.6, r: 1.1 })), // stalls along the market's north side
 ];
 
+const SHOP_WORDS = ["카페", "꽃집", "빵집", "책방", "세탁소", "분식", "수선", "철물", "사진관", "와인바"];
+
+/**
+ * A Haebangchon house: windows lined up with its storeys, brick or painted render, a shopfront
+ * and awning toward the street, and the rooftop clutter of the neighbourhood (parapet, water
+ * tank, laundry, pots), air conditioners on the side walls and sometimes a balcony.
+ */
 function House({ lot }: { lot: Lot }) {
   const corners = [ground(lot.x0, lot.z0), ground(lot.x1, lot.z0), ground(lot.x0, lot.z1), ground(lot.x1, lot.z1)];
-  const base = Math.min(...corners) - 0.8;
-  const top = Math.max(...corners) + lot.floors * 3;
+  const g0 = Math.min(...corners);
+  const g1 = Math.max(...corners);
+  const base = g0 - 0.8;
+  const top = g1 + lot.floors * 3;
   const w = lot.x1 - lot.x0, d = lot.z1 - lot.z0;
   const cx = (lot.x0 + lot.x1) / 2, cz = (lot.z0 + lot.z1) / 2;
+  const walls = useMemo(() => {
+    const g = worldBox(w, top - base, d);
+    // Shift the pattern so each storey's window sits where that storey is.
+    const uv = g.attributes.uv as THREE.BufferAttribute;
+    const nrm = g.attributes.normal as THREE.BufferAttribute;
+    const lift = (top + base) / 2 - g1;
+    for (let k = 0; k < uv.count; k++) if (Math.abs(nrm.getY(k)) < 0.5) uv.setY(k, uv.getY(k) + lift + 0.6);
+    return g;
+  }, [w, d, top, base, g1]);
+  const r = useMemo(() => rand(lot.seed), [lot.seed]);
+  const extra = useMemo(
+    () => ({
+      laundry: r() < 0.35,
+      pots: r() < 0.3,
+      balcony: lot.floors >= 2 && r() < 0.35,
+      sign: lot.awning && r() < 0.5 ? SHOP_WORDS[Math.floor(r() * SHOP_WORDS.length)] : null,
+      ac: r() < 0.7,
+    }),
+    [r, lot.floors, lot.awning],
+  );
+  const a = lot.awning;
+  // The street face: which way it looks, how wide it is, and the ground in front of it.
+  const face = a ? { nx: a.dx, nz: a.dz, len: a.dx ? d : w, x: cx + a.dx * (w / 2), z: cz + a.dz * (d / 2) } : null;
+  const faceY = face ? ground(face.x, face.z) : g1;
+  const turn = face ? Math.atan2(face.nx, face.nz) : 0;
+  // A side wall for the air conditioners: the one across from the street, or the east wall.
+  const side = face ? { nx: -face.nx, nz: -face.nz } : { nx: 1, nz: 0 };
   return (
     <group>
-      <TexBox size={[w, top - base, d]} position={[cx, (top + base) / 2, cz]} name="facade" tile={3} tint={lot.color} />
-      <TexBox size={[w + 0.3, 0.3, d + 0.3]} position={[cx, top + 0.15, cz]} name="plaster" tile={2} tint="#ddd6ca" />
+      <mesh geometry={walls} material={surface(lot.brick ? "brick" : "facade", 3, lot.brick ? "#ffffff" : lot.color)} position={[cx, (top + base) / 2, cz]} castShadow receiveShadow userData={{ solid: true }}>
+        <Ink />
+      </mesh>
+      {/* roof: a slab and a low parapet round its edge */}
+      <TexBox size={[w + 0.2, 0.12, d + 0.2]} position={[cx, top + 0.06, cz]} name="plaster" tile={2} tint="#cfc8bc" line={false} />
+      {[
+        [w + 0.2, 0.15, cx, cz - d / 2],
+        [w + 0.2, 0.15, cx, cz + d / 2],
+        [0.15, d + 0.2, cx - w / 2, cz],
+        [0.15, d + 0.2, cx + w / 2, cz],
+      ].map(([sx, sz, x, z], k) => (
+        <TexBox key={k} size={[sx, 0.55, sz]} position={[x, top + 0.38, z]} name="plaster" tile={2} tint={lot.brick ? "#e6dccf" : lot.color} />
+      ))}
       {lot.tank && (
-        <mesh position={[cx + w * 0.22, top + 1, cz - d * 0.2]} material={toon(lot.tank)} castShadow>
+        <mesh position={[cx + w * 0.22, top + 0.95, cz - d * 0.2]} material={toon(lot.tank)} castShadow>
           <cylinderGeometry args={[0.7, 0.7, 1.4, 16]} />
           <Ink />
         </mesh>
       )}
-      {lot.awning && (
-        <mesh
-          position={[cx + lot.awning.dx * (w / 2 + 0.5), Math.min(...corners) + 2.6, cz + lot.awning.dz * (d / 2 + 0.5)]}
-          rotation={lot.awning.dx ? [0, 0, lot.awning.dx * -0.35] : [lot.awning.dz * 0.35, 0, 0]}
-          material={toon(lot.awning.color)}
-          castShadow
-        >
-          <boxGeometry args={lot.awning.dx ? [1.2, 0.08, d * 0.75] : [w * 0.75, 0.08, 1.2]} />
-          <Ink />
-        </mesh>
+      {extra.laundry && <LaundryLine position={[cx - w * 0.15, top + 0.1, cz + d * 0.15]} rotation={r() * Math.PI} length={Math.min(w, d) * 0.6} />}
+      {extra.pots && [-1, 0, 1].map((k) => <Pot key={k} position={[cx + k * 0.8, top + 0.12, cz + d / 2 - 0.5]} size={0.8} />)}
+      {face && a && (
+        <>
+          {/* shopfront glass on the ground floor, the awning above it */}
+          <mesh
+            position={[face.x + face.nx * 0.04, faceY + 1.45, face.z + face.nz * 0.04]}
+            rotation={[0, turn, 0]}
+            material={surface("shop", 1, "#ffffff")}
+          >
+            <boxGeometry args={[face.len * 0.86, 2.7, 0.06]} />
+            <Ink />
+          </mesh>
+          <mesh position={[face.x + face.nx * 0.55, faceY + 3.05, face.z + face.nz * 0.55]} rotation={[0, turn, 0]} material={toon(a.color)} castShadow>
+            <boxGeometry args={[face.len * 0.8, 0.08, 1.15]} />
+            <Ink />
+          </mesh>
+          {extra.sign && (
+            <Sign
+              position={[face.x + face.nx * 0.3 + (face.nz ? face.len * 0.42 : 0), faceY + 4.3, face.z + face.nz * 0.3 + (face.nx ? face.len * 0.42 : 0)]}
+              rotation={turn + Math.PI / 2}
+              text={extra.sign}
+              color={a.color}
+              vertical
+            />
+          )}
+          {extra.balcony && (
+            <group position={[face.x + face.nx * 0.45, faceY + 3.2 + 2.9, face.z + face.nz * 0.45]} rotation={[0, turn, 0]}>
+              <mesh material={toon("#d8d1c4")} castShadow>
+                <boxGeometry args={[face.len * 0.5, 0.12, 0.9]} />
+                <Ink />
+              </mesh>
+              <mesh position={[0, 0.5, 0.42]} material={toon("#5d6873")}>
+                <boxGeometry args={[face.len * 0.5, 0.06, 0.06]} />
+              </mesh>
+            </group>
+          )}
+        </>
       )}
+      {extra.ac &&
+        [1.6, 4.6].slice(0, lot.floors >= 2 ? 2 : 1).map((h) => (
+          <AcUnit key={h} position={[cx + side.nx * (w / 2 + 0.2), g1 + h, cz + side.nz * (d / 2 + 0.2)]} facing={Math.atan2(side.nx, side.nz)} />
+        ))}
+    </group>
+  );
+}
+
+/** String lights hung under the market roof: bulbs along sagging wires. */
+function StringLights({ from, to, y }: { from: [number, number]; to: [number, number]; y: number }) {
+  const geo = useMemo(() => {
+    const A = new THREE.Vector3(from[0], y, from[1]), B = new THREE.Vector3(to[0], y, to[1]);
+    const mid = A.clone().lerp(B, 0.5);
+    mid.y -= 0.8;
+    const curve = new THREE.QuadraticBezierCurve3(A, mid, B);
+    const bulbs: THREE.BufferGeometry[] = [];
+    for (let k = 1; k < 14; k++) {
+      const p = curve.getPoint(k / 14);
+      bulbs.push(new THREE.SphereGeometry(0.08, 8, 6).translate(p.x, p.y - 0.08, p.z));
+    }
+    return { wire: new THREE.TubeGeometry(curve, 20, 0.012, 4, false), bulbs };
+  }, [from, to, y]);
+  const glow = useMemo(() => toonWith({ color: "#fff3cf", emissive: "#ffd27a", emissiveIntensity: 0.9, key: "bulb" }), []);
+  return (
+    <group>
+      <mesh geometry={geo.wire} material={toon("#2f3238")} />
+      {geo.bulbs.map((b, k) => (
+        <mesh key={k} geometry={b} material={glow} />
+      ))}
     </group>
   );
 }
@@ -191,6 +358,25 @@ function Market() {
           </mesh>
         </group>
       ))}
+      {/* the entrance arch from the street, and lights strung under the roof */}
+      {[0.25, 5.75].map((z) => (
+        <mesh key={z} position={[-12, y(-12, z) + 2.2, z]} material={toon("#3e7d5b")} castShadow>
+          <cylinderGeometry args={[0.12, 0.12, 4.4, 8]} />
+          <Ink />
+        </mesh>
+      ))}
+      <Sign position={[-12, y(-12, 3) + 4.2, 3]} rotation={Math.PI / 2} text="신흥시장" color="#3e7d5b" />
+      {[-3, 1.5, 5.5].map((z) => (
+        <StringLights key={z} from={[m.x0 + 0.5, z]} to={[m.x1 - 0.5, z]} y={roofY - 0.25} />
+      ))}
+      {/* produce on the stalls */}
+      {[-25, -21, -17].flatMap((x, i) =>
+        [-0.6, -0.2, 0.2, 0.6].map((dx, k) => (
+          <mesh key={`${x}${k}`} position={[x + dx, y(x, -4.6) + 1.06, -4.6]} material={toon(["#d94b3a", "#e8a33a", "#6ea85a", "#8a5ac2"][(i + k) % 4])} castShadow>
+            <icosahedronGeometry args={[0.13, 1]} />
+          </mesh>
+        )),
+      )}
       <group position={[TABLE.x, y(TABLE.x, TABLE.z), TABLE.z]}>
         <TexBox size={[1.4, 0.06, 0.8]} position={[0, 0.74, 0]} name="wood" tile={0.8} />
         <TexBox size={[0.1, 0.72, 0.1]} position={[0, 0.36, 0]} name="wood" tile={0.8} tint="#9b8064" />
@@ -234,6 +420,8 @@ function Scene() {
       <Mountains radius={300} color="#a8b994" />
       <CityView from={[-160, 72]} to={[160, 230]} seed={9} />
       <Terrain size={[340, 340]} hills={HILLS} name="grass" tile={6} step={3} />
+      {/* the whole village floor is paved: yards, back alleys, the gaps between houses */}
+      <Boardwalk rects={[{ x0: -42, z0: -50, x1: 38, z1: 26 }]} hills={HILLS} lift={0.012} paving={{ name: "granite", tile: 2.4, tint: "#c4bcae" }} />
       <Boardwalk rects={SIDEWALKS} hills={HILLS} lift={0.03} paving={{ name: "granite", tile: 1.1, tint: "#c9c2b6" }} />
       <Boardwalk rects={PAVED} hills={HILLS} lift={LIFT} paving={{ name: "granite", tile: 1.4, tint: "#d8d2c8" }} />
       <Stairs rect={STAIRS} hills={HILLS} />
@@ -241,6 +429,15 @@ function Scene() {
         <House key={i} lot={lot} />
       ))}
       <Market />
+      <Poles poles={POLES} wires={WIRES} />
+      <CornerMirror position={[2.9, ground(2.9, -6.3), -6.3]} facing={-Math.PI / 4} />
+      <CornerMirror position={[-22.3, ground(-22.3, -9.7), -9.7]} facing={Math.PI / 4} />
+      {CLUTTER.map((c, k) =>
+        c.kind === "pot" ? <Pot key={k} position={[c.x, ground(c.x, c.z), c.z]} size={0.9} /> : <Basin key={k} position={[c.x, ground(c.x, c.z), c.z]} greens={c.kind === "greens"} />,
+      )}
+      {SCOOTERS.map(([x, z, rot], k) => (
+        <Scooter key={k} position={[x, ground(x, z) + LIFT, z]} rotation={rot} color={["#e8e3d8", "#c8463c", "#2f5aa8"][k % 3]} />
+      ))}
       <CafeBench />
       <SeoulTower position={[12, towerY - 1, -125]} scale={1.5} />
       <LeafLitter

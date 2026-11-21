@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanChat, guessLang, MAX_CHAT, RateLimit } from "./chat.ts";
+import { cleanChat, guessLang, MAX_CHAT, plausibleTranslation, RateLimit } from "./chat.ts";
 
 test("messages are trimmed, single-spaced and capped in length", () => {
   assert.equal(cleanChat("  안녕하세요\n\n반가워요  "), "안녕하세요 반가워요");
@@ -42,4 +42,13 @@ test("sending is limited to a steady pace", () => {
   for (const t of [2600, 3900, 5200]) assert.ok(r.take(t));
   assert.ok(!r.take(6500), "five in ten seconds is the most");
   assert.ok(r.take(12000));
+});
+
+test("translations that are only keyboard-layout noise are rejected", () => {
+  assert.equal(plausibleTranslation("ㅑㅣㅐㅍ됴ㅐㅕ", "i love you", "ko"), false, "loose Korean letters typed on the wrong layout");
+  assert.equal(plausibleTranslation("사랑해요", "i love you", "ko"), true);
+  assert.equal(plausibleTranslation("안녕하세요", "안녕하세요", "en"), false, "the same text is no translation");
+  assert.equal(plausibleTranslation("안녕", "hello", "en"), false, "English asked for, Korean returned");
+  assert.equal(plausibleTranslation("Hello", "안녕하세요", "en"), true);
+  assert.equal(plausibleTranslation("x".repeat(400), "hi", "en"), false, "far longer than the message");
 });

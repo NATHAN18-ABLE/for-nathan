@@ -11,8 +11,7 @@ import { useLang } from "@/lib/lang.ts";
 import type { Lang } from "@/lib/hero/copy.ts";
 import { asset } from "@/lib/base-path.ts";
 import { Phrases } from "@/components/Phrases";
-import { nearestRoom } from "@/lib/metaverse/queue.ts";
-import { entryRoom, roomHref } from "@/lib/metaverse/open.ts";
+import { OPEN_ROOMS } from "@/lib/metaverse/open.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import { courseFor } from "@/lib/districts/courses.ts";
 import styles from "./test.module.css";
@@ -27,8 +26,8 @@ const T = {
     also: "Also close to you:",
     course: (d: string) => `A day course for ${d} is in preparation.`,
     seeDay: (d: string) => `See a day in ${d}`,
-    roomSoon: (room: string, open: string) => `The ${room} room opens soon. Until then, travelers meet in ${open}.`,
     meet: (open: string) => `Walk ${open} with friends first`,
+    other: "Walk another district in the metaverse",
     again: "Take the test again",
   },
   ko: {
@@ -38,8 +37,8 @@ const T = {
     also: "이곳도 잘 맞아요:",
     course: (d: string) => `${d} 하루 코스는 준비 중입니다.`,
     seeDay: (d: string) => `${d}의 하루 코스 보기`,
-    roomSoon: (room: string, open: string) => `${room} 방은 곧 열립니다. 그동안은 ${open}에서 다른 여행자들을 만날 수 있습니다.`,
     meet: (open: string) => `친구들과 ${open} 먼저 걸어 보기`,
+    other: "다른 지역 메타버스로 걸어보기",
     again: "테스트 다시 하기",
   },
 } as const;
@@ -103,8 +102,8 @@ function Result({ lang, answers, onRestart }: { lang: Lang; answers: Answer[]; o
   const code = typeCode(answers);
   const type = TRAVEL_TYPES[code];
   const { best, runnerUp } = matchDistricts(scoreAnswers(answers));
-  const room = nearestRoom(best.slug);
-  const open = entryRoom(room);
+  // Only a district with its own room links straight into it; otherwise the visitor picks one.
+  const own = OPEN_ROOMS.includes(best.slug);
   const ko = lang === "ko";
   const name = (d: { nameEn: string; nameKo: string }) => (ko ? d.nameKo : d.nameEn);
   // Rooms are named after the area without the "-gu" ending (종로, 서대문).
@@ -137,16 +136,11 @@ function Result({ lang, answers, onRestart }: { lang: Lang; answers: Answer[]; o
       )}
       <p className={styles.note}>
         {!courseFor(best.slug) && <Phrases text={t.course(name(best))} />}
-        {open !== room && (
-          <>
-            {" "}
-            <Phrases text={t.roomSoon(roomName(room), roomName(open))} />
-          </>
-        )}
+
       </p>
       <div className={styles.actions}>
-        <Link className="btn btn-light" href={roomHref(room)}>
-          {t.meet(roomName(open))}
+        <Link className="btn btn-light" href={own ? `/metaverse/${best.slug}` : "/metaverse"}>
+          {own ? t.meet(roomName(best.slug)) : t.other}
         </Link>
         <button type="button" className={styles.again} onClick={onRestart}>
           {t.again}
