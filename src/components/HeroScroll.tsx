@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { preload } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { gsap } from "gsap";
@@ -33,6 +34,13 @@ const CAPTIONS: readonly [number, number][] = [
 ];
 const CAPTION_FADE = 0.035;
 const SMOOTH_MS = 120; // time constant of the scroll follow; frame-rate independent
+// Loading gate. A first scroll that outruns the download shows held frames, so scrolling waits
+// (briefly) until the frames already here plus those still arriving keep ahead of a visitor
+// going through the film in about SCROLL_SECS. On a fast line that is only the opening.
+const SCROLL_SECS = 5;
+const GATE_MAX_MS = 2500; // never hold the page longer than this
+
+const PORTRAIT = "(max-aspect-ratio: 4/5)"; // phones held upright get the tall film
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const phase = (p: number, from: number, len: number) => clamp01((p - from) / len);
@@ -43,19 +51,13 @@ const frameUrl = (set: string, i: number) => asset(`/hero/${set}/${String(i + 1)
 
 type Frame = HTMLImageElement | ImageBitmap;
 
-const loadImage = (blob: Blob) =>
-  new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = URL.createObjectURL(blob);
-  });
-
 export function HeroScroll() {
   const router = useRouter();
   const [lang, chooseLang] = useLang();
   const [reduced, setReduced] = useState(false);
   const [portrait, setPortrait] = useState(false);
+  // The first screen says the film is loading until the effect below knows otherwise.
+  const [loading, setLoading] = useState(true);
   const t = COPY[lang];
   const set = portrait ? "m" : "d";
 
@@ -65,6 +67,7 @@ export function HeroScroll() {
   const nightRef = useRef<HTMLDivElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
   const cueRef = useRef<HTMLDivElement>(null);
+  const cueFillRef = useRef<HTMLSpanElement>(null);
   const startRef = useRef<HTMLDivElement>(null);
   const welcomeRef = useRef<HTMLHeadingElement>(null);
   const captionRefs = useRef<(HTMLParagraphElement | null)[]>([]);
@@ -72,7 +75,7 @@ export function HeroScroll() {
 
   useEffect(() => {
     const rm = matchMedia("(prefers-reduced-motion: reduce)");
-    const pm = matchMedia("(max-aspect-ratio: 4/5)");
+    const pm = matchMedia(PORTRAIT);
     const sync = () => {
       setReduced(rm.matches);
       setPortrait(pm.matches);
@@ -188,42 +191,17 @@ export function HeroScroll() {
       ctx.globalAlpha = 1;
     };
 
-    // Preview sheets: a small copy of every frame, loaded first, shown until the sharp frame is in.
-    const sheets: (Frame | null)[] = [];
-    const tile = (i: number): [Frame, number, number, number, number] | null => {
-      const pv = timing?.preview;
-      if (!pv) return null;
-      const per = pv.cols * pv.rows;
-      const sheet = sheets[Math.floor(i / per)];
-      if (!sheet) return null;
-      const t = i % per;
-      const tw = sheet.width / pv.cols, th = sheet.height / pv.rows;
-      return [sheet, (t % pv.cols) * tw, Math.floor(t / pv.cols) * th, tw, th];
-    };
-    const coverTile = (tl: [Frame, number, number, number, number], alpha: number) => {
-      const [img, sx, sy, tw, th] = tl;
-      const cw = canvas.width;
-      const ch = canvas.height;
-      const s = Math.max(cw / tw, ch / th);
-      const w = tw * s;
-      const h = th * s;
-      ctx.globalAlpha = alpha;
-      ctx.drawImage(img, sx, sy, tw, th, (cw - w) / 2, (ch - h) / 2, w, h);
-      ctx.globalAlpha = 1;
-    };
-
     // What is on screen. The film only ever shows real, sharp frames: when the exact frame is
     // not decoded yet, it holds the closest decoded frame between the one shown and the one
-    // wanted, so the picture keeps moving forward and never steps back. Mixing in the small
-    // preview copies made the picture flicker between sharp and blurred, so those are used
-    // only while no sharp frame exists anywhere near (a cold jump far into the film).
+    // wanted, so the picture keeps moving forward and never steps back. (Blurred stand-ins
+    // flickering against sharp frames read as grain.)
     let shown = -1;
     const pickSharp = (i0: number): number | null => {
       if (bitmaps.has(i0)) return i0;
       // a frame between the one on screen and the one wanted counts as half a frame closer
       const score = (k: number) => Math.abs(k - i0) - (shown >= 0 && (k - shown) * (i0 - k) >= 0 ? 0.5 : 0);
       let best: number | null = null;
-      for (const k of bitmaps.keys()) if (Math.abs(k - i0) <= 24 && (best === null || score(k) < score(best))) best = k;
+      for (const k of bitmaps.keys()) if (best === null || score(k) < score(best)) best = k;
       return best;
     };
     const render = (p: number) => {
@@ -266,10 +244,8 @@ export function HeroScroll() {
             shown = k;
             drawn = k === i0 && (a <= 0.06 || next) ? key : -1;
           } else {
-            const tl = tile(i0);
-            if (tl) coverTile(tl, 1);
             shown = -1;
-            drawn = -1;
+            drawn = -1; // nothing decoded yet: the poster behind the canvas shows
           }
           if (stats) {
             stats.want = i0;
@@ -337,6 +313,51 @@ export function HeroScroll() {
     resize();
     window.addEventListener("resize", resize);
 
+    // Hold scrolling at the top until enough of the film is here (see SCROLL_SECS).
+    const blockKeys = new Set([" ", "PageDown", "ArrowDown", "End", "Spacebar"]);
+    const block = (e: Event) => {
+      if (e instanceof KeyboardEvent && !blockKeys.has(e.key)) return;
+      e.preventDefault();
+    };
+    let gateTimer = 0;
+    const openGate = () => {
+      cancelAnimationFrame(gateTimer);
+      clearTimeout(gateLimit);
+      window.removeEventListener("wheel", block);
+      window.removeEventListener("touchmove", block);
+      window.removeEventListener("keydown", block);
+      setLoading(false);
+    };
+    // Starts at once, so nothing scrolls before the timing file is in; `watch` begins once it is.
+    const holding = window.scrollY <= 10; // coming back mid-page: nothing to wait for
+    const began = performance.now();
+    if (holding) {
+      const opts = { passive: false } as const;
+      window.addEventListener("wheel", block, opts);
+      window.addEventListener("touchmove", block, opts);
+      window.addEventListener("keydown", block);
+    } else {
+      setLoading(false);
+    }
+    const watch = (total: number) => {
+      if (!holding) return;
+      const check = () => {
+        if (cancelled) return;
+        const t = performance.now() - began;
+        let run = 0;
+        while (run < total && blobs[run]) run++;
+        const have = blobs.reduce((n, b) => n + (b ? 1 : 0), 0);
+        const rate = have >= 6 ? (have / t) * 1000 : 0; // frames a second, once it can be told
+        const need = Math.min(total, Math.max(24, Math.ceil(total - rate * SCROLL_SECS)));
+        if (cueFillRef.current) cueFillRef.current.style.transform = `scaleY(${Math.min(1, run / need)})`;
+        if (run >= need || t >= GATE_MAX_MS) return openGate();
+        gateTimer = requestAnimationFrame(check);
+      };
+      check();
+    };
+    // the hard limit holds even if the timing file never comes
+    const gateLimit = window.setTimeout(openGate, GATE_MAX_MS + 100);
+
     // Download every frame as a compressed blob, a few at a time: the opening first, then
     // always the stretch just ahead of where the visitor is scrolling (see nextToFetch).
     // Fetching in a fixed coarse-to-fine order left gaps right where the first scroll went.
@@ -348,16 +369,6 @@ export function HeroScroll() {
         windows = scrollWindows(data, FRAMES_FROM, FRAMES_TO);
         blobs.length = data.frames;
         blobs.fill(null);
-        // The preview sheets first, in order: a whole-film fallback for well under a megabyte.
-        (async () => {
-          for (let k = 0; k < (data.preview?.sheets ?? 0) && !cancelled; k++) {
-            try {
-              const blob = await (await fetch(asset(`/hero/${set}/preview-${k + 1}.webp`))).blob();
-              sheets[k] = "createImageBitmap" in window ? await createImageBitmap(blob) : await loadImage(blob);
-              drawn = -1;
-            } catch {}
-          }
-        })();
         const got = new Uint8Array(data.frames);
         const tries = new Uint8Array(data.frames);
         const worker = async () => {
@@ -374,7 +385,8 @@ export function HeroScroll() {
             }
           }
         };
-        await Promise.all(Array.from({ length: portrait ? 3 : 5 }, worker));
+        watch(data.frames);
+        await Promise.all(Array.from({ length: 6 }, worker));
       })
       .catch(() => {});
 
@@ -392,6 +404,7 @@ export function HeroScroll() {
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf);
+      openGate();
       window.removeEventListener("resize", resize);
       st.kill();
       for (const f of bitmaps.values()) release(f);
@@ -400,6 +413,13 @@ export function HeroScroll() {
   }, [reduced, portrait, set]);
 
   const nightBg = { backgroundImage: `url(${asset(`/hero/night-${set}.jpg`)})` };
+  // The opening picture, chosen by CSS (not by state, which the server cannot know), so a phone
+  // fetches only its own poster, and early.
+  const posterD = asset("/hero/poster-d.jpg");
+  const posterM = asset("/hero/poster-m.jpg");
+  preload(posterM, { as: "image", media: PORTRAIT, fetchPriority: "high" });
+  preload(posterD, { as: "image", media: `not all and ${PORTRAIT}`, fetchPriority: "high" });
+  const posters = { "--poster-d": `url(${posterD})`, "--poster-m": `url(${posterM})` } as React.CSSProperties;
 
   const nav = <SiteNav lang={lang} onLang={chooseLang} />;
 
@@ -414,10 +434,10 @@ export function HeroScroll() {
 
   // Tells first-time visitors the page is driven by scrolling.
   const cue = (
-    <div ref={cueRef} className={styles.cue} aria-hidden="true">
-      <span className={styles.cueText}>{t.scrollCue}</span>
+    <div ref={cueRef} className={styles.cue} data-loading={(loading && !reduced) || undefined} aria-hidden="true">
+      <span className={styles.cueText}>{loading && !reduced ? t.loadingCue : t.scrollCue}</span>
       <span className={styles.cueTrack}>
-        <span className={styles.cueDot} />
+        {loading && !reduced ? <span ref={cueFillRef} className={styles.cueFill} /> : <span className={styles.cueDot} />}
       </span>
     </div>
   );
@@ -440,7 +460,7 @@ export function HeroScroll() {
     return (
       <div className={styles.root}>
         {nav}
-        <section className={styles.staticHero} style={{ backgroundImage: `url(${asset(`/hero/poster-${set}.jpg`)})` }}>
+        <section className={`${styles.staticHero} ${styles.poster}`} style={posters}>
           <div className={styles.shade} aria-hidden="true" />
           {intro}
           {cue}
@@ -465,8 +485,8 @@ export function HeroScroll() {
           <div ref={sceneRef} className={styles.scene}>
             <canvas
               ref={canvasRef}
-              className={styles.canvas}
-              style={{ backgroundImage: `url(${asset(`/hero/poster-${set}.jpg`)})` }}
+              className={`${styles.canvas} ${styles.poster}`}
+              style={posters}
               aria-hidden="true"
             />
           </div>

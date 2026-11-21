@@ -35,6 +35,16 @@
   background-position: center;
 }
 
+.poster {
+  background-image: var(--poster-d);
+}
+
+@media (max-aspect-ratio: 4/5) {
+  .poster {
+    background-image: var(--poster-m);
+  }
+}
+
 /* The last frame, softly blurred, becomes the backdrop for the first question. */
 .night {
   position: absolute;
@@ -295,6 +305,21 @@
   border-radius: 2px;
   background: var(--white);
   animation: cueRun 1.8s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+/* while the film loads, the line fills from the top instead of running */
+.cueFill {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: var(--white);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 160ms linear;
+}
+
+.cue[data-loading] .cueText {
+  opacity: 0.86;
 }
 
 @keyframes cueRun {
