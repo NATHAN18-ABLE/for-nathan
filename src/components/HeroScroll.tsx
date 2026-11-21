@@ -224,6 +224,8 @@ export function HeroScroll() {
       ctx.globalAlpha = 1;
     };
 
+    let sharpMix = 0;
+    let lastSharp: Frame | null = null;
     const render = (p: number) => {
       let shade = 0;
       const film = phase(p, FRAMES_FROM, FRAMES_TO - FRAMES_FROM);
@@ -256,11 +258,14 @@ export function HeroScroll() {
         const key = Math.round(f * 16);
         if (key !== drawn) {
           const a = f - i0;
-          const exact = bitmaps.get(i0);
-          // Without the sharp frame: the preview of this very frame if its sheet is in (right
-          // place, softer picture), else the nearest sharp frame.
+          let exact = bitmaps.get(i0);
+          // Without the sharp frame: a sharp neighbour a few frames off looks continuous, so use
+          // that first; flipping between sharp frames and soft previews made the film shimmer.
+          // Only further away does the preview of this very frame stand in.
+          const close = exact ? null : nearestDecoded(i0);
+          if (!exact && close && Math.abs(close[0] - i0) <= 8) exact = close[1];
           const preview = exact ? null : tile(i0);
-          const near = exact || preview ? null : nearestDecoded(i0);
+          const near = exact || preview ? null : close;
           if (stats) {
             stats.want = i0;
             stats.shown = exact || preview ? i0 : (near?.[0] ?? -1);
@@ -268,16 +273,27 @@ export function HeroScroll() {
             stats.blobs = blobs.filter(Boolean).length;
             stats.decoded = bitmaps.size;
           }
-          if (exact) {
+          // Between soft and sharp, fade rather than switch: a hard swap reads as a flicker.
+          sharpMix += ((exact ? 1 : 0) - sharpMix) * 0.3;
+          if (exact) lastSharp = exact;
+          // a frame dropped from memory since cannot be drawn any more
+          if (lastSharp && !exact && ![...bitmaps.values()].includes(lastSharp)) lastSharp = null;
+          const settling = Math.abs((exact ? 1 : 0) - sharpMix) > 0.02;
+          const soft = tile(i0);
+          if (soft && (settling || !exact)) {
+            coverTile(soft, 1);
+            const next = tile(i0 + 1);
+            if (a > 0.06 && next) coverTile(next, a);
+            if (lastSharp && sharpMix > 0.02) cover(exact ?? lastSharp, sharpMix);
+            drawn = -1; // keep drawing until the fade settles or the sharp frame arrives
+          } else if (exact) {
             cover(exact, 1);
             const next = bitmaps.get(i0 + 1);
             if (a > 0.06 && next) cover(next, a);
-            drawn = key;
+            drawn = bitmaps.get(i0) ? key : -1;
           } else if (preview) {
             coverTile(preview, 1);
-            const next = tile(i0 + 1);
-            if (a > 0.06 && next) coverTile(next, a);
-            drawn = -1; // draw again when the sharp frame arrives
+            drawn = -1;
           } else if (near) {
             cover(near[1], 1);
             drawn = -1;

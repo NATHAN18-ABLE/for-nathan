@@ -9,7 +9,10 @@ This keeps N frames picked at even steps of visual change (from timing.json's cu
 them smaller (phones at 576x1024), and packs a small copy of every kept frame into a few
 preview sheets that load first, so any point of the film can be shown at once.
 
-Usage: python3 scripts/thin-hero-frames.py [frames=300]
+Frames are written once from the full-quality source frames (pass the folder holding the
+original public/hero, e.g. from `git archive`), so nothing is compressed twice.
+
+Usage: python3 scripts/thin-hero-frames.py <source public/hero folder> [frames=300]
 """
 import json, math, shutil, sys, tempfile
 from pathlib import Path
@@ -19,8 +22,8 @@ ROOT = Path(__file__).resolve().parent.parent
 HERO = ROOT / "public/hero"
 SETS = {
     # name: (frame size or None to keep, WebP quality, preview tile size)
-    "d": (None, 58, (192, 108)),
-    "m": ((576, 1024), 55, (108, 192)),
+    "d": (None, 70, (192, 108)),
+    "m": ((648, 1152), 66, (108, 192)),
 }
 COLS, ROWS = 10, 6  # tiles per preview sheet
 
@@ -39,8 +42,9 @@ def pick(curve, n):
 
 
 def main():
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 300
-    timing = json.loads((HERO / "timing.json").read_text())
+    source = Path(sys.argv[1])
+    n = int(sys.argv[2]) if len(sys.argv) > 2 else 300
+    timing = json.loads((source / "timing.json").read_text())
     seg = timing["segments"][0]
     curve = seg["curve"]
     keep = pick(curve, n)
@@ -49,7 +53,8 @@ def main():
     sheets = math.ceil(n / per)
 
     for name, (size, quality, tile) in SETS.items():
-        src = HERO / name
+        src = source / name
+        dst = HERO / name
         tmp = Path(tempfile.mkdtemp())
         sheet_imgs = [Image.new("RGB", (tile[0] * COLS, tile[1] * ROWS)) for _ in range(sheets)]
         for k, i in enumerate(keep):
@@ -60,13 +65,13 @@ def main():
             s, t = divmod(k, per)
             sheet_imgs[s].paste(im.resize(tile, Image.LANCZOS), ((t % COLS) * tile[0], (t // COLS) * tile[1]))
         for s, img in enumerate(sheet_imgs):
-            img.save(tmp / f"preview-{s + 1}.webp", "WEBP", quality=38, method=6)
-        for f in src.glob("*.webp"):
+            img.save(tmp / f"preview-{s + 1}.webp", "WEBP", quality=46, method=6)
+        for f in dst.glob("*.webp"):
             f.unlink()
         for f in tmp.iterdir():
-            shutil.move(str(f), src / f.name)
-        size_mb = sum(f.stat().st_size for f in src.glob("0*.webp")) / 1e6
-        prev_kb = sum(f.stat().st_size for f in src.glob("preview-*.webp")) / 1e3
+            shutil.move(str(f), dst / f.name)
+        size_mb = sum(f.stat().st_size for f in dst.glob("0*.webp")) / 1e6
+        prev_kb = sum(f.stat().st_size for f in dst.glob("preview-*.webp")) / 1e3
         print(f"{name}: {n} frames, {size_mb:.1f} MB; previews {sheets} sheets, {prev_kb:.0f} kB")
 
     c0, c1 = curve[keep[0]], curve[keep[-1]]
