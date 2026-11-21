@@ -353,8 +353,10 @@ export function HeroScroll() {
         const sinceOpen = performance.now(); // ms since the page was requested
         let run = 0;
         while (run < total && blobs[run]) run++;
-        const have = blobs.reduce((n, b) => n + (b ? 1 : 0), 0);
-        const rate = have >= 6 ? (have / t) * 1000 : 0; // frames a second, once it can be told
+        // frames a second, once it can be told; the preloaded opening arrives from the page's own
+        // download in no time, so it says nothing about the line and is left out
+        const have = blobs.reduce((n, b, i) => n + (b && i >= EARLY_FRAMES ? 1 : 0), 0);
+        const rate = have >= 8 ? (have / t) * 1000 : 0;
         const need = Math.min(total, Math.max(24, Math.ceil(total - rate * SCROLL_SECS)));
         if (cueFillRef.current) cueFillRef.current.style.transform = `scaleY(${Math.min(1, run / need)})`;
         if (run >= need || sinceOpen >= GATE_MAX_MS) return openGate();
