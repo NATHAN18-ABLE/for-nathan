@@ -174,18 +174,6 @@ export function HeroScroll() {
       }
     };
 
-    const nearestDecoded = (i: number): [number, Frame] | null => {
-      let best: [number, Frame] | null = null;
-      let dist = Infinity;
-      for (const [k, f] of bitmaps) {
-        const d = Math.abs(k - i);
-        if (d < dist) {
-          dist = d;
-          best = [k, f];
-        }
-      }
-      return best;
-    };
     // ?perf: how far the frame on screen is from the one the scroll asks for.
     const stats = new URLSearchParams(location.search).has("perf") ? ((window as unknown as { __hero: object }).__hero = { want: 0, shown: -1, sharp: false, blobs: 0, decoded: 0 }) as { want: number; shown: number; sharp: boolean; blobs: number; decoded: number } : null;
 
@@ -224,8 +212,20 @@ export function HeroScroll() {
       ctx.globalAlpha = 1;
     };
 
-    let sharpMix = 0;
-    let lastSharp: Frame | null = null;
+    // What is on screen. The film only ever shows real, sharp frames: when the exact frame is
+    // not decoded yet, it holds the closest decoded frame between the one shown and the one
+    // wanted, so the picture keeps moving forward and never steps back. Mixing in the small
+    // preview copies made the picture flicker between sharp and blurred, so those are used
+    // only while no sharp frame exists anywhere near (a cold jump far into the film).
+    let shown = -1;
+    const pickSharp = (i0: number): number | null => {
+      if (bitmaps.has(i0)) return i0;
+      // a frame between the one on screen and the one wanted counts as half a frame closer
+      const score = (k: number) => Math.abs(k - i0) - (shown >= 0 && (k - shown) * (i0 - k) >= 0 ? 0.5 : 0);
+      let best: number | null = null;
+      for (const k of bitmaps.keys()) if (Math.abs(k - i0) <= 24 && (best === null || score(k) < score(best))) best = k;
+      return best;
+    };
     const render = (p: number) => {
       let shade = 0;
       const film = phase(p, FRAMES_FROM, FRAMES_TO - FRAMES_FROM);
@@ -245,58 +245,38 @@ export function HeroScroll() {
         const i0 = Math.floor(f);
         if (i0 !== lastFrame) direction = i0 > lastFrame ? 1 : -1;
         lastFrame = i0;
-        // The exact frame has not arrived yet: decode the closest one that has, so the film
-        // keeps moving instead of holding a frame from far back.
+        // The exact frame has not arrived yet: decode the closest one that has.
         if (!blobs[i0]) {
           const k = nearestAvailable(i0, (j) => j >= 0 && j < blobs.length && !!blobs[j], 60);
           if (k !== null) decode(k);
         }
-        for (const i of wanted(i0, direction, timing.frames, 6, 16)) {
-          if (decoding.size >= 3) break;
+        for (const i of wanted(i0, direction, timing.frames, 6, portrait ? 12 : 16)) {
+          if (decoding.size >= 4) break;
           decode(i);
         }
         const key = Math.round(f * 16);
         if (key !== drawn) {
           const a = f - i0;
-          let exact = bitmaps.get(i0);
-          // Without the sharp frame: a sharp neighbour a few frames off looks continuous, so use
-          // that first; flipping between sharp frames and soft previews made the film shimmer.
-          // Only further away does the preview of this very frame stand in.
-          const close = exact ? null : nearestDecoded(i0);
-          if (!exact && close && Math.abs(close[0] - i0) <= 8) exact = close[1];
-          const preview = exact ? null : tile(i0);
-          const near = exact || preview ? null : close;
+          const k = pickSharp(i0);
+          if (k !== null) {
+            cover(bitmaps.get(k)!, 1);
+            // between two neighbouring frames, blend them; only ever two sharp neighbours
+            const next = k === i0 ? bitmaps.get(i0 + 1) : undefined;
+            if (a > 0.06 && next) cover(next, a);
+            shown = k;
+            drawn = k === i0 && (a <= 0.06 || next) ? key : -1;
+          } else {
+            const tl = tile(i0);
+            if (tl) coverTile(tl, 1);
+            shown = -1;
+            drawn = -1;
+          }
           if (stats) {
             stats.want = i0;
-            stats.shown = exact || preview ? i0 : (near?.[0] ?? -1);
-            stats.sharp = !!exact;
+            stats.shown = k ?? -1;
+            stats.sharp = k !== null;
             stats.blobs = blobs.filter(Boolean).length;
             stats.decoded = bitmaps.size;
-          }
-          // Between soft and sharp, fade rather than switch: a hard swap reads as a flicker.
-          sharpMix += ((exact ? 1 : 0) - sharpMix) * 0.3;
-          if (exact) lastSharp = exact;
-          // a frame dropped from memory since cannot be drawn any more
-          if (lastSharp && !exact && ![...bitmaps.values()].includes(lastSharp)) lastSharp = null;
-          const settling = Math.abs((exact ? 1 : 0) - sharpMix) > 0.02;
-          const soft = tile(i0);
-          if (soft && (settling || !exact)) {
-            coverTile(soft, 1);
-            const next = tile(i0 + 1);
-            if (a > 0.06 && next) coverTile(next, a);
-            if (lastSharp && sharpMix > 0.02) cover(exact ?? lastSharp, sharpMix);
-            drawn = -1; // keep drawing until the fade settles or the sharp frame arrives
-          } else if (exact) {
-            cover(exact, 1);
-            const next = bitmaps.get(i0 + 1);
-            if (a > 0.06 && next) cover(next, a);
-            drawn = bitmaps.get(i0) ? key : -1;
-          } else if (preview) {
-            coverTile(preview, 1);
-            drawn = -1;
-          } else if (near) {
-            cover(near[1], 1);
-            drawn = -1;
           }
         }
       }
