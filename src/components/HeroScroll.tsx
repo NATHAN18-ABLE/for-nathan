@@ -43,6 +43,14 @@ const frameUrl = (set: string, i: number) => asset(`/hero/${set}/${String(i + 1)
 
 type Frame = HTMLImageElement | ImageBitmap;
 
+const loadImage = (blob: Blob) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(blob);
+  });
+
 export function HeroScroll() {
   const router = useRouter();
   const [lang, chooseLang] = useLang();
@@ -179,7 +187,7 @@ export function HeroScroll() {
       return best;
     };
     // ?perf: how far the frame on screen is from the one the scroll asks for.
-    const stats = new URLSearchParams(location.search).has("perf") ? ((window as unknown as { __hero: object }).__hero = { want: 0, shown: -1, blobs: 0, decoded: 0 }) as { want: number; shown: number; blobs: number; decoded: number } : null;
+    const stats = new URLSearchParams(location.search).has("perf") ? ((window as unknown as { __hero: object }).__hero = { want: 0, shown: -1, sharp: false, blobs: 0, decoded: 0 }) as { want: number; shown: number; sharp: boolean; blobs: number; decoded: number } : null;
 
     const cover = (img: Frame, alpha: number) => {
       const cw = canvas.width;
@@ -189,6 +197,30 @@ export function HeroScroll() {
       const h = img.height * s;
       ctx.globalAlpha = alpha;
       ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
+      ctx.globalAlpha = 1;
+    };
+
+    // Preview sheets: a small copy of every frame, loaded first, shown until the sharp frame is in.
+    const sheets: (Frame | null)[] = [];
+    const tile = (i: number): [Frame, number, number, number, number] | null => {
+      const pv = timing?.preview;
+      if (!pv) return null;
+      const per = pv.cols * pv.rows;
+      const sheet = sheets[Math.floor(i / per)];
+      if (!sheet) return null;
+      const t = i % per;
+      const tw = sheet.width / pv.cols, th = sheet.height / pv.rows;
+      return [sheet, (t % pv.cols) * tw, Math.floor(t / pv.cols) * th, tw, th];
+    };
+    const coverTile = (tl: [Frame, number, number, number, number], alpha: number) => {
+      const [img, sx, sy, tw, th] = tl;
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const s = Math.max(cw / tw, ch / th);
+      const w = tw * s;
+      const h = th * s;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(img, sx, sy, tw, th, (cw - w) / 2, (ch - h) / 2, w, h);
       ctx.globalAlpha = 1;
     };
 
@@ -203,7 +235,6 @@ export function HeroScroll() {
         const dir = film < (a + b) / 2 ? 1 : -1; // rise in from below, lift away above
         el.style.opacity = String(e);
         el.style.transform = `translateY(${dir * 18 * (1 - e)}px)`;
-        el.style.filter = e < 1 ? `blur(${5 * (1 - e)}px)` : "";
         el.style.visibility = v > 0 ? "visible" : "hidden";
         shade = Math.max(shade, e);
       });
@@ -226,19 +257,30 @@ export function HeroScroll() {
         if (key !== drawn) {
           const a = f - i0;
           const exact = bitmaps.get(i0);
-          const near = exact ? null : nearestDecoded(i0);
-          const base = exact ?? near?.[1];
+          // Without the sharp frame: the preview of this very frame if its sheet is in (right
+          // place, softer picture), else the nearest sharp frame.
+          const preview = exact ? null : tile(i0);
+          const near = exact || preview ? null : nearestDecoded(i0);
           if (stats) {
             stats.want = i0;
-            stats.shown = exact ? i0 : (near?.[0] ?? -1);
+            stats.shown = exact || preview ? i0 : (near?.[0] ?? -1);
+            stats.sharp = !!exact;
             stats.blobs = blobs.filter(Boolean).length;
             stats.decoded = bitmaps.size;
           }
-          if (base) {
-            cover(base, 1);
+          if (exact) {
+            cover(exact, 1);
             const next = bitmaps.get(i0 + 1);
-            if (exact && a > 0.06 && next) cover(next, a);
-            drawn = exact ? key : -1;
+            if (a > 0.06 && next) cover(next, a);
+            drawn = key;
+          } else if (preview) {
+            coverTile(preview, 1);
+            const next = tile(i0 + 1);
+            if (a > 0.06 && next) coverTile(next, a);
+            drawn = -1; // draw again when the sharp frame arrives
+          } else if (near) {
+            cover(near[1], 1);
+            drawn = -1;
           }
         }
       }
@@ -248,7 +290,6 @@ export function HeroScroll() {
         const v = easeOut(phase(p, WELCOME_IN[0], WELCOME_IN[1]));
         w.style.opacity = String(v);
         w.style.transform = `translateY(${24 * (1 - v)}px) scale(${0.98 + 0.02 * v})`;
-        w.style.filter = v < 1 ? `blur(${8 * (1 - v)}px)` : "";
         w.style.visibility = v > 0 ? "visible" : "hidden";
       }
       const u = easeOut(phase(p, 0, INTRO_OUT));
@@ -263,7 +304,6 @@ export function HeroScroll() {
       if (intro) {
         intro.style.opacity = String(1 - u);
         intro.style.transform = `translateY(${-24 * u}px)`;
-        intro.style.filter = u > 0 ? `blur(${6 * u}px)` : "";
         intro.style.visibility = u >= 1 ? "hidden" : "visible";
       }
       // The held shot keeps a slow push-in so it settles rather than freezes.
@@ -312,6 +352,16 @@ export function HeroScroll() {
         windows = scrollWindows(data, FRAMES_FROM, FRAMES_TO);
         blobs.length = data.frames;
         blobs.fill(null);
+        // The preview sheets first, in order: a whole-film fallback for well under a megabyte.
+        (async () => {
+          for (let k = 0; k < (data.preview?.sheets ?? 0) && !cancelled; k++) {
+            try {
+              const blob = await (await fetch(asset(`/hero/${set}/preview-${k + 1}.webp`))).blob();
+              sheets[k] = "createImageBitmap" in window ? await createImageBitmap(blob) : await loadImage(blob);
+              drawn = -1;
+            } catch {}
+          }
+        })();
         const got = new Uint8Array(data.frames);
         const tries = new Uint8Array(data.frames);
         const worker = async () => {
@@ -328,7 +378,7 @@ export function HeroScroll() {
             }
           }
         };
-        await Promise.all(Array.from({ length: portrait ? 4 : 6 }, worker));
+        await Promise.all(Array.from({ length: portrait ? 3 : 5 }, worker));
       })
       .catch(() => {});
 

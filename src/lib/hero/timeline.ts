@@ -8,6 +8,8 @@ export interface Segment {
 export interface Timing {
   frames: number;
   segments: Segment[];
+  // Small copies of every frame packed in a few sheets (preview-1.webp …), cols × rows per sheet.
+  preview?: { cols: number; rows: number; sheets: number };
 }
 
 export interface ScrollWindow {

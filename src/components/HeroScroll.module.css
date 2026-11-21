@@ -93,7 +93,7 @@
   text-wrap: balance;
   opacity: 0;
   visibility: hidden;
-  will-change: opacity, transform, filter;
+  will-change: opacity, transform;
 }
 
 .caption:lang(ko) {
@@ -123,7 +123,7 @@
   text-wrap: balance;
   opacity: 0;
   visibility: hidden;
-  will-change: opacity, transform, filter;
+  will-change: opacity, transform;
 }
 
 .start {
@@ -166,7 +166,7 @@
   text-shadow:
     0 1px 3px rgb(8 10 16 / 0.28),
     0 6px 48px rgb(8 10 16 / 0.42);
-  will-change: opacity, transform, filter;
+  will-change: opacity, transform;
 }
 
 .headline {
@@ -268,10 +268,9 @@
 .cueText {
   padding: 9px 20px;
   border-radius: 999px;
-  background: rgb(8 10 16 / 0.32);
+  /* no backdrop blur: the film under it changes every frame, and re-blurring it would cost */
+  background: rgb(8 10 16 / 0.46);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.28);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   font-size: clamp(16px, 1.35vw, 19px);
   font-weight: 600;
   letter-spacing: 0.02em;
