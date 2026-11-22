@@ -190,3 +190,11 @@ details[open] > :not(summary) {
     animation: none;
   }
 }
+
+/* Netlify adds a "Powered by Netlify" badge in a fixed frame to every page on the free plan.
+   It covered the corner of the test and the rooms' controls, so it is kept out of sight.
+   (Turning it off under Project configuration → General → "Powered by Netlify badge", where
+   the plan allows it, removes it at the source.) */
+#nl-badge-frame {
+  display: none !important;
+}
