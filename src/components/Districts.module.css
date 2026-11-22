@@ -701,6 +701,8 @@
   .readyArea {
     margin-left: 8px;
     font-size: 15px;
+    /* long English names may wrap between their words here */
+    white-space: normal;
   }
   .soonList {
     grid-template-columns: minmax(0, 1fr);
