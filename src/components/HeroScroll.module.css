@@ -1,0 +1,525 @@
+.root {
+  position: relative;
+  background: var(--night);
+}
+
+/* past the film, the bar takes on the night so nothing reads through it */
+.root :global(header) {
+  transition: background-color 240ms ease-out;
+}
+
+.root[data-past] :global(header) {
+  background-color: color-mix(in oklab, var(--night) 94%, transparent);
+}
+
+.root :global(.site-footer) {
+  color: rgb(251 251 249 / 0.66);
+}
+
+/* Pinned track */
+.track {
+  position: relative;
+  height: 960svh;
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  /*
+   * Down to the very bottom of the screen: Safari's floating bottom bar (iOS 26) is see-through,
+   * and with only the space above it (svh) the night background showed through the bar instead
+   * of the film. Things pinned to the bottom stay clear of the bar by --under.
+   */
+  height: 100lvh;
+  --under: calc(100lvh - 100svh);
+  overflow: hidden;
+  background: var(--night);
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+/* Scrolling waits at the top while the film loads (HeroScroll lifts this when it is ready).
+   The page gets it from the server, before any script runs; should the scripts never arrive,
+   it lets go by itself after six seconds. The gutter stays, so nothing shifts when it lifts. */
+:global(html):has(.gate) {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  animation: heroGateRelease 0s linear 6s forwards;
+}
+
+@keyframes heroGateRelease {
+  to {
+    overflow: auto;
+  }
+}
+
+.poster {
+  background-image: var(--poster-d);
+}
+
+@media (max-aspect-ratio: 4/5) {
+  .poster {
+    background-image: var(--poster-m);
+  }
+}
+
+/* The last frame, softly blurred, becomes the backdrop for the first question. */
+.night {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background-size: cover;
+  background-position: center;
+  will-change: opacity, transform;
+}
+
+.dusk {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 40%, rgb(16 28 70 / 0.1), rgb(10 18 46 / 0.55)),
+    linear-gradient(to bottom, rgb(10 18 46 / 0.15), rgb(10 18 46 / 0.4));
+}
+
+/* Soft shade so white type reads on the bright day sky: a band under the menu
+   and a wide, low pool of blue behind the title. */
+.shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgb(16 30 70 / 0.42), rgb(16 30 70 / 0) 24%),
+    radial-gradient(56% 34% at 50% 45%, rgb(16 30 70 / 0.34), rgb(16 30 70 / 0.12) 60%, rgb(16 30 70 / 0)),
+    /* the daytime film is bright; a light, even veil brings it down a step */
+    rgb(18 22 34 / 0.14);
+}
+
+/* Appears only while a caption is up, so the lines read over trees and rooftops. */
+.lowShade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(to top, rgb(10 18 46 / 0.55), rgb(10 18 46 / 0.18) 34%, rgb(10 18 46 / 0) 52%);
+  will-change: opacity;
+}
+
+.caption {
+  position: absolute;
+  left: var(--gutter);
+  bottom: calc(clamp(40px, 11svh, 120px) + env(safe-area-inset-bottom) + var(--under));
+  margin: 0;
+  max-width: min(18ch, calc(100% - 2 * var(--gutter)));
+  font-size: clamp(32px, 4vw, 60px);
+  line-height: 1.08;
+  font-weight: 360;
+  letter-spacing: -0.022em;
+  color: var(--white);
+  text-shadow:
+    0 1px 2px rgb(8 10 16 / 0.3),
+    0 4px 32px rgb(8 10 16 / 0.45);
+  text-wrap: balance;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.caption:lang(ko) {
+  letter-spacing: -0.01em;
+}
+
+/* The arrival: the welcome line, then the button that opens the test */
+.arrival {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 0 var(--gutter) calc(4svh + var(--under));
+  text-align: center;
+  pointer-events: none;
+}
+
+.welcome {
+  margin: 0;
+  font-size: clamp(30px, 8.2vw, 116px);
+  line-height: 1.02;
+  font-weight: 340;
+  letter-spacing: -0.025em;
+  color: var(--white);
+  text-shadow: 0 4px 40px rgb(6 12 34 / 0.5);
+  text-wrap: balance;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.start {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  margin-top: clamp(20px, 3.4svh, 36px);
+  color: var(--white);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.startLine {
+  margin: 0;
+  max-width: 32ch;
+  font-size: clamp(17px, 1.4vw, 20px);
+  font-weight: 440;
+  opacity: 0.9;
+  text-shadow: 0 2px 20px rgb(6 12 34 / 0.5);
+  text-wrap: balance;
+}
+
+.start :global(.btn) {
+  min-height: 52px;
+  padding-inline: 30px;
+  font-size: 17px;
+}
+
+/* Opening title: alone, centred, nothing to press yet. */
+.intro {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 0 var(--gutter) calc(10svh + var(--under));
+  text-align: center;
+  color: var(--white);
+  text-shadow:
+    0 1px 3px rgb(8 10 16 / 0.28),
+    0 6px 48px rgb(8 10 16 / 0.42);
+  will-change: opacity, transform;
+}
+
+.headline {
+  margin: 0;
+  /* Small enough on phones to stay on one line: a three-word title should not break. */
+  font-size: clamp(34px, 9vw, 124px);
+  line-height: 1;
+  font-weight: 370;
+  letter-spacing: -0.025em;
+}
+
+.sub {
+  margin: 24px 0 0;
+  max-width: 32ch;
+  font-size: clamp(18px, 1.5vw, 22px);
+  line-height: 1.45;
+  font-weight: 460;
+  letter-spacing: 0.005em;
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .headline,
+  .sub {
+    animation: arrive 1200ms var(--ease-out) both;
+  }
+  .sub {
+    animation-delay: 220ms;
+  }
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(8px);
+  }
+}
+
+/* Reduced motion: the same story as still sections */
+.staticHero,
+.staticNight {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.staticNight .welcome,
+.staticNight .start {
+  opacity: 1;
+  visibility: visible;
+}
+
+.staticNight .start {
+  pointer-events: auto;
+}
+
+@media (max-width: 760px) {
+  .caption {
+    bottom: calc(48px + env(safe-area-inset-bottom));
+  }
+}
+
+/* A quiet second way in: walk the Jongno room before taking the test. */
+.walkFirst {
+  margin-top: -6px;
+  padding: 8px 4px;
+  font-size: 15px;
+  color: rgb(251 251 249 / 0.85);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  text-shadow: 0 2px 14px rgb(6 12 34 / 0.5);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .walkFirst:hover {
+    color: var(--white);
+  }
+}
+
+/* Scroll cue: a short track with a dot travelling down it, under a quiet label. */
+.cue {
+  position: absolute;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom) + var(--under));
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  transform: translateX(-50%);
+  color: var(--white);
+  text-shadow: 0 1px 2px rgb(8 10 16 / 0.35), 0 2px 14px rgb(8 10 16 / 0.3);
+  pointer-events: none;
+}
+
+/* Big and on a soft pill, so the cue reads over any frame of the film. */
+.cueText {
+  padding: 9px 20px;
+  border-radius: 999px;
+  /* no backdrop blur: the film under it changes every frame, and re-blurring it would cost */
+  background: rgb(8 10 16 / 0.46);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.28);
+  font-size: clamp(16px, 1.35vw, 19px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.cueTrack {
+  position: relative;
+  width: 3px;
+  height: 56px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.3);
+}
+
+.cueDot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--white);
+  animation: cueRun 1.8s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+@keyframes cueRun {
+  0% { transform: translateY(-18px); }
+  70%, 100% { transform: translateY(56px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cueDot {
+    animation: none;
+    transform: translateY(19px);
+  }
+}
+
+/* ---------- The opening card (first visit only) ----------
+   Seoul's lights, out of focus and dimmed, the mark, one line, and a hairline that fills as the
+   film arrives. When it is ready the card lifts and the first scene settles into place. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 0 var(--gutter);
+  color: var(--white);
+  background: var(--night) var(--night-d) center / cover no-repeat;
+  transition:
+    opacity 760ms cubic-bezier(0.22, 1, 0.36, 1) 140ms,
+    visibility 0s linear 900ms;
+  /* should the scripts never arrive, it lifts by itself, with the scroll hold */
+  animation: splashFailsafe 500ms ease-out 6s forwards;
+}
+
+@media (max-aspect-ratio: 4/5) {
+  .splash {
+    background-image: var(--night-m);
+  }
+}
+
+/* darker at the edges, so the line reads on any part of the picture */
+.splash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 46%, rgb(10 14 32 / 0.38), rgb(6 8 18 / 0.78));
+}
+
+.splashBody {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  transition:
+    opacity 380ms ease-out,
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.splashLogo {
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2), 0 6px 24px rgb(4 6 14 / 0.4);
+  animation: splashRise 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.splashWord {
+  margin: 0 0 34px;
+  font-size: 15px;
+  font-weight: 340;
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+  color: rgb(251 251 249 / 0.86);
+  animation: splashRise 900ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+.splashStrong {
+  font-weight: 560;
+}
+
+.splashLine {
+  max-width: 22ch;
+  margin: 0 0 32px;
+  font-size: clamp(24px, 3.1vw, 36px);
+  font-weight: 300;
+  line-height: 1.32;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+  word-break: keep-all;
+  text-shadow: 0 2px 24px rgb(4 6 14 / 0.45);
+  animation: splashRise 1100ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
+}
+
+.inKo {
+  display: none;
+}
+
+:global(html[data-lang="ko"]) .inKo {
+  display: inline;
+}
+
+:global(html[data-lang="ko"]) .inEn {
+  display: none;
+}
+
+.splashTrack {
+  position: relative;
+  width: 120px;
+  height: 1px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.2);
+  animation: splashFade 800ms ease-out 420ms both;
+}
+
+.splashFill {
+  position: absolute;
+  inset: 0;
+  background: rgb(255 255 255 / 0.9);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms linear;
+}
+
+.splash[data-leaving] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.splash[data-leaving] .splashBody {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* already shown in this visit: never drawn (known before the first paint) */
+:global(html[data-intro="seen"]) .splash {
+  display: none;
+}
+
+@keyframes splashRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes splashFade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes splashFailsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* as the card lifts, the first scene settles in and the headline rises */
+.root[data-reveal] .canvas {
+  animation: sceneSettle 1700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.root[data-reveal] .intro {
+  animation: introRise 1200ms cubic-bezier(0.16, 1, 0.3, 1) 160ms backwards;
+}
+
+@keyframes sceneSettle {
+  from {
+    transform: scale(1.045);
+  }
+}
+
+@keyframes introRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash {
+    display: none;
+  }
+}

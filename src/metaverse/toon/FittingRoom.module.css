@@ -1,0 +1,346 @@
+/* Fitting room: the figure on a podium to the left, choices to the right; stacked on phones. */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+  min-height: 100svh;
+  background: #ece5d9;
+  color: var(--ink);
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  touch-action: none;
+}
+
+.moves {
+  position: absolute;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  translate: -50% 0;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.72);
+  box-shadow: 0 6px 20px -10px rgb(30 33 38 / 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  max-width: calc(100% - 32px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.moves button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+
+.moves button[aria-pressed="true"] {
+  background: var(--ink);
+  color: #fff;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: clamp(24px, 4svh, 44px) clamp(20px, 2.4vw, 36px) 32px;
+  background: #faf7f1;
+  box-shadow: -1px 0 0 rgb(30 33 38 / 0.08);
+}
+
+.back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin: -8px 0 -16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.footRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.head h1 {
+  margin: 0;
+  font-size: clamp(30px, 2.6vw, 38px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.head p {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.lang {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgb(30 33 38 / 0.14);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 560;
+}
+
+.panel h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.panel h2 span {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgb(30 33 38 / 0.06);
+}
+
+.segment button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.segment button[aria-pressed="true"] {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(30 33 38 / 0.12), 0 4px 12px -6px rgb(30 33 38 / 0.2);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cards button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 92px;
+  padding: 14px;
+  border: 1px solid rgb(30 33 38 / 0.1);
+  border-radius: 16px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  transition: border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.cards button[aria-pressed="true"] {
+  border-color: var(--cobalt);
+  box-shadow: inset 0 0 0 1px var(--cobalt);
+}
+
+.duo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%);
+  box-shadow: inset 0 0 0 1px rgb(30 33 38 / 0.12);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.swatch {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%);
+  box-shadow: inset 0 0 0 1px rgb(30 33 38 / 0.14);
+  transition: transform 160ms var(--ease-out);
+}
+
+.swatch[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1px rgb(30 33 38 / 0.14), 0 0 0 3px #faf7f1, 0 0 0 5px var(--cobalt);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chips button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgb(30 33 38 / 0.12);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out), border-color 180ms var(--ease-out);
+}
+
+.chips button[aria-pressed="true"] {
+  border-color: var(--cobalt);
+  background: var(--cobalt);
+  color: #fff;
+}
+
+.hint {
+  margin: -6px 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.sub {
+  margin-top: 16px;
+}
+
+.sub h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.foot {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.shuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgb(30 33 38 / 0.14);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.foot p {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.panel button:focus-visible,
+.moves button:focus-visible {
+  outline: 2px solid var(--cobalt);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cards button:hover,
+  .chips button:hover,
+  .shuffle:hover {
+    border-color: rgb(30 33 38 / 0.3);
+  }
+  .swatch:hover {
+    transform: scale(1.06);
+  }
+}
+
+.cards button:active,
+.chips button:active,
+.shuffle:active {
+  transform: scale(0.97);
+}
+
+.swatch:active {
+  transform: scale(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel button,
+  .moves button {
+    transition: none;
+  }
+}
+
+/* Phones and narrow tablets: the figure on top, choices scrolling beneath. */
+@media (max-width: 820px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stage {
+    position: relative;
+    height: 56svh;
+  }
+  .panel {
+    border-radius: 24px 24px 0 0;
+    margin-top: -20px;
+    position: relative;
+    box-shadow: 0 -8px 24px -16px rgb(30 33 38 / 0.3);
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
+  }
+  .moves {
+    bottom: 32px;
+  }
+  /* eight moves: two rows on a phone instead of a cut-off strip */
+  .moves {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: calc(100% - 24px);
+    max-width: none;
+    border-radius: 22px;
+  }
+  .moves button {
+    min-height: 40px;
+    padding: 0 11px;
+    font-size: 13px;
+  }
+}

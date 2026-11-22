@@ -1,0 +1,139 @@
+.page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding-top: calc(72px + env(safe-area-inset-top));
+  color: var(--white);
+  background: var(--night);
+}
+
+/* Same night as the end of the opening scroll, so the test feels like one place. */
+.page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(120% 90% at 50% 40%, rgb(16 28 70 / 0.1), rgb(10 18 46 / 0.55)),
+    linear-gradient(to bottom, rgb(10 18 46 / 0.15), rgb(10 18 46 / 0.45)),
+    var(--night-d) center / cover no-repeat,
+    var(--night);
+}
+
+@media (max-aspect-ratio: 4/5) {
+  .page::before {
+    background:
+      radial-gradient(120% 90% at 50% 40%, rgb(16 28 70 / 0.1), rgb(10 18 46 / 0.55)),
+      linear-gradient(to bottom, rgb(10 18 46 / 0.15), rgb(10 18 46 / 0.45)),
+      var(--night-m) center / cover no-repeat,
+      var(--night);
+  }
+}
+
+.center {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px var(--gutter) calc(48px + env(safe-area-inset-bottom));
+}
+
+.result {
+  flex: 1;
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: clamp(32px, 8vh, 96px) var(--gutter) calc(64px + env(safe-area-inset-bottom));
+}
+
+.code {
+  margin: 0 0 8px;
+  font-size: 18px;
+  letter-spacing: 0.32em;
+  color: #c9def5;
+  font-weight: 500;
+}
+
+.typeName {
+  margin: 0 0 12px;
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1.04;
+  font-weight: 330;
+  letter-spacing: -0.025em;
+}
+
+.typeLine {
+  margin: 0 0 40px;
+  max-width: 50ch;
+  font-size: 20px;
+  color: rgb(251 251 249 / 0.82);
+}
+
+.district {
+  padding: 28px 0 8px;
+  border-top: 1px solid rgb(251 251 249 / 0.22);
+}
+
+.district h2 {
+  margin: 0 0 8px;
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 380;
+  letter-spacing: -0.015em;
+}
+
+.district h2 span,
+.runner span {
+  color: rgb(251 251 249 / 0.7);
+  font-weight: 340;
+}
+
+.district p {
+  margin: 0 0 8px;
+  max-width: 60ch;
+}
+
+.runner {
+  color: rgb(251 251 249 / 0.78);
+}
+
+.note {
+  margin: 24px 0 28px;
+  color: rgb(251 251 249 / 0.7);
+  font-size: 15px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+}
+
+.again {
+  padding: 8px 0;
+  background: none;
+  border: 0;
+  color: rgb(251 251 249 / 0.82);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+/* The cobalt ring disappears on the night backdrop; use a white one outside the card. */
+.result :focus-visible {
+  outline-color: var(--white);
+}
+
+.courseLink {
+  margin: 20px 0 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.courseLink a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--white);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}

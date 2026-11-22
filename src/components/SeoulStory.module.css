@@ -1,0 +1,507 @@
+/* Seoul Story: two thousand years read as one day, porcelain morning to the city at night. */
+.page {
+  --morning: #ebe8e1;
+  --day: #efe4d1;
+  --dusk: #dfc6c1;
+  --night: #1c2448;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--porcelain);
+  color: var(--ink);
+}
+
+.page [data-tone="morning"] { --tone: var(--morning); }
+.page [data-tone="day"] { --tone: var(--day); }
+.page [data-tone="dusk"] { --tone: var(--dusk); }
+.page [data-tone="night"] { --tone: var(--night); }
+.page [data-from="morning"] { --from: var(--morning); }
+.page [data-from="day"] { --from: var(--day); }
+.page [data-from="dusk"] { --from: var(--dusk); }
+.page [data-from="night"] { --from: var(--night); }
+
+.main {
+  flex: 1;
+}
+
+.container,
+.inner {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+.head {
+  padding-top: clamp(48px, 10svh, 120px);
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: clamp(44px, 7vw, 92px);
+  line-height: 1.02;
+  font-weight: 330;
+  letter-spacing: -0.03em;
+}
+
+.lead {
+  margin: 14px 0 0;
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.3;
+  font-weight: 450;
+  letter-spacing: -0.015em;
+}
+
+.intro {
+  margin: 14px 0 0;
+  max-width: 52ch;
+  font-size: clamp(17px, 1.4vw, 19px);
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+/* ---- the seven scenes on one line ---- */
+
+.ribbon {
+  --station: 112px;
+  margin: clamp(36px, 6svh, 56px) calc(var(--gutter) * -1) 0;
+  padding: 0 var(--gutter) 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.ribbon ol {
+  display: grid;
+  min-width: min-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ribbon li {
+  position: relative;
+}
+
+.ribbon li::before {
+  content: "";
+  position: absolute;
+  top: 34px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgb(34 65 143 / 0.4);
+}
+
+.ribbon li:first-child::before {
+  left: 50%;
+}
+
+.ribbon li:last-child::before {
+  right: 50%;
+}
+
+.ribbon a {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 0 6px 6px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.ribbonMark {
+  font-size: 13px;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.ribbonDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: inset 0 0 0 2px var(--cobalt), 0 0 0 5px var(--porcelain);
+  transition: transform 200ms var(--ease-out);
+}
+
+.ribbonTitle {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ribbon a:hover .ribbonDot {
+    transform: scale(1.2);
+  }
+  .ribbon a:hover .ribbonTitle {
+    color: var(--cobalt);
+  }
+}
+
+/* ---- scenes ---- */
+
+.scenes {
+  margin-top: clamp(40px, 6svh, 72px);
+}
+
+.band {
+  --fg: var(--ink);
+  --fg-soft: var(--ink-soft);
+  --accent: var(--cobalt);
+  --line: rgb(30 33 38 / 0.14);
+  --panel: rgb(255 255 255 / 0.5);
+  color: var(--fg);
+  background: var(--tone);
+  scroll-margin-top: 72px;
+}
+
+/* The change of hour happens in a strip above each scene, so text always sits on its own tone. */
+.band::before {
+  content: "";
+  display: block;
+  height: clamp(56px, 9svh, 112px);
+  background: linear-gradient(to bottom, var(--from), var(--tone));
+}
+
+.band[data-tone="night"] {
+  --fg: #f2efe8;
+  --fg-soft: rgb(242 239 232 / 0.74);
+  --accent: #b9c7ff;
+  --line: rgb(242 239 232 / 0.2);
+  --panel: rgb(255 255 255 / 0.08);
+}
+
+.band[data-tone="night"] ::selection {
+  background: #b9c7ff;
+  color: var(--night);
+}
+
+.band[data-tone="night"] :focus-visible {
+  outline-color: #b9c7ff;
+}
+
+.inner {
+  /* The year sits large above the story; the picture holds the right column. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+  grid-template-areas:
+    "when media"
+    "body media";
+  column-gap: clamp(28px, 4vw, 64px);
+  align-items: start;
+  padding-block: clamp(8px, 2svh, 24px) clamp(48px, 8svh, 88px);
+}
+
+.mark {
+  margin: 0;
+  /* one line always: a year never breaks inside itself */
+  white-space: nowrap;
+  font-size: clamp(34px, 4.4vw, 60px);
+  line-height: 1;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.when {
+  grid-area: when;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin-bottom: 20px;
+}
+
+.span {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fg-soft);
+}
+
+.body {
+  grid-area: body;
+  min-width: 0;
+}
+
+.cityName {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 15px;
+  font-weight: 560;
+}
+
+.cityName span {
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fg-soft);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(26px, 2.8vw, 36px);
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.summary {
+  margin: 14px 0 0;
+  max-width: 48ch;
+  font-size: clamp(17px, 1.5vw, 19px);
+  line-height: 1.7;
+  color: var(--fg-soft);
+}
+
+.visitLabel {
+  margin: 28px 0 8px;
+  font-size: 14px;
+  font-weight: 560;
+  color: var(--fg-soft);
+}
+
+.places {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.places li {
+  border-bottom: 1px solid var(--line);
+}
+
+.placeLink,
+.placePlain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  min-height: 44px;
+  padding: 11px 0;
+  text-decoration: none;
+}
+
+.placeName {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.placeMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--fg-soft);
+  white-space: nowrap;
+}
+
+.placeLink .placeMeta {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.placeLink svg {
+  transition: transform 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .placeLink:hover .placeName {
+    color: var(--accent);
+  }
+  .placeLink:hover svg {
+    transform: translateX(3px);
+  }
+}
+
+.media {
+  grid-area: media;
+  min-width: 0;
+}
+
+.figure {
+  margin: 0;
+}
+
+.figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: 0 12px 34px -16px rgb(10 15 35 / 0.5);
+}
+
+.credit {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg-soft);
+  overflow-wrap: break-word;
+}
+
+.credit a {
+  color: inherit;
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--accent);
+}
+
+/* ---- closing, still at night ---- */
+
+.closing {
+  padding-block: clamp(40px, 7svh, 80px) clamp(56px, 10svh, 112px);
+  background: var(--night);
+  color: #f2efe8;
+}
+
+.closingText {
+  margin: 0;
+  max-width: 30ch;
+  font-size: clamp(24px, 2.8vw, 36px);
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  margin-top: 32px;
+}
+
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #f2efe8;
+  text-underline-offset: 0.25em;
+}
+
+.closing :focus-visible {
+  outline-color: #b9c7ff;
+}
+
+.footer {
+  max-width: none;
+  background: var(--night);
+  color: rgb(242 239 232 / 0.66);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ribbonDot,
+  .placeLink svg {
+    transition: none;
+  }
+}
+
+/* ---- smaller screens ---- */
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+  }
+}
+
+/*
+ * Phones: one line runs down the left edge through all seven scenes, with a node at each year,
+ * and each scene reads year, picture, title, story, places. The sideways ribbon is not needed
+ * then (the line itself is the timeline), so it goes.
+ */
+@media (max-width: 640px) {
+  .ribbon {
+    display: none;
+  }
+  .band {
+    position: relative;
+  }
+  .band::before {
+    height: 40px;
+  }
+  .band::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--gutter) + 6px);
+    width: 2px;
+    background: color-mix(in oklab, var(--accent) 34%, transparent);
+  }
+  .scenes > .band:first-child::after {
+    top: 40px;
+  }
+  .scenes > .band:last-child::after {
+    bottom: auto;
+    height: 96px;
+  }
+  .inner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "when"
+      "media"
+      "body";
+    padding-left: calc(var(--gutter) + 30px);
+    padding-bottom: 56px;
+  }
+  .when {
+    position: relative;
+    margin-bottom: 16px;
+  }
+  /* the node on the line, level with the year */
+  .when::before {
+    content: "";
+    position: absolute;
+    left: -31px;
+    top: 9px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--tone);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .mark {
+    font-size: 32px;
+  }
+  .media {
+    margin-bottom: 20px;
+  }
+  .figure img {
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+  }
+  .tile {
+    aspect-ratio: 16 / 7;
+  }
+  .summary {
+    font-size: 16px;
+  }
+  .visitLabel {
+    margin-top: 22px;
+  }
+}

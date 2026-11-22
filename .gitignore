@@ -1,1 +1,11 @@
 .playwright-mcp/
+
+# Generated videos are large; originals stay on Higgsfield (job ids in docs/ASSETS.md)
+assets/incoming/video/
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.impeccable/review/
+out/
+deliverables/
