@@ -1,0 +1,16 @@
+# Netlify: the site is built as plain static files (out/) and served from the root.
+# The 3D rooms talk to Supabase Realtime straight from the browser; no server functions.
+[build]
+  command = "NEXT_PUBLIC_BUILD=$(TZ=Asia/Seoul date +%Y.%m.%d-%H%M) npm run build:static"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "22"
+  STATIC_EXPORT = "1"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Unknown paths get the site's own 404 page.
+[[redirects]]
+  from = "/*"
+  to = "/404.html"
+  status = 404
