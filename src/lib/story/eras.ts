@@ -30,7 +30,7 @@ export const STORY = {
   title: { en: "Two thousand years of Seoul", ko: "2천 년의 서울" },
   intro: {
     en: "From Baekje's first capital to Joseon's Hanyang and the city of today. Two thousand years of Seoul, in seven scenes.",
-    ko: "백제의 첫 도읍에서 조선의 한양, 그리고 오늘의 서울까지. 2천 년 동안 이어진 도시의 이야기를 일곱 장면으로 정리했습니다.",
+    ko: "백제의 첫 도읍에서 조선의 한양, 그리고 오늘의 서울까지. 2천 년 동안 이어진 도시의 이야기를\u2028일곱 장면으로 정리했습니다.",
   },
   closing: {
     en: "A city where two thousand years are still alive. Meet the past in its palaces and alleys, and walk today's Seoul in its streets.",

@@ -682,23 +682,25 @@
 }
 
 @media (max-width: 640px) {
+  /* a picture card per district: the whole card is the link, so no separate "see the day" */
   .readyRow {
-    grid-template-columns: 96px minmax(0, 1fr);
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 20px 0 26px;
   }
   .readyPhoto,
   .readyTile {
-    width: 96px;
-    height: 96px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 1;
+    border-radius: 14px;
   }
   .readyGo {
-    grid-column: 2;
+    display: none;
   }
   .readyArea {
-    display: block;
-    margin: 2px 0 0;
-    /* on its own line here, so it may wrap between words */
-    white-space: normal;
+    margin-left: 8px;
+    font-size: 15px;
   }
   .soonList {
     grid-template-columns: minmax(0, 1fr);

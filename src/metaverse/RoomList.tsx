@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SiteNav } from "@/components/SiteNav";
 import { Phrases } from "@/components/Phrases";
+import { asset } from "@/lib/base-path.ts";
 import { useLang } from "@/lib/lang.ts";
 import { COPY } from "@/lib/hero/copy.ts";
 import { MAX_INSTANCES, ROOMS } from "@/lib/metaverse/queue.ts";
@@ -24,7 +25,7 @@ const PLAN: Record<string, { place: { en: string; ko: string }; hour: { en: stri
 
 const TEXT = {
   en: {
-    lede: "Walk the streets of Seoul with friends before you go. Each room holds up to thirty people, and a new room opens when one fills up.",
+    lede: "Walk Seoul's alleys with friends in the metaverse before you go. Each room holds up to thirty people.",
     enter: "Enter",
     wardrobe: "Choose your traveler in the wardrobe",
     soon: "Opening soon",
@@ -33,7 +34,7 @@ const TEXT = {
     near: (d: string) => `Closest room to ${d}`,
   },
   ko: {
-    lede: "친구들과 함께 서울의 골목을 먼저 걸어 보세요. 방마다 30명까지 들어갈 수 있고, 가득 차면 같은 방이 하나 더 열립니다.",
+    lede: "메타버스로 친구들과 함께 서울의 골목을 먼저 걸어 보세요. 방마다 30명까지 들어갈 수 있습니다.",
     enter: "들어가기",
     wardrobe: "옷장에서 내 캐릭터 꾸미기",
     soon: "곧 열려요",
@@ -102,7 +103,17 @@ export function RoomList() {
             const isMine = mine?.room === slug;
             return (
               <li key={slug} className={styles.row} data-mine={isMine}>
-                <span className={styles.sky} style={{ background: `linear-gradient(${plan.sky[0]}, ${plan.sky[1]})` }} aria-hidden="true" />
+                {/* a glimpse of the room itself, over its sky while the picture loads */}
+                <img
+                  className={styles.sky}
+                  src={asset(`/metaverse/thumbs/${slug}.webp`)}
+                  alt=""
+                  width={192}
+                  height={192}
+                  loading="lazy"
+                  decoding="async"
+                  style={{ background: `linear-gradient(${plan.sky[0]}, ${plan.sky[1]})` }}
+                />
                 <div className={styles.text}>
                   <h2>
                     {name(slug)}

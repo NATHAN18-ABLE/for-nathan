@@ -429,23 +429,79 @@
   }
 }
 
+/*
+ * Phones: one line runs down the left edge through all seven scenes, with a node at each year,
+ * and each scene reads year, picture, title, story, places. The sideways ribbon is not needed
+ * then (the line itself is the timeline), so it goes.
+ */
 @media (max-width: 640px) {
   .ribbon {
-    --station: 120px;
-    mask-image: linear-gradient(to right, #000 82%, transparent);
-    -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+    display: none;
+  }
+  .band {
+    position: relative;
+  }
+  .band::before {
+    height: 40px;
+  }
+  .band::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--gutter) + 6px);
+    width: 2px;
+    background: color-mix(in oklab, var(--accent) 34%, transparent);
+  }
+  .scenes > .band:first-child::after {
+    top: 40px;
+  }
+  .scenes > .band:last-child::after {
+    bottom: auto;
+    height: 96px;
   }
   .inner {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "when"
-      "body"
-      "media";
+      "media"
+      "body";
+    padding-left: calc(var(--gutter) + 30px);
+    padding-bottom: 56px;
+  }
+  .when {
+    position: relative;
+    margin-bottom: 16px;
+  }
+  /* the node on the line, level with the year */
+  .when::before {
+    content: "";
+    position: absolute;
+    left: -31px;
+    top: 9px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--tone);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .mark {
+    font-size: 32px;
   }
   .media {
-    margin-top: 24px;
+    margin-bottom: 20px;
+  }
+  .figure img {
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
   }
   .tile {
     aspect-ratio: 16 / 7;
+  }
+  .summary {
+    font-size: 16px;
+  }
+  .visitLabel {
+    margin-top: 22px;
   }
 }
