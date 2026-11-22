@@ -1,0 +1,295 @@
+/* The test statistics: plain bars on porcelain, cobalt for the measure. */
+.page {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--porcelain);
+  color: var(--ink);
+}
+
+.main {
+  flex: 1;
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding: clamp(48px, 10svh, 120px) var(--gutter) clamp(56px, 10svh, 120px);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(44px, 7vw, 92px);
+  line-height: 1.02;
+  font-weight: 330;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 18px 0 0;
+  font-size: clamp(19px, 1.8vw, 24px);
+  line-height: 1.5;
+}
+
+.note {
+  margin: 10px 0 0;
+  max-width: 56ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.updated {
+  white-space: nowrap;
+}
+
+.empty {
+  margin: 40px 0 0;
+  font-size: 17px;
+  color: var(--ink-soft);
+}
+
+.empty a {
+  color: var(--cobalt);
+  font-weight: 500;
+  text-underline-offset: 0.25em;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(32px, 5vw, 72px);
+}
+
+.h2 {
+  margin: clamp(48px, 7svh, 72px) 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--porcelain-shadow);
+  font-size: 17px;
+  font-weight: 560;
+}
+
+/* ---- bars ---- */
+
+.bars {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: minmax(0, 9.5em) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.barLabel {
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.barSub {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.barTrack {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--porcelain-shadow);
+  overflow: hidden;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--cobalt);
+  transform-origin: left;
+  transition: transform 500ms var(--ease-out);
+}
+
+.barValue {
+  min-width: 4.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 560;
+}
+
+.barPct {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+/* ---- days ---- */
+
+.days {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(30, minmax(0, 1fr));
+  align-items: end;
+  gap: 4px;
+  height: 180px;
+  padding-bottom: 22px;
+}
+
+.day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+
+.dayBar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--cobalt);
+}
+
+.dayCount {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.dayLabel {
+  position: absolute;
+  bottom: -20px;
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- questions ---- */
+
+.questions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 26px;
+}
+
+.prompt {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 10px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.qNum {
+  flex: none;
+  min-width: 1.4em;
+  font-weight: 560;
+  color: var(--cobalt);
+  font-variant-numeric: tabular-nums;
+}
+
+.split {
+  display: grid;
+  gap: 8px;
+}
+
+.splitTrack {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+}
+
+.splitA,
+.splitB {
+  flex-basis: 0;
+  min-width: 3px;
+  border-radius: 6px;
+  transition: flex-grow 500ms var(--ease-out);
+}
+
+.splitA {
+  background: var(--cobalt);
+}
+
+.splitB {
+  background: var(--celadon);
+}
+
+.splitLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.splitLabels span:last-child {
+  text-align: right;
+}
+
+.splitLabels strong {
+  color: var(--ink);
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- language and device ---- */
+
+.audience {
+  display: grid;
+  gap: 22px;
+  max-width: 560px;
+}
+
+.devices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+}
+
+.devices strong {
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .days {
+    gap: 2px;
+    height: 150px;
+  }
+  .dayCount {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barFill,
+  .splitA,
+  .splitB {
+    transition: none;
+  }
+}

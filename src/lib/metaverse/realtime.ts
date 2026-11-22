@@ -6,14 +6,7 @@ import type { Look } from "./look.ts";
 import type { Avatar } from "./outfit.ts";
 import type { WishId } from "./lanterns.ts";
 
-// Public by design: the publishable key only opens Realtime channels, there is no table data.
-// A host may set its own (Netlify's Supabase extension, or the site's environment variables);
-// without them the site uses the project below.
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://qfuzoymuzsnlbirnlsmb.supabase.co";
-const KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "sb_publishable__9aJ0uP7nHMjCN19evf3Ow_iUOIkI6N";
+import { SUPABASE_KEY as KEY, SUPABASE_URL as URL } from "../supabase-config.ts";
 
 let client: SupabaseClient | null = null;
 const supabase = () => (client ??= createClient(URL, KEY, { realtime: { params: { eventsPerSecond: 8 } } }));
