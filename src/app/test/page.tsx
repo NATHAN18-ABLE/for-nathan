@@ -14,6 +14,7 @@ import { Phrases } from "@/components/Phrases";
 import { OPEN_ROOMS } from "@/lib/metaverse/open.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import { courseFor } from "@/lib/districts/courses.ts";
+import { deviceKind, saveResult } from "@/lib/test-stats.ts";
 import styles from "./test.module.css";
 
 const KEY = "seoul.answers";
@@ -102,6 +103,11 @@ function Result({ lang, answers, onRestart }: { lang: Lang; answers: Answer[]; o
   const code = typeCode(answers);
   const type = TRAVEL_TYPES[code];
   const { best, runnerUp } = matchDistricts(scoreAnswers(answers));
+  // Count this result once in the anonymous statistics.
+  useEffect(() => {
+    saveResult({ type_code: code, best: best.slug, runner_up: runnerUp.slug, answers: answers.join(""), lang, device: deviceKind() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers.join("")]);
   // Only a district with its own room links straight into it; otherwise the visitor picks one.
   const own = OPEN_ROOMS.includes(best.slug);
   const ko = lang === "ko";
