@@ -26,6 +26,13 @@
   position: sticky;
   top: 0;
   height: 100svh;
+  /*
+   * Down to the very bottom of the screen: Safari's floating bottom bar (iOS 26) is see-through,
+   * and with only the space above it (svh) the night background showed through the bar instead
+   * of the film. Things pinned to the bottom stay clear of the bar by --under.
+   */
+  height: 100lvh;
+  --under: calc(100lvh - 100svh);
   overflow: hidden;
   background: var(--night);
 }
@@ -113,7 +120,7 @@
 .caption {
   position: absolute;
   left: var(--gutter);
-  bottom: calc(clamp(40px, 11svh, 120px) + env(safe-area-inset-bottom));
+  bottom: calc(clamp(40px, 11svh, 120px) + env(safe-area-inset-bottom) + var(--under));
   margin: 0;
   max-width: min(18ch, calc(100% - 2 * var(--gutter)));
   font-size: clamp(32px, 4vw, 60px);
@@ -141,7 +148,7 @@
   display: grid;
   place-content: center;
   justify-items: center;
-  padding: 0 var(--gutter) 4svh;
+  padding: 0 var(--gutter) calc(4svh + var(--under));
   text-align: center;
   pointer-events: none;
 }
@@ -194,7 +201,7 @@
   display: grid;
   place-content: center;
   justify-items: center;
-  padding: 0 var(--gutter) 10svh;
+  padding: 0 var(--gutter) calc(10svh + var(--under));
   text-align: center;
   color: var(--white);
   text-shadow:
@@ -287,7 +294,7 @@
 .cue {
   position: absolute;
   left: 50%;
-  bottom: calc(28px + env(safe-area-inset-bottom));
+  bottom: calc(28px + env(safe-area-inset-bottom) + var(--under));
   z-index: 3;
   display: grid;
   justify-items: center;
