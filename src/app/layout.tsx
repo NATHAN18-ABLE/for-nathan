@@ -20,7 +20,9 @@ export const viewport: Viewport = {
 
 // Runs before the first paint: the language the visitor chose (so a Korean visitor never sees the
 // opening card in English first) and whether the opening card was already shown in this visit.
-const EARLY = `try{var d=document.documentElement,q=new URLSearchParams(location.search).get("lang"),l=q==="ko"||q==="en"?q:localStorage.getItem("seoul.lang");if(l==="ko"||l==="en")d.dataset.lang=l;if(sessionStorage.getItem("seoul.intro"))d.dataset.intro="seen"}catch(e){}`;
+// It also takes out the comment Netlify writes into <head> on every page (and the line break in
+// front of it): React finds nodes it did not render there, fails to hydrate and redraws the page.
+const EARLY = `try{for(var c=document.head.childNodes,i=c.length-1;i>=0;i--){var n=c[i];if((n.nodeType===8&&/Netlify/.test(n.data))||(n.nodeType===3&&!n.data.trim()))n.remove()}}catch(e){}try{var d=document.documentElement,q=new URLSearchParams(location.search).get("lang"),l=q==="ko"||q==="en"?q:localStorage.getItem("seoul.lang");if(l==="ko"||l==="en")d.dataset.lang=l;if(sessionStorage.getItem("seoul.intro"))d.dataset.intro="seen"}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
