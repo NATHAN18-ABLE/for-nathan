@@ -79,7 +79,7 @@ const HOLES = [
   ...BENCHES.map(([x, z]) => ({ x, z, r: 1.2 })),
   { x: SHELTER.x, z: -26.2, r: 1.4 }, // the shelter's bench
   ...[-4, 2].flatMap((x) => [-26.6, -22.6].map((z) => ({ x, z, r: 0.25 }))), // its posts
-  { x: BEACON.x, z: BEACON.z, r: 2.7 },
+  { x: BEACON.x, z: BEACON.z, r: 2.9 },
   { x: -6, z: 31, r: 1.05 }, // the trail sign
   { x: SPRING.x, z: SPRING.z, r: 1.05 },
   { x: GYM.x, z: GYM.z, r: 0.95 },
