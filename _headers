@@ -1,0 +1,8 @@
+# Cache rules for static hosts that read this file (Cloudflare Pages, Netlify).
+# GitHub Pages ignores it.
+# Built scripts carry a hash in their names, so they can be kept for good.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+# The film frames keep their names when the film is re-cut, so they are kept only an hour.
+/hero/*
+  Cache-Control: public, max-age=3600
