@@ -40,9 +40,11 @@
     },
     "brainstorming": {
       "source": "obra/superpowers",
+      "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
       "sourceType": "github",
       "skillPath": "skills/brainstorming/SKILL.md",
-      "computedHash": ""
+      "computedHash": "a7424777b7f81e3eb9b4556d29fe233553736d8255780d3e1feea190fef61fef",
+      "installMode": "copy"
     },
     "cad": {
       "source": "earthtojake/text-to-cad",
@@ -51,11 +53,43 @@
       "skillPath": "skills/cad/SKILL.md",
       "computedHash": ""
     },
+    "cartoon-3d-short": {
+      "source": "mromidev/claude-animated-shorts",
+      "commit": "e3b817b6afc6cd413466d43f11ba31209e034bbf",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "5e22407caaa66b02af5a6cb28b0a436da726cc857dfd4f09d03ee006aaa1fa28",
+      "installMode": "copy"
+    },
+    "claude-automation-recommender": {
+      "source": "anthropics/claude-plugins-official",
+      "commit": "73c8cf3ea7e296057b467990f2f5d61b4c922260",
+      "sourceType": "github",
+      "skillPath": "plugins/claude-code-setup/skills/claude-automation-recommender/SKILL.md",
+      "computedHash": "77eacdf8f94c87706f3d840ddd94aa246a0d9b83201d6249dce2d7584112afe5",
+      "installMode": "copy"
+    },
+    "create-design-md": {
+      "source": "ibelick/ui-skills",
+      "commit": "7ef0076fce1dfa39dd2bc43b7dc13add6eda8a41",
+      "sourceType": "github",
+      "skillPath": "skills/create-design-md/SKILL.md",
+      "computedHash": "2fd65eb377fb0081ae1eb9217856f1dbe5de0f0b5607c6df8f3349708a664ecb",
+      "installMode": "copy"
+    },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/taste-skill/SKILL.md",
       "computedHash": ""
+    },
+    "device-frames": {
+      "source": "ibelick/ui-skills",
+      "commit": "7ef0076fce1dfa39dd2bc43b7dc13add6eda8a41",
+      "sourceType": "github",
+      "skillPath": "skills/device-frames/SKILL.md",
+      "computedHash": "0577383175ec86e39bdc24da8c5a9b53085e6858f1d4cce847dbb05e1a03dc6b",
+      "installMode": "copy"
     },
     "dfam-check": {
       "source": "earthtojake/text-to-cad",
@@ -95,6 +129,14 @@
       "sourceType": "github",
       "skillPath": "skills/dxf/SKILL.md",
       "computedHash": ""
+    },
+    "earshot": {
+      "source": "Leonxlnx/earshot",
+      "commit": "7a7f7c5c70d4a763a1eca4b3666af7c77e313f97",
+      "sourceType": "github",
+      "skillPath": "skills/earshot/SKILL.md",
+      "computedHash": "4ce67786e15c6018bd50254c159494d6d70c6b051177fc4b4f9aadd5390872d7",
+      "installMode": "copy"
     },
     "embedded-captions": {
       "source": "heygen-com/hyperframes",
@@ -290,6 +332,14 @@
       "skillPath": "skills/karpathy-guidelines/SKILL.md",
       "computedHash": ""
     },
+    "line-art-animation": {
+      "source": "JDhruv14/line-art-animation",
+      "commit": "c43d698913cf0ad44f984c7ae14c5348010594d3",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "2136fdfeff4c15a48b17f34acb399ae5b1dabb8e88431263ecbfca66a341207f",
+      "installMode": "copy"
+    },
     "media-use": {
       "source": "heygen-com/hyperframes",
       "sourceType": "github",
@@ -320,6 +370,38 @@
       "skillPath": "skills/music-to-video/SKILL.md",
       "computedHash": ""
     },
+    "netlify-caching": {
+      "source": "netlify/context-and-tools",
+      "commit": "b111e771432aecedc81782d64cac42530a9cd1eb",
+      "sourceType": "github",
+      "skillPath": "skills/netlify-caching/SKILL.md",
+      "computedHash": "5ac61534940693fe36b96f0720e9651c07fcb8acc227712c416783b6e04e8de9",
+      "installMode": "copy"
+    },
+    "netlify-config": {
+      "source": "netlify/context-and-tools",
+      "commit": "b111e771432aecedc81782d64cac42530a9cd1eb",
+      "sourceType": "github",
+      "skillPath": "skills/netlify-config/SKILL.md",
+      "computedHash": "051768f439097309a46a8b60a665ceff3e6af10be47b142798cef9a53bea9b91",
+      "installMode": "copy"
+    },
+    "netlify-deploy": {
+      "source": "netlify/context-and-tools",
+      "commit": "b111e771432aecedc81782d64cac42530a9cd1eb",
+      "sourceType": "github",
+      "skillPath": "skills/netlify-deploy/SKILL.md",
+      "computedHash": "ccbee4ac84c2cf2e06e2fd6dabffc4f33e41e64b4fe7e3d5d4ec2a409fd6b206",
+      "installMode": "copy"
+    },
+    "netlify-frameworks": {
+      "source": "netlify/context-and-tools",
+      "commit": "b111e771432aecedc81782d64cac42530a9cd1eb",
+      "sourceType": "github",
+      "skillPath": "skills/netlify-frameworks/SKILL.md",
+      "computedHash": "99f9126a210dba3008a61d20657f7b21e80795138aac2948aa8d4ad03432bb46",
+      "installMode": "copy"
+    },
     "onboarding": {
       "source": "elevenlabs/skills",
       "sourceType": "github",
@@ -349,6 +431,14 @@
       "sourceType": "github",
       "skillPath": "skills/prototype/SKILL.md",
       "computedHash": ""
+    },
+    "real-sound": {
+      "source": "Leonxlnx/earshot",
+      "commit": "7a7f7c5c70d4a763a1eca4b3666af7c77e313f97",
+      "sourceType": "github",
+      "skillPath": "skills/real-sound/SKILL.md",
+      "computedHash": "0caed483c0c11a7b3dcc7e449d2856a1845a9ea13251f2708ff0e9c4397045fb",
+      "installMode": "copy"
     },
     "receiving-code-review": {
       "source": "obra/superpowers",
@@ -489,6 +579,22 @@
       "skillPath": "skills/subagent-driven-development/SKILL.md",
       "computedHash": ""
     },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "sourceType": "github",
+      "skillPath": "skills/supabase/SKILL.md",
+      "computedHash": "2fbff32fd63b7d31585cacf0ed43e5bf8d05dd20d6c0c751d256cb967a00eec1",
+      "installMode": "copy"
+    },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "commit": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505",
+      "installMode": "copy"
+    },
     "systematic-debugging": {
       "source": "obra/superpowers",
       "sourceType": "github",
@@ -533,15 +639,33 @@
     },
     "using-superpowers": {
       "source": "obra/superpowers",
+      "commit": "22f0b463e7a5e579904dd6211a520321035526f7",
       "sourceType": "github",
       "skillPath": "skills/using-superpowers/SKILL.md",
-      "computedHash": ""
+      "computedHash": "6a9104fac7e16c3cec2bc118943aefd331cac35b4cfabd427cea4dc16337c6a5",
+      "installMode": "copy"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "commit": "5a37a6329fbad3666c3207392a6a7c0110e92efb",
+      "sourceType": "github",
+      "skillPath": "skills/react-best-practices/SKILL.md",
+      "computedHash": "7991ed4fbecdac23f47c1a40c243e00a212a9e7f3604db93959b3ae11dffe299",
+      "installMode": "copy"
     },
     "verification-before-completion": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/verification-before-completion/SKILL.md",
       "computedHash": ""
+    },
+    "video-use": {
+      "source": "browser-use/video-use",
+      "commit": "43cfc566833548093455c9d4a46bd69913b7e552",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "51abac63c2a9189dc482cd9ae2674dd028e7e7a85e2439fc7e524cf553f867fc",
+      "installMode": "copy"
     },
     "voice-changer": {
       "source": "elevenlabs/skills",
@@ -554,6 +678,14 @@
       "sourceType": "github",
       "skillPath": "voice-isolator/SKILL.md",
       "computedHash": ""
+    },
+    "watch": {
+      "source": "bradautomates/claude-video",
+      "commit": "03ceb42f7fa2c4439aca01752118044baabffb8f",
+      "sourceType": "github",
+      "skillPath": "skills/watch/SKILL.md",
+      "computedHash": "26c7f5055f38651b6da2649506ad34f3d98ade4b540e417acb74efbf3258bf72",
+      "installMode": "copy"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",

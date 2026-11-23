@@ -9,3 +9,6 @@ next-env.d.ts
 .impeccable/review/
 out/
 deliverables/
+
+# Skills live in the design-taste-kit plugin; see CLAUDE.md.
+.claude/skills/
