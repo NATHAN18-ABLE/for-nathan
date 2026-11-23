@@ -25,7 +25,7 @@ Entry points:
 | PPT and planning | `theme-factory`, `grill-me`, `grilling`, `to-spec`, `setup-matt-pocock-skills` | anthropics/skills, mattpocock/skills |
 | Design review | `web-design-guidelines` (fetches Vercel's latest rules) | vercel-labs/agent-skills |
 | Development discipline | `brainstorming`, `writing-plans`, `executing-plans`, `test-driven-development`, `systematic-debugging`, `verification-before-completion` and the other superpowers skills; `karpathy-guidelines` | obra/superpowers, forrestchang/andrej-karpathy-skills |
-| CAD and fabrication | `cad`, `dxf`, `engineering-drawing`, `dfm`, `dfam-check`, `gcode`, `bambu-labs`, `step-parts`, `sendcutsend`, `urdf`, `srdf`, `sdf` | earthtojake/text-to-cad |
+| CAD and fabrication | `cad`, `dxf`, `engineering-drawing`, `dfm`, `dfam-check`, `gcode`, `bambu-labs`, `step-parts` | earthtojake/text-to-cad |
 
 ## MCP servers
 
