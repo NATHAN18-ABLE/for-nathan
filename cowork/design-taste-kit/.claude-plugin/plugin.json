@@ -1,18 +1,20 @@
 {
   "name": "design-taste-kit",
-  "version": "0.4.2",
-  "description": "Every skill installed in nathan18-able/for-nathan: frontend design pipeline (build-site), HyperFrames and Remotion video, GSAP, ElevenLabs audio, PPT, planning (brainstorming, grilling, to-spec), superpowers and Karpathy coding discipline, text-to-CAD, plus Playwright, ElevenLabs and Gamma MCP servers.",
+  "version": "0.5.0",
+  "description": "All of this account's design, development, video and planning skills in one plugin: the frontend design pipeline (start with build-site), Next.js/Supabase/Netlify development, HyperFrames and Remotion video, video analysis and editing, sound, PPT, planning and CAD, plus Playwright, Chrome DevTools, Context7, Netlify, ElevenLabs and Gamma MCP servers.",
   "author": {
     "name": "nathan18-able"
   },
   "license": "MIT",
   "keywords": [
     "design",
-    "ui",
+    "frontend",
+    "nextjs",
+    "supabase",
     "video",
     "motion-graphics",
-    "presentation",
     "audio",
-    "anti-slop"
+    "presentation",
+    "planning"
   ]
 }

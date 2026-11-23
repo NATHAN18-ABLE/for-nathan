@@ -1,11 +1,20 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest"
-      ]
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/playwright.mjs"]
+    },
+    "chrome-devtools": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/chrome-devtools.mjs"]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "netlify": {
+      "type": "http",
+      "url": "https://mcp.netlify.com/mcp"
     },
     "elevenlabs": {
       "type": "http",

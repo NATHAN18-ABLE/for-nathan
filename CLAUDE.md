@@ -1,29 +1,41 @@
 # 프로젝트 지침
 
+## 스킬·MCP 위치 (필수)
+
+스킬과 MCP 서버는 전부 `design-taste-kit` 플러그인(`cowork/design-taste-kit/`)에 들어 있다. Claude Code와 Cowork 모두 이 플러그인 하나만 쓴다.
+Skill 도구에서는 `design-taste-kit:<스킬 이름>`으로 부른다. 아래 표의 스킬 이름은 이 플러그인 안의 이름이다.
+
+- 스킬 설치·업데이트는 `scripts/skills.sh add <owner/repo> <스킬...>` / `scripts/skills.sh update [스킬...]`로만 한다. `npx skills add`·`update`를 프로젝트에서 직접 실행하면 `.claude/skills/`가 다시 생겨 스킬이 두 벌로 로드된다.
+- 스킬·MCP를 바꾼 뒤에는 `scripts/build-cowork-plugin.sh`로 플러그인 파일을 다시 만들고, 사용자가 Cowork에 재설치해야 반영된다.
+
 ## 사이트 제작 파이프라인 (필수)
 
 웹사이트·랜딩페이지·포트폴리오·대시보드·웹앱 UI 등 **프론트엔드 화면을 새로 만들거나 리디자인할 때는**
-`.claude/skills/`에 설치된 디자인 스킬을 아래 순서대로 **전부** 적용한다. 일부만 골라 쓰지 않는다.
+`design-taste-kit` 플러그인의 디자인 스킬을 아래 순서대로 **전부** 적용한다. 일부만 골라 쓰지 않는다.
 작은 수정(버그 하나, 문구 하나)이라면 해당 단계의 스킬만 적용해도 된다.
 
 `disable-model-invocation`이 걸린 스킬(`pick-ui-library`, `prototype`, `review-animations`)은
-Skill 도구로 호출할 수 없으므로 해당 `SKILL.md`를 직접 Read 해서 지침을 따른다.
+Skill 도구로 호출할 수 없으므로 플러그인의 `skills/<이름>/SKILL.md`를 직접 Read 해서 지침을 따른다.
 
 | 단계 | 스킬 | 할 일 |
 |---|---|---|
-| 1. 맥락 | `impeccable` (+ `design-md-library`) | `.claude/skills/impeccable/scripts/impeccable context` 실행 → PRODUCT.md 없으면 `init`, 이어서 `shape`/new-work로 모드(Persuade/Operate/Read/Experience)와 비주얼 월드 결정. 사용자가 "Stripe처럼"처럼 브랜드를 레퍼런스로 들면 `design-md-library`에서 해당 DESIGN.md를 읽어 비주얼 월드의 근거로 쓴다 |
+| 1. 맥락 | `impeccable` (+ `design-md-library`) | `impeccable` 스킬 폴더의 `scripts/impeccable context` 실행 → PRODUCT.md 없으면 `init`, 이어서 `shape`/new-work로 모드(Persuade/Operate/Read/Experience)와 비주얼 월드 결정. 사용자가 "Stripe처럼"처럼 브랜드를 레퍼런스로 들면 `design-md-library`에서 해당 DESIGN.md를 읽어 비주얼 월드의 근거로 쓴다. 정한 방향을 문서로 남길 때는 `create-design-md` |
 | 2. 방향 | `design-taste-frontend` (+ `ui-ux-pro-max`) | 한 줄 "Design Read" 출력, 세 다이얼 값 결정, 템플릿 같은 AI 디자인 금지 규칙 적용. 팔레트·폰트 조합 후보가 필요하면 `ui-ux-pro-max`의 `--design-system` 검색에 같은 다이얼 값을 넣어 근거 데이터로 참고 |
 | 3. 라이브러리 | `pick-ui-library` (Read) | 필요한 UI 라이브러리 선정. 토스트가 필요하면 `ask-sonner` |
 | 4. 구현 | `impeccable` craft-floor + `emil-design-eng` + `apple-design` | UI 편집 전 `impeccable/reference/craft-floor.md`를 읽고, 컴포넌트 완성도·타이포·재질·제스처 원칙을 지키며 구현 |
 | 5. 모바일 | `mobile-native` | 100vh, 입력 확대, 탭 하이라이트, 노치 safe-area 등 모바일 네이티브 감각 처리 |
 | 6. 모션 | `find-animation-opportunities` → `animate` | 애니메이션이 필요한 곳을 고르고(불필요한 곳은 배제) 구현. React Native/Expo면 `animate-expo` |
-| 7. 검수 | `impeccable` `audit` + `hallmark audit` + `web-design-guidelines` → `polish`, `review-animations` (Read), `improve-animations` | 접근성·성능·반응형 점검, AI 슬롭 패턴 점검(`hallmark audit`은 수정 없이 목록만), 모션 리뷰, 최종 폴리시. 데스크톱·모바일 스크린샷을 한 번에 확인하고 수정은 한 번에 묶어서 최대 1회 재확인 |
+| 7. 검수 | `impeccable` `audit` + `hallmark audit` + `web-design-guidelines` + `chrome-devtools` MCP → `polish`, `review-animations` (Read), `improve-animations` | 접근성·성능·반응형 점검, AI 슬롭 패턴 점검(`hallmark audit`은 수정 없이 목록만), Lighthouse 점수와 성능 기록(LCP·CLS), 모션 리뷰, 최종 폴리시. 데스크톱·모바일 스크린샷을 한 번에 확인하고 수정은 한 번에 묶어서 최대 1회 재확인 |
 
 `hallmark`는 이 파이프라인 안에서는 `audit`(필요하면 `study`)만 쓴다. 기본 디자인 플로우는 테마를 따로 골라
 `impeccable`/`design-taste-frontend`의 결정과 충돌하므로, 사용자가 Hallmark를 이름으로 부를 때만 실행한다.
 
 여러 시안을 비교해야 하면 4단계 전에 `prototype` (Read)으로 변형안을 만든다.
 Swift 코드가 있으면 `write-swift`를 적용한다. 동작 이름을 모르면 `animation-vocabulary`를 참고한다.
+시안을 휴대폰·노트북 목업에 넣어 보여줄 때는 `device-frames`.
+
+브라우저 MCP는 역할을 나눈다. `playwright`는 화면 조작·스크린샷·기기별 확인(아이폰·iPad 줄바꿈은 `--device`나 WebKit으로 확인)을 맡고,
+`chrome-devtools`는 Lighthouse·성능 기록·네트워크·콘솔 점검에만 쓴다. 클릭과 입력은 `chrome-devtools`에서 꺼져 있다.
 
 ## Higgsfield 크레딧 규칙 (필수, 2026-11-16 사용자 지시)
 
@@ -52,15 +64,15 @@ Swift 코드가 있으면 `write-swift`를 적용한다. 동작 이름을 모르
 | 작업 | 순서 |
 |---|---|
 | 기획 | 브리프가 모호하면 `brainstorming`으로 의도·대상·범위를 먼저 확정한다. 브리프가 이미 구체적이면 짧게 확인만 하고 넘어간다. 사용자가 계획을 검증받고 싶어 하면 `grilling`(사용자 명령은 `/grill-me`), 대화를 기획서로 정리할 때는 `/to-spec`(처음 한 번 `/setup-matt-pocock-skills`로 이슈 트래커 설정) |
-| 개발 | 코드를 쓰거나 고칠 때는 `karpathy-guidelines`를 지킨다. 여러 단계짜리 개발은 superpowers 흐름(`writing-plans` → `test-driven-development` → `verification-before-completion`)을 따르고, 버그는 `systematic-debugging` |
-| 영상·모션그래픽 | `hyperframes`(진입점)가 용도별 워크플로(`motion-graphics`, `product-launch-video`, `faceless-explainer`, `music-to-video`, `talking-head-recut`, `embedded-captions` 등)를 고른다. 움직임은 `hyperframes-animation` + GSAP 공식 스킬(`gsap-*`), 디자인 방향은 `hyperframes-creative`와 `design-md-library`. 사용자가 Remotion(React)을 지정하거나 기존 Remotion 프로젝트면 `remotion-best-practices`(진입점)와 `remotion-*` |
-| 3D·CAD·제작 | 부품 모델링은 `cad`, 2D 도면은 `dxf`·`engineering-drawing`, 제조성 검토는 `dfm`·`dfam-check`, 3D 프린팅은 `gcode` → `bambu-labs`, 기성 부품은 `step-parts`, 로봇 기술 파일은 `urdf`·`srdf`·`sdf`, 레이저 커팅 주문 점검은 `sendcutsend` |
-| 소리 | 내레이션·음악·효과음은 ElevenLabs MCP(`elevenlabs`)를 우선 쓰고, 코드로 처리해야 하면 `text-to-speech`·`music`·`sound-effects`·`speech-to-text` 스킬. 믹싱은 `hyperframes-audio` |
+| 개발 | 코드를 쓰거나 고칠 때는 `karpathy-guidelines`를 지킨다. 여러 단계짜리 개발은 superpowers 흐름(`writing-plans` → `test-driven-development` → `verification-before-completion`)을 따르고, 버그는 `systematic-debugging`. React·Next.js 코드는 `vercel-react-best-practices`, Supabase는 `supabase`·`supabase-postgres-best-practices`(테이블·RLS·Realtime을 바꿀 때 필수). base-ui·zustand·React Three Fiber·Tailwind·motion처럼 공식 스킬이 없는 라이브러리는 코드를 쓰기 전에 `context7` MCP로 현재 버전 문서를 확인한다. Netlify 배포·설정은 `netlify-deploy`·`netlify-config`·`netlify-frameworks`·`netlify-caching`과 `netlify` MCP. 새 프로젝트의 자동화(hooks·MCP 등) 점검은 `claude-automation-recommender`(읽기 전용) |
+| 영상·모션그래픽 | `hyperframes`(진입점)가 용도별 워크플로(`motion-graphics`, `product-launch-video`, `faceless-explainer`, `music-to-video`, `talking-head-recut`, `embedded-captions` 등)를 고른다. 움직임은 `hyperframes-animation` + GSAP 공식 스킬(`gsap-*`), 디자인 방향은 `hyperframes-creative`와 `design-md-library`. 사용자가 Remotion(React)을 지정하거나 기존 Remotion 프로젝트면 `remotion-best-practices`(진입점)와 `remotion-*`. 레퍼런스 영상을 분석할 때는 `watch`, 촬영 원본을 1차 편집할 때는 `video-use`, 캐릭터가 나오는 세로 스토리 쇼츠는 `cartoon-3d-short`, 손그림 선화 애니메이션은 `line-art-animation` |
+| 3D·CAD·제작 | 부품 모델링은 `cad`, 2D 도면은 `dxf`·`engineering-drawing`, 제조성 검토는 `dfm`·`dfam-check`, 3D 프린팅은 `gcode` → `bambu-labs`, 기성 부품은 `step-parts` |
+| 소리 | 내레이션·음악·효과음은 ElevenLabs MCP(`elevenlabs`)를 우선 쓰고, 코드로 처리해야 하면 `text-to-speech`·`music`·`sound-effects`·`speech-to-text` 스킬. 믹싱은 `hyperframes-audio`. 효과음을 코드로 만들거나 넣은 소리를 들어보고 평가할 때는 `earshot`·`real-sound`(처음 한 번 `pip install "earshot[listen] @ git+https://github.com/Leonxlnx/earshot"` 필요) |
 | PPT | 편집 가능한 .pptx가 필요하면 Anthropic `pptx` 스킬 + `theme-factory`, 비주얼 중심 덱은 Gamma MCP(`gamma`), 인터랙티브 HTML 덱은 `slideshow` |
 
 superpowers 스킬(`brainstorming`, `writing-plans`, `test-driven-development` 등)은 실제로 무언가를 만들거나 고치는 작업에서만 쓴다.
 질문·검색·조사·설명·스킬 설치·설정 작업에는 쓰지 않는다. `using-superpowers`는 사용자가 `/using-superpowers`로 직접 부를 때만 쓴다.
-`npx skills update`로 superpowers를 업데이트하면 이 제한을 넣은 설명문이 원본으로 돌아가므로, 업데이트 뒤에는 다시 좁혀 둔다.
+이 제한은 `scripts/patch-skills.py`에 들어 있어서 `scripts/skills.sh update`가 업데이트 뒤에 자동으로 다시 적용한다.
 
 이 작업들에도 아래 우선순위와 완료 보고 규칙을 그대로 적용한다.
 
