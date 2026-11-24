@@ -11,6 +11,9 @@ out="$root/cowork/$name.plugin"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
+# Stop before packaging anything claude.ai would refuse to upload.
+python3 -I "$root/scripts/check-skills.py" "$root/cowork/$name/skills"
+
 cp -R "$root/cowork/$name/." "$work/"
 find "$work" \( -name __pycache__ -o -name .DS_Store -o -name node_modules -o -name .venv \) -prune -exec rm -rf {} +
 
