@@ -398,7 +398,7 @@ export function FittingRoom() {
             </Link>
             <button type="button" className={styles.shuffle} onClick={shuffle}>
               <Shuffle size={18} weight="bold" aria-hidden="true" />
-              {t.shuffle}
+              <span className={styles.shuffleText}>{t.shuffle}</span>
             </button>
           </div>
           <p>{t.saved}</p>
