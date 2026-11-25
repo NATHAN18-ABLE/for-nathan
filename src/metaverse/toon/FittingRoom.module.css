@@ -330,6 +330,46 @@
   .moves {
     bottom: 32px;
   }
+  /* the way in stays in reach at the bottom of the screen while the choices scroll */
+  .foot {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 0 calc(-1 * clamp(20px, 2.4vw, 36px)) calc(-1 * max(32px, env(safe-area-inset-bottom)));
+    padding: 12px clamp(20px, 2.4vw, 36px) max(14px, env(safe-area-inset-bottom));
+    background: #faf7f1;
+    box-shadow: 0 -10px 20px -14px rgb(30 33 38 / 0.35);
+  }
+  /* one slim row: the way in wide, the surprise button beside it */
+  .foot .footRow {
+    flex-wrap: nowrap;
+  }
+  .foot .footRow > :first-child {
+    flex: 1;
+    min-width: 0;
+    min-height: 50px;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  /* on a phone the surprise button is a round icon; its label stays for screen readers */
+  .foot .shuffle {
+    flex: none;
+    justify-content: center;
+    width: 50px;
+    min-height: 50px;
+    padding: 0;
+  }
+  .foot .shuffleText {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .foot p {
+    display: none;
+  }
   /* eight moves: two rows on a phone instead of a cut-off strip */
   .moves {
     flex-wrap: wrap;

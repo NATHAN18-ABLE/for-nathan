@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { OPEN_ROOMS } from "@/lib/metaverse/open.ts";
+import { OPEN_ROOMS, markDressed } from "@/lib/metaverse/open.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
@@ -32,6 +32,7 @@ const T = {
   en: {
     title: "Fitting room",
     lead: "Choose how you look before you walk into Seoul.",
+    leadFor: (room: string) => `Before you walk into ${room}, choose how you look.`,
     gender: "Figure",
     genders: { f: "Woman", m: "Man" },
     outfit: "Outfit",
@@ -63,6 +64,7 @@ const T = {
   ko: {
     title: "옷장",
     lead: "서울을 걷기 전에 내 모습을 골라 보세요.",
+    leadFor: (room: string) => `${room}에 들어가기 전에 내 모습을 골라 보세요.`,
     gender: "캐릭터",
     genders: { f: "여자", m: "남자" },
     outfit: "옷",
@@ -105,9 +107,10 @@ export function FittingRoom() {
   const [look, setLook] = useState<Look>(defaultLook);
   // Where to go next: the room that sent the traveler here, or the first open room.
   const [room, setRoom] = useState(OPEN_ROOMS[0]);
+  const [fromRoom, setFromRoom] = useState(false);
   useEffect(() => {
     const from = new URLSearchParams(location.search).get("from");
-    if (from && OPEN_ROOMS.includes(from)) setRoom(from);
+    if (from && OPEN_ROOMS.includes(from)) (setRoom(from), setFromRoom(true));
   }, []);
   const roomName = DISTRICTS.find((d) => d.slug === room)?.[lang === "ko" ? "nameKo" : "nameEn"] ?? room;
 
@@ -218,7 +221,7 @@ export function FittingRoom() {
         <header className={styles.head}>
           <div>
             <h1>{t.title}</h1>
-            <p>{t.lead}</p>
+            <p>{fromRoom ? t.leadFor(roomName) : t.lead}</p>
           </div>
           <button
             type="button"
@@ -390,12 +393,12 @@ export function FittingRoom() {
 
         <footer className={styles.foot}>
           <div className={styles.footRow}>
-            <Link className="btn btn-primary" href={`/metaverse/${room}`}>
+            <Link className="btn btn-primary" href={`/metaverse/${room}`} onClick={markDressed}>
               {t.enter(roomName)}
             </Link>
             <button type="button" className={styles.shuffle} onClick={shuffle}>
               <Shuffle size={18} weight="bold" aria-hidden="true" />
-              {t.shuffle}
+              <span className={styles.shuffleText}>{t.shuffle}</span>
             </button>
           </div>
           <p>{t.saved}</p>
