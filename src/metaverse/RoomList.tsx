@@ -11,7 +11,7 @@ import { MAX_INSTANCES, ROOMS } from "@/lib/metaverse/queue.ts";
 import { matchDistricts, scoreAnswers, type Answer } from "@/lib/match/match.ts";
 import { QUESTIONS } from "@/lib/match/questions.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
-import { OPEN_ROOMS } from "@/lib/metaverse/open.ts";
+import { OPEN_ROOMS, wardrobeHref } from "@/lib/metaverse/open.ts";
 import styles from "./RoomList.module.css";
 
 // Rooms and their hour: a bright day in the forest, dusk in the old town, sunset, night.
@@ -130,7 +130,7 @@ export function RoomList() {
                   {built ? (
                     <>
                       <span className={styles.count}>{t.here(counts[slug] ?? 0)}</span>
-                      <Link className={isMine ? "btn btn-primary" : "btn"} href={`/metaverse/${slug}`}>
+                      <Link className={isMine ? "btn btn-primary" : "btn"} href={wardrobeHref(slug)}>
                         {t.enter}
                       </Link>
                     </>

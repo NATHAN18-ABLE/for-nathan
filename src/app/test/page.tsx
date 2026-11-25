@@ -11,7 +11,7 @@ import { useLang } from "@/lib/lang.ts";
 import type { Lang } from "@/lib/hero/copy.ts";
 import { asset } from "@/lib/base-path.ts";
 import { Phrases } from "@/components/Phrases";
-import { OPEN_ROOMS } from "@/lib/metaverse/open.ts";
+import { OPEN_ROOMS, wardrobeHref } from "@/lib/metaverse/open.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import { courseFor } from "@/lib/districts/courses.ts";
 import { deviceKind, saveResult } from "@/lib/test-stats.ts";
@@ -145,7 +145,7 @@ function Result({ lang, answers, onRestart }: { lang: Lang; answers: Answer[]; o
 
       </p>
       <div className={styles.actions}>
-        <Link className="btn btn-light" href={own ? `/metaverse/${best.slug}` : "/metaverse"}>
+        <Link className="btn btn-light" href={own ? wardrobeHref(best.slug) : "/metaverse"}>
           {own ? t.meet(roomName(best.slug)) : t.other}
         </Link>
         <button type="button" className={styles.again} onClick={onRestart}>

@@ -36,10 +36,11 @@ const CAPTION_FADE = 0.035;
 const SMOOTH_MS = 120; // time constant of the scroll follow; frame-rate independent
 // Loading gate. A first scroll that outruns the download shows held frames, so scrolling waits
 // (briefly) until the frames already here plus those still arriving keep ahead of a visitor
-// going through the film in about SCROLL_SECS. On a fast line that is only the opening.
-const SCROLL_SECS = 5;
+// Scrolling waits at the top until every frame of the film has arrived (each one fetched or
+// given up on), so even a fast first scroll never outruns the download. A fast line takes a
+// second or two; a slow one is let go at GATE_MAX_MS and holds frames as it scrolls.
 const EARLY_FRAMES = 16; // fetched alongside the page, before any script runs
-const GATE_MAX_MS = 3000; // never hold the page longer than this, counted from the page request
+const GATE_MAX_MS = 10000; // never hold the page longer than this, counted from the page request
 // The opening card (first visit only): long enough to read its one line, then it lifts.
 const SPLASH_MIN_MS = 1400; // from the page request
 const SPLASH_OUT_MS = 900; // how long it takes to lift
@@ -124,7 +125,7 @@ export function HeroScroll() {
     const blobs: (Blob | null)[] = [];
     const bitmaps = new Map<number, Frame>();
     const decoding = new Set<number>();
-    const maxDecoded = portrait ? 24 : 32;
+    const maxDecoded = portrait ? 28 : 40;
     let frameW = portrait ? 720 : 1280;
     let lastFrame = 0;
     let direction: 1 | -1 = 1;
@@ -239,8 +240,8 @@ export function HeroScroll() {
           const k = nearestAvailable(i0, (j) => j >= 0 && j < blobs.length && !!blobs[j], 60);
           if (k !== null) decode(k);
         }
-        for (const i of wanted(i0, direction, timing.frames, 6, portrait ? 12 : 16)) {
-          if (decoding.size >= 4) break;
+        for (const i of wanted(i0, direction, timing.frames, 6, portrait ? 16 : 24)) {
+          if (decoding.size >= 6) break;
           decode(i);
         }
         const key = Math.round(f * 16);
@@ -324,7 +325,7 @@ export function HeroScroll() {
     resize();
     window.addEventListener("resize", resize);
 
-    // Hold scrolling at the top until enough of the film is here (see SCROLL_SECS).
+    // Hold scrolling at the top until the whole film is here (see GATE_MAX_MS).
     const blockKeys = new Set([" ", "PageDown", "ArrowDown", "End", "Spacebar"]);
     const block = (e: Event) => {
       if (e instanceof KeyboardEvent && !blockKeys.has(e.key)) return;
@@ -361,7 +362,6 @@ export function HeroScroll() {
     // cannot scroll ahead while the scripts are still on their way; this keeps it held until the
     // film is ready and then lets go. `watch` begins once the timing file is in.
     const holding = window.scrollY <= 10; // coming back mid-page: nothing to wait for
-    const began = performance.now();
     if (holding) {
       const opts = { passive: false } as const;
       window.addEventListener("wheel", block, opts);
@@ -371,21 +371,16 @@ export function HeroScroll() {
       setLoading(false);
       setSplash("gone");
     }
+    const settled = { n: 0 }; // frames fetched or given up on
     const watch = (total: number) => {
       if (!holding) return;
       const check = () => {
         if (cancelled) return;
-        const t = performance.now() - began;
         const sinceOpen = performance.now(); // ms since the page was requested
-        let run = 0;
-        while (run < total && blobs[run]) run++;
-        // frames a second, once it can be told; the preloaded opening arrives from the page's own
-        // download in no time, so it says nothing about the line and is left out
-        const have = blobs.reduce((n, b, i) => n + (b && i >= EARLY_FRAMES ? 1 : 0), 0);
-        const rate = have >= 8 ? (have / t) * 1000 : 0;
-        const need = Math.min(total, Math.max(24, Math.ceil(total - rate * SCROLL_SECS)));
-        if (splashFillRef.current) splashFillRef.current.style.transform = `scaleX(${Math.min(1, run / need)})`;
-        if (run >= need || sinceOpen >= GATE_MAX_MS) return openGate();
+        // every frame in (or given up on after its retries), and the opening decoded for drawing
+        const ready = settled.n >= total && [0, 1, 2, 3].every((k) => bitmaps.has(k) || !blobs[k]);
+        if (splashFillRef.current) splashFillRef.current.style.transform = `scaleX(${Math.min(1, settled.n / total)})`;
+        if (ready || sinceOpen >= GATE_MAX_MS) return openGate();
         gateTimer = requestAnimationFrame(check);
       };
       check();
@@ -406,6 +401,7 @@ export function HeroScroll() {
         blobs.fill(null);
         const got = new Uint8Array(data.frames);
         const tries = new Uint8Array(data.frames);
+        settled.n = 0;
         const worker = async () => {
           for (let i = nextToFetch(got, lastFrame, direction); i !== undefined && !cancelled; i = nextToFetch(got, lastFrame, direction)) {
             got[i] = 1;
@@ -413,10 +409,12 @@ export function HeroScroll() {
               const r = await fetch(frameUrl(set, i));
               if (!r.ok) throw new Error(String(r.status));
               blobs[i] = await r.blob();
+              settled.n++;
               drawn = -1;
             } catch {
               // A dropped download on a shaky connection: try that frame again later (twice at most).
               if (++tries[i] < 3) got[i] = 0;
+              else settled.n++;
             }
           }
         };
