@@ -127,3 +127,22 @@
 - Git 태그 `v1.0` — 제출 시점 소스
 - `site-v1.0` 브랜치 — 빌드된 사이트 파일 그대로(정적 호스팅에 올리면 바로 열림)
 - 테스트 통계 원본 — 모집 종료 후 Supabase `test_results` 표를 CSV로 내려받아 보관할 것
+
+## 13. 화면
+
+| 컴퓨터 | 휴대폰 |
+|---|---|
+| ![홈](screenshots/desktop-01-home.jpg) | ![홈](screenshots/phone-01-home.jpg) |
+| ![테스트 결과](screenshots/desktop-04-test-result.jpg) | ![테스트 결과](screenshots/phone-04-test-result.jpg) |
+| ![종로구 하루 코스](screenshots/desktop-06-district-jongno.jpg) | ![종로구 하루 코스](screenshots/phone-06-district-jongno.jpg) |
+| ![서울 이야기](screenshots/desktop-07-story.jpg) | ![서울 이야기](screenshots/phone-07-story.jpg) |
+| ![옷장](screenshots/desktop-09-wardrobe.jpg) | ![옷장](screenshots/phone-09-wardrobe.jpg) |
+| ![종로 메타버스](screenshots/desktop-10-room-jongno.jpg) | ![종로 메타버스](screenshots/phone-10-room-jongno.jpg) |
+
+메타버스 방 5개:
+
+| 서대문 | 용산 | 강남 | 영등포 |
+|---|---|---|---|
+| ![](screenshots/desktop-11-room-seodaemun.jpg) | ![](screenshots/desktop-12-room-yongsan.jpg) | ![](screenshots/desktop-13-room-gangnam.jpg) | ![](screenshots/desktop-14-room-yeongdeungpo.jpg) |
+
+전체 화면(컴퓨터 16장, 휴대폰 12장)은 `docs/screenshots/`에 있다. 2026년 11월 26일 촬영.
