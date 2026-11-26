@@ -11,7 +11,7 @@ import { MAX_INSTANCES, ROOMS } from "@/lib/metaverse/queue.ts";
 import { matchDistricts, scoreAnswers, type Answer } from "@/lib/match/match.ts";
 import { QUESTIONS } from "@/lib/match/questions.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
-import { OPEN_ROOMS, wardrobeHref } from "@/lib/metaverse/open.ts";
+import { enterHref, isDressed, OPEN_ROOMS } from "@/lib/metaverse/open.ts";
 import styles from "./RoomList.module.css";
 
 // Rooms and their hour: a bright day in the forest, dusk in the old town, sunset, night.
@@ -49,6 +49,9 @@ export function RoomList() {
   const t = TEXT[lang];
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [mine, setMine] = useState<{ room: string; from: string | null } | null>(null);
+  // Before the first character, room links go through the wardrobe; afterwards, straight in.
+  const [dressed, setDressed] = useState(false);
+  useEffect(() => setDressed(isDressed()), []);
 
   useEffect(() => {
     try {
@@ -130,7 +133,7 @@ export function RoomList() {
                   {built ? (
                     <>
                       <span className={styles.count}>{t.here(counts[slug] ?? 0)}</span>
-                      <Link className={isMine ? "btn btn-primary" : "btn"} href={wardrobeHref(slug)}>
+                      <Link className={isMine ? "btn btn-primary" : "btn"} href={enterHref(slug, dressed)}>
                         {t.enter}
                       </Link>
                     </>

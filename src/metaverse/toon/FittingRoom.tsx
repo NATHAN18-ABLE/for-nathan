@@ -129,6 +129,15 @@ export function FittingRoom() {
     } catch {}
   };
 
+  // Walking in keeps the figure on screen, even untouched, so every room shows the same one.
+  const enter = () => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(av));
+      localStorage.setItem(LOOK_KEY, JSON.stringify(look));
+    } catch {}
+    markDressed();
+  };
+
   const wear = (next: Look) => {
     setLook(next);
     try {
@@ -393,7 +402,7 @@ export function FittingRoom() {
 
         <footer className={styles.foot}>
           <div className={styles.footRow}>
-            <Link className="btn btn-primary" href={`/metaverse/${room}`} onClick={markDressed}>
+            <Link className="btn btn-primary" href={`/metaverse/${room}`} onClick={enter}>
               {t.enter(roomName)}
             </Link>
             <button type="button" className={styles.shuffle} onClick={shuffle}>

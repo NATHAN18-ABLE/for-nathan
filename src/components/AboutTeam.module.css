@@ -110,6 +110,31 @@
   line-height: 1.55;
 }
 
+/* A line they live by: set apart by a hairline, in the soft ink. */
+.quote {
+  margin: 14px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--porcelain-shadow);
+}
+
+.quote blockquote {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.quote figcaption {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.quote figcaption::before {
+  content: "— ";
+}
+
 .actions {
   margin-top: clamp(56px, 9svh, 96px);
 }
