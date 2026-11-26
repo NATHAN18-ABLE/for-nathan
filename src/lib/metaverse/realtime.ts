@@ -48,7 +48,10 @@ export interface RoomHandlers {
 }
 
 export interface RoomConnection {
+  /** Change what others see of me (look, outfit). Sent at most once per PRESENCE_GAP_MS, merged. */
   update: (patch: Partial<Presence>) => void;
+  /** Keep my latest spot for the next (re)join without sending anything: positions travel as broadcasts. */
+  remember: (patch: Partial<Presence>) => void;
   send: (e: RoomEvent) => void;
   leave: () => void;
 }
@@ -56,38 +59,80 @@ export interface RoomConnection {
 /** Channel name for one copy of a room ("jongno", copy 2 → "room:jongno:2"). */
 const topic = (room: string, instance: number) => `room:${room}:${instance}`;
 
+// Supabase closes the channel of a client that sends Presence too often (measured: the 6th
+// update within about 20 seconds). Presence therefore carries only who is here and how they
+// look; movement goes over broadcast, and look changes are merged and spaced out.
+const PRESENCE_GAP_MS = 10000; // 7 s apart held for 12 updates in a row; 3 s apart was cut at the 6th
+const RETRY_MS = [2000, 5000, 10000, 20000, 30000];
+
 export function joinRoom(room: string, instance: number, me: Presence, h: RoomHandlers): RoomConnection {
   let state = { ...me };
-  let channel: RealtimeChannel | null = supabase().channel(topic(room, instance), {
-    config: { presence: { key: me.id }, broadcast: { self: false } },
-  });
-  h.onStatus("connecting");
+  let channel: RealtimeChannel | null = null;
+  let left = false;
+  let retries = 0;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastTrack = 0;
+  let trackTimer: ReturnType<typeof setTimeout> | undefined;
+  let dirty = false;
 
-  channel
-    .on("presence", { event: "sync" }, () => {
-      if (!channel) return;
-      const all = channel.presenceState<Presence>();
+  const track = () => {
+    trackTimer = undefined;
+    if (!channel || left) return;
+    dirty = false;
+    lastTrack = Date.now();
+    channel.track(state);
+  };
+
+  const open = () => {
+    if (left) return;
+    h.onStatus("connecting");
+    const c = supabase().channel(topic(room, instance), {
+      config: { presence: { key: me.id }, broadcast: { self: false } },
+    });
+    channel = c;
+    c.on("presence", { event: "sync" }, () => {
+      if (channel !== c) return;
+      const all = c.presenceState<Presence>();
       h.onMembers(Object.values(all).map((list) => list[0]).filter(Boolean));
     })
-    .on("broadcast", { event: "room" }, ({ payload }) => h.onEvent(payload as RoomEvent))
-    .subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await channel?.track(state);
-        h.onStatus("live");
-      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        h.onStatus("offline");
-      }
-    });
+      .on("broadcast", { event: "room" }, ({ payload }) => h.onEvent(payload as RoomEvent))
+      .subscribe(async (status) => {
+        if (channel !== c || left) return;
+        if (status === "SUBSCRIBED") {
+          retries = 0;
+          clearTimeout(trackTimer);
+          track();
+          h.onStatus("live");
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          // Closed by the server or the network: come back on our own, a little later each time.
+          h.onStatus("offline");
+          channel = null;
+          supabase().removeChannel(c);
+          clearTimeout(retryTimer);
+          retryTimer = setTimeout(open, RETRY_MS[Math.min(retries++, RETRY_MS.length - 1)]);
+        }
+      });
+  };
+  open();
 
   return {
     update(patch) {
       state = { ...state, ...patch };
-      channel?.track(state);
+      dirty = true;
+      if (trackTimer || !channel) return; // already waiting, or the next join sends it
+      trackTimer = setTimeout(() => dirty && track(), Math.max(0, lastTrack + PRESENCE_GAP_MS - Date.now()));
+    },
+    remember(patch) {
+      state = { ...state, ...patch };
     },
     send(e) {
-      channel?.send({ type: "broadcast", event: "room", payload: e });
+      // Only over the socket: before the channel is joined, supabase-js would fall back to HTTP.
+      if (channel?.state === "joined") channel.send({ type: "broadcast", event: "room", payload: e });
     },
     leave() {
+      left = true;
+      clearTimeout(retryTimer);
+      clearTimeout(trackTimer);
       const c = channel;
       channel = null;
       if (c) {

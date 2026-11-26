@@ -206,6 +206,10 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const [copies, setCopies] = useState<number[]>([]);
   const [copiesOpen, setCopiesOpen] = useState(false);
   const lastSpot = useRef<{ x: number; z: number; heading: number } | null>(null);
+  // Where each other traveler last stopped, from their broadcasts (Presence only holds where they came in).
+  // Mutated in place: the figures read it every frame.
+  const spots = useRef(new Map<string, P>());
+  const greeted = useRef(new Set<string>());
   const [members, setMembers] = useState<Presence[]>([]);
   const [status, setStatus] = useState<"connecting" | "live" | "offline">("connecting");
   const [bubbles, setBubbles] = useState<Record<string, string>>({});
@@ -323,9 +327,12 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       setLook(sanitizeLook(JSON.parse(localStorage.getItem("seoul.mv.look2") ?? "null")));
     } catch {}
     try {
-      // Chosen in the wardrobe; a traveler who skipped it gets a figure at random.
+      // Chosen in the wardrobe. Without one, a figure is drawn at random once and kept, so the
+      // traveler looks the same in every room.
       const saved = localStorage.getItem("seoul.mv.avatar1");
-      setAvatar(saved ? sanitizeAvatar(JSON.parse(saved)) : sanitizeAvatar({ ...defaultAvatar(Math.random() < 0.5 ? "f" : "m"), skin: Math.floor(Math.random() * 4) }));
+      const figure = saved ? sanitizeAvatar(JSON.parse(saved)) : sanitizeAvatar({ ...defaultAvatar(Math.random() < 0.5 ? "f" : "m"), skin: Math.floor(Math.random() * 4) });
+      if (!saved) localStorage.setItem("seoul.mv.avatar1", JSON.stringify(figure));
+      setAvatar(figure);
     } catch {}
     setWebgl(hasWebgl());
     setReady(true);
@@ -433,9 +440,14 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     setAway(false);
 
     const onEvent = (e: RoomEvent) => {
-      const m = motions.current.get(e.id);
+      let m = motions.current.get(e.id);
       const path = e.kind === "move" ? cleanPath(e.path) : null;
-      if (e.kind === "move" && m && path) {
+      if (e.kind === "move" && path && typeof e.id === "string") {
+        const end = path[path.length - 1];
+        if (!m) motions.current.set(e.id, (m = newMotion(path[0].x, path[0].z)));
+        const spot = spots.current.get(e.id);
+        if (spot) (spot.x = end.x), (spot.z = end.z);
+        else spots.current.set(e.id, { x: end.x, z: end.z });
         m.path = [{ x: m.x, z: m.z }, ...path.slice(1)];
         m.start = performance.now();
         m.speed = cleanSpeed(e.speed);
@@ -462,13 +474,28 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       }
     };
     if (room.lanterns) fetchLanterns(room.slug).then(setLanterns);
+    let greetTimer: ReturnType<typeof setTimeout> | undefined;
     const c = joinRoom(room.slug, instance, presence, {
       onMembers: (list) => {
+        let newcomer = false;
         for (const p of list) {
           if (!motions.current.has(p.id)) motions.current.set(p.id, newMotion(p.x, p.z, p.heading));
+          if (!spots.current.has(p.id)) spots.current.set(p.id, { x: p.x, z: p.z });
           if (typeof p.name === "string") names.current.set(p.id, p.name.slice(0, 40));
+          if (p.id !== id && !greeted.current.has(p.id)) {
+            greeted.current.add(p.id);
+            newcomer = true;
+          }
         }
         setMembers(list);
+        // Someone new only knows where I came in: tell them where I am now.
+        if (newcomer) {
+          clearTimeout(greetTimer);
+          greetTimer = setTimeout(() => {
+            const m = motions.current.get(id);
+            if (m) conn.current?.send({ kind: "move", id, path: [{ x: m.x, z: m.z }, { x: m.x, z: m.z }], speed: m.speed });
+          }, 400 + Math.random() * 600);
+        }
       },
       onEvent,
       onStatus: setStatus,
@@ -478,7 +505,10 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     window.addEventListener("pagehide", bye);
     return () => {
       window.removeEventListener("pagehide", bye);
+      clearTimeout(greetTimer);
       c.leave();
+      spots.current.clear();
+      greeted.current.clear();
       conn.current = null;
       motions.current.clear();
       setMembers([]);
@@ -574,7 +604,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
 
   const arrived = useCallback(() => {
     const m = motions.current.get(me.current.id);
-    if (m) conn.current?.update({ x: m.x, z: m.z, heading: m.heading });
+    if (m) conn.current?.remember({ x: m.x, z: m.z, heading: m.heading });
     const next = pending.current;
     pending.current = null;
     next?.();
@@ -792,10 +822,12 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   // Cleaned look and position for each traveler, reused while unchanged so their figures
   // are not re-rendered on every update from the room.
   const props = (p: Presence) => {
-    const key = JSON.stringify([p.look, p.avatar, p.x, p.z]);
+    let rest = spots.current.get(p.id);
+    if (!rest) spots.current.set(p.id, (rest = { x: p.x, z: p.z }));
+    const key = JSON.stringify([p.look, p.avatar]);
     const hit = propCache.current.get(p.id);
-    if (hit && hit.key === key) return hit;
-    const next = { key, look: sanitizeLook(p.look), avatar: sanitizeAvatar(p.avatar), rest: { x: p.x, z: p.z } };
+    if (hit && hit.key === key && hit.rest === rest) return hit;
+    const next = { key, look: sanitizeLook(p.look), avatar: sanitizeAvatar(p.avatar), rest };
     propCache.current.set(p.id, next);
     return next;
   };

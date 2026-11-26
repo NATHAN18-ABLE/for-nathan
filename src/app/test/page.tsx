@@ -11,7 +11,7 @@ import { useLang } from "@/lib/lang.ts";
 import type { Lang } from "@/lib/hero/copy.ts";
 import { asset } from "@/lib/base-path.ts";
 import { Phrases } from "@/components/Phrases";
-import { OPEN_ROOMS, wardrobeHref } from "@/lib/metaverse/open.ts";
+import { enterHref, isDressed, OPEN_ROOMS } from "@/lib/metaverse/open.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import { courseFor } from "@/lib/districts/courses.ts";
 import { deviceKind, saveResult } from "@/lib/test-stats.ts";
@@ -99,6 +99,9 @@ export default function TestPage() {
 }
 
 function Result({ lang, answers, onRestart }: { lang: Lang; answers: Answer[]; onRestart: () => void }) {
+  // Before the first character, the room link goes through the wardrobe; afterwards, straight in.
+  const [dressed, setDressed] = useState(false);
+  useEffect(() => setDressed(isDressed()), []);
   const t = T[lang];
   const code = typeCode(answers);
   const type = TRAVEL_TYPES[code];
@@ -145,7 +148,7 @@ function Result({ lang, answers, onRestart }: { lang: Lang; answers: Answer[]; o
 
       </p>
       <div className={styles.actions}>
-        <Link className="btn btn-light" href={own ? wardrobeHref(best.slug) : "/metaverse"}>
+        <Link className="btn btn-light" href={own ? enterHref(best.slug, dressed) : "/metaverse"}>
           {own ? t.meet(roomName(best.slug)) : t.other}
         </Link>
         <button type="button" className={styles.again} onClick={onRestart}>

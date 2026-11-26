@@ -58,6 +58,12 @@ export function AboutTeam() {
                   {m.role && <> · {m.role[lang]}</>}
                 </p>
                 {m.bio && <p className={styles.bio}><Phrases text={m.bio[lang]} /></p>}
+                {m.quote && (
+                  <figure className={styles.quote}>
+                    <blockquote><Phrases text={m.quote.text[lang]} /></blockquote>
+                    <figcaption>{m.quote.by[lang]}</figcaption>
+                  </figure>
+                )}
               </li>
             ))}
           </ul>
