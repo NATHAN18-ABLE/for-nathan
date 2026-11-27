@@ -53,12 +53,14 @@ type Props = {
   rest?: { x: number; z: number };
   onArrive?: () => void;
   ground?: (x: number, z: number) => number;
+  // First-person view: the figure still walks (and reports arriving) but is not drawn.
+  hidden?: boolean;
 };
 
 const shortestAngle = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 /** One traveler. Memoized: it only re-renders when its own props change, not on every room update. */
-export const Avatar = memo(function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubble, meLabel, rest, onArrive, ground }: Props) {
+export const Avatar = memo(function Avatar({ motion, look, avatar, name, type, sameType, isMe, bubble, meLabel, rest, onArrive, ground, hidden = false }: Props) {
   const root = useRef<THREE.Group>(null);
   const tag = useRef<HTMLDivElement>(null);
   const seatBlend = useRef(0);
@@ -147,7 +149,7 @@ export const Avatar = memo(function Avatar({ motion, look, avatar, name, type, s
   });
 
   return (
-    <group ref={root}>
+    <group ref={root} visible={!hidden}>
       <Detail.Provider value={near ? FULL : LIGHT}>
       <ToonFigure
         scale={FIGURE_SCALE}
@@ -159,7 +161,7 @@ export const Avatar = memo(function Avatar({ motion, look, avatar, name, type, s
         actionRef={pose}
       />
       </Detail.Provider>
-      {labels && (
+      {labels && !hidden && (
         <Html position={[0, 1.78, 0]} center pointerEvents="none" zIndexRange={[6, 1]}>
           <div ref={tag} className={styles.tag} data-me={isMe} data-same={sameType}>
             {isMe && meLabel && <span className={styles.tagMe}>{meLabel}</span>}
@@ -168,7 +170,7 @@ export const Avatar = memo(function Avatar({ motion, look, avatar, name, type, s
           </div>
         </Html>
       )}
-      {labels && bubble && (
+      {labels && !hidden && bubble && (
         <Html position={[0, 2.12, 0]} center pointerEvents="none" zIndexRange={[8, 7]}>
           <div className={styles.bubble}>{bubble}</div>
         </Html>

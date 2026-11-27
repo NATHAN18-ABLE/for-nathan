@@ -1,3 +1,4 @@
+import { UpdateWatcher } from "@/components/UpdateWatcher";
 import type { Metadata, Viewport } from "next";
 // Pretendard: the typeface most Korean websites use, with matching Latin letters.
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <PointerHalo />
+        <UpdateWatcher />
       </body>
     </html>
   );

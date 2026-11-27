@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { OPEN_ROOMS, markDressed } from "@/lib/metaverse/open.ts";
+import { cleanName, MAX_NAME, NAME_KEY } from "@/lib/metaverse/names.ts";
 import { DISTRICTS } from "@/lib/match/districts.ts";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
@@ -33,6 +34,10 @@ const T = {
     title: "Fitting room",
     lead: "Choose how you look before you walk into Seoul.",
     leadFor: (room: string) => `Before you walk into ${room}, choose how you look.`,
+    name: "Name",
+    nameHint: "Other travelers see this above your head. Leave it empty to be called Traveler.",
+    namePlaceholder: "What should we call you?",
+    nameBad: "That name can't be used. Try another one.",
     gender: "Figure",
     genders: { f: "Woman", m: "Man" },
     outfit: "Outfit",
@@ -65,6 +70,10 @@ const T = {
     title: "옷장",
     lead: "서울을 걷기 전에 내 모습을 골라 보세요.",
     leadFor: (room: string) => `${room}에 들어가기 전에 내 모습을 골라 보세요.`,
+    name: "이름",
+    nameHint: "다른 여행자에게 머리 위로 보여요. 비워 두면 '여행자'로 들어가요.",
+    namePlaceholder: "어떻게 불러 드릴까요?",
+    nameBad: "쓸 수 없는 이름이에요. 다른 이름을 적어 주세요.",
     gender: "캐릭터",
     genders: { f: "여자", m: "남자" },
     outfit: "옷",
@@ -114,6 +123,23 @@ export function FittingRoom() {
   }, []);
   const roomName = DISTRICTS.find((d) => d.slug === room)?.[lang === "ko" ? "nameKo" : "nameEn"] ?? room;
 
+  // The name other travelers see; checked by the same filter the room applies.
+  const [name, setName] = useState("");
+  const nameBad = name.trim() !== "" && cleanName(name) === null;
+  const nameField = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    try {
+      setName(localStorage.getItem(NAME_KEY) ?? "");
+    } catch {}
+  }, []);
+  const saveName = (raw: string) => {
+    try {
+      const clean = cleanName(raw);
+      if (clean) localStorage.setItem(NAME_KEY, clean);
+      else if (!raw.trim()) localStorage.removeItem(NAME_KEY);
+    } catch {}
+  };
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(KEY);
@@ -130,7 +156,13 @@ export function FittingRoom() {
   };
 
   // Walking in keeps the figure on screen, even untouched, so every room shows the same one.
-  const enter = () => {
+  const enter = (e: React.MouseEvent) => {
+    if (nameBad) {
+      e.preventDefault();
+      nameField.current?.focus();
+      return;
+    }
+    saveName(name);
     try {
       localStorage.setItem(KEY, JSON.stringify(av));
       localStorage.setItem(LOOK_KEY, JSON.stringify(look));
@@ -240,6 +272,31 @@ export function FittingRoom() {
             {lang === "ko" ? "EN" : "한국어"}
           </button>
         </header>
+
+        <section>
+          <h2>
+            <label htmlFor="fr-name">{t.name}</label>
+          </h2>
+          <input
+            ref={nameField}
+            id="fr-name"
+            className={styles.name}
+            type="text"
+            value={name}
+            maxLength={MAX_NAME * 2}
+            placeholder={t.namePlaceholder}
+            autoComplete="nickname"
+            enterKeyHint="done"
+            aria-invalid={nameBad}
+            aria-describedby="fr-name-hint"
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => !nameBad && saveName(name)}
+            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          />
+          <p id="fr-name-hint" className={nameBad ? styles.nameBad : styles.nameHint} aria-live="polite">
+            {nameBad ? t.nameBad : t.nameHint}
+          </p>
+        </section>
 
         <section aria-labelledby="fr-gender">
           <h2 id="fr-gender">{t.gender}</h2>

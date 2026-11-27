@@ -6,3 +6,6 @@
 # The film frames keep their names when the film is re-cut, so they are kept only an hour.
 /hero/*
   Cache-Control: public, max-age=3600
+# The live version stamp: always asked for fresh.
+/version.txt
+  Cache-Control: no-store
