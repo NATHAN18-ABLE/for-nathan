@@ -438,6 +438,32 @@
     font-size: 14px;
     padding: 0 12px;
   }
+  /* One button for the other language, as in the wardrobe. */
+  .lang {
+    padding: 0 2px;
+  }
+  .lang button[aria-pressed="true"] {
+    display: none;
+  }
+  .lang button {
+    opacity: 1;
+  }
+  /* a long room name gives way before the buttons do */
+  .title {
+    min-width: 0;
+  }
+  .title h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* The view switch moves down to the right thumb, across from the joystick. */
+  .viewToggle {
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right));
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 92px);
+    width: 52px;
+    height: 52px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1022,5 +1048,24 @@
   }
   .notices:has(p) ~ .poi {
     top: calc(104px + env(safe-area-inset-top));
+  }
+}
+
+/* The narrowest phones: the copy number gives its room to the room name. */
+@media (max-width: 400px) {
+  .title .copy {
+    display: none;
+  }
+}
+
+/* Phones: all five dock buttons in view, with none hidden off the edge. */
+@media (max-width: 480px) {
+  .dock {
+    gap: 2px;
+    padding: 5px;
+  }
+  .dock button {
+    padding: 0 11px;
+    font-size: 14px;
   }
 }

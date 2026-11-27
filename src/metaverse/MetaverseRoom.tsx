@@ -14,7 +14,7 @@ import { CAPACITY, MAX_INSTANCES, isIdle, pickInstance, seatMembers, statusOf } 
 import { EMOTES, PHRASES, phraseText } from "@/lib/metaverse/phrases.ts";
 import { cleanChat, guessLang, MAX_CHAT, RateLimit } from "@/lib/metaverse/chat.ts";
 import { canTranslate, translate } from "./translate";
-import { autoName } from "@/lib/metaverse/names.ts";
+import { autoName, cleanName, savedName } from "@/lib/metaverse/names.ts";
 import { typeCode, type Answer } from "@/lib/match/match.ts";
 import { QUESTIONS } from "@/lib/match/questions.ts";
 import { useLang } from "@/lib/lang.ts";
@@ -44,6 +44,8 @@ const UI = {
     dress: "Dress up",
     soundOn: "Sound on",
     soundOff: "Sound off",
+    firstPerson: "See through your own eyes",
+    thirdPerson: "See yourself from behind",
     hangLantern: "Hang a wish lantern",
     hangTitle: "Hang a wish lantern",
     hangBody: "Choose a wish and a colour. Your lantern stays lit on the wall for a day, for everyone in this room.",
@@ -108,6 +110,8 @@ const UI = {
     dress: "꾸미기",
     soundOn: "소리 켜기",
     soundOff: "소리 끄기",
+    firstPerson: "1인칭 시점으로 보기",
+    thirdPerson: "3인칭 시점으로 보기",
     hangLantern: "소원 등 달기",
     hangTitle: "소원 등 달기",
     hangBody: "소원과 색을 골라 주세요. 등은 하루 동안 담장에 켜져 있고, 이 방의 모두에게 보여요.",
@@ -257,7 +261,30 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   const conn = useRef<RoomConnection | null>(null);
   const lastInput = useRef(Date.now());
   // A raised three-quarter view, like looking down on a little town.
-  const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.5, dist: 7.4, touchedAt: 0 });
+  const view = useRef<View>({ yaw: (room.spawnHeading ?? 0) + Math.PI, pitch: 0.5, dist: 7.4, touchedAt: 0, first: false, tilt: 0 });
+  // First or third person; the choice is kept on this device.
+  const [firstPerson, setFirstPerson] = useState(false);
+  const chooseView = useCallback((first: boolean) => {
+    view.current.first = first;
+    view.current.tilt = 0;
+    setFirstPerson(first);
+    try {
+      localStorage.setItem("seoul.mv.view", first ? "first" : "third");
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("seoul.mv.view") === "first") chooseView(true);
+    } catch {}
+    // V switches the view, outside text fields
+    const key = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "v" || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.target as HTMLElement)?.closest?.("input, textarea, select")) return;
+      chooseView(!view.current.first);
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [chooseView]);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const stick = useRef<Stick>({ x: 0, y: 0, active: false });
   const propCache = useRef(new Map<string, { key: string; look: Look; avatar: AvatarLook; rest: P }>());
@@ -301,6 +328,10 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       if (pinch.current) v.dist = Math.min(14, Math.max(3.4, v.dist * (pinch.current / Math.max(1, d))));
       pinch.current = d;
+    } else if (v.first) {
+      // looking around from the eyes: sideways turns, up and down tilts the gaze
+      v.yaw -= (e.clientX - prev.x) * 0.005;
+      v.tilt = Math.min(0.6, Math.max(-0.75, v.tilt - (e.clientY - prev.y) * 0.004));
     } else {
       v.yaw -= (e.clientX - prev.x) * 0.006;
       v.pitch = Math.min(1.1, Math.max(0.05, v.pitch + (e.clientY - prev.y) * 0.005));
@@ -322,7 +353,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
   // Identity, look and capability checks happen in the browser only.
   useEffect(() => {
     const id = myId();
-    me.current = { id, type: myType(), name: autoName(id) };
+    me.current = { id, type: myType(), name: savedName() ?? autoName(id) };
     try {
       setLook(sanitizeLook(JSON.parse(localStorage.getItem("seoul.mv.look2") ?? "null")));
     } catch {}
@@ -476,7 +507,9 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
     if (room.lanterns) fetchLanterns(room.slug).then(setLanterns);
     let greetTimer: ReturnType<typeof setTimeout> | undefined;
     const c = joinRoom(room.slug, instance, presence, {
-      onMembers: (list) => {
+      onMembers: (raw) => {
+        // Names come from anyone's browser: the same filter as the wardrobe, else the auto name.
+        const list = raw.map((p) => ({ ...p, name: cleanName(p.name) ?? autoName(String(p.id)) }));
         let newcomer = false;
         for (const p of list) {
           if (!motions.current.has(p.id)) motions.current.set(p.id, newMotion(p.x, p.z, p.heading));
@@ -884,6 +917,7 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               meLabel={t.you}
               onArrive={arrived}
               ground={ground}
+              hidden={firstPerson}
             />
           )}
           {others.map((p) => {
@@ -958,6 +992,21 @@ export function MetaverseRoom({ room }: { room: RoomConfig }) {
               )}
             </svg>
           </button>
+          {room.world && (
+            <button type="button" className={`${styles.iconButton} ${styles.viewToggle}`} aria-pressed={firstPerson} aria-label={firstPerson ? t.thirdPerson : t.firstPerson} title={`${firstPerson ? t.thirdPerson : t.firstPerson} (V)`} onClick={() => (touch(), chooseView(!firstPerson))}>
+              {firstPerson ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="7.5" r="3.2" />
+                  <path d="M5.5 20c.6-3.9 3.2-6 6.5-6s5.9 2.1 6.5 6" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" />
+                  <circle cx="12" cy="12" r="2.8" />
+                </svg>
+              )}
+            </button>
+          )}
           <div className={styles.lang} role="group" aria-label="Language">
             <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>
               EN
@@ -1286,6 +1335,8 @@ export interface View {
   pitch: number;
   dist: number;
   touchedAt: number; // last time the person turned the camera themselves
+  first: boolean; // first-person: the camera sits at the traveler's eyes
+  tilt: number; // first-person only: looking up (+) or down (-)
 }
 
 /** Static scenery: compute transforms once, then skip them every frame. */
@@ -1407,6 +1458,30 @@ function Rig({ room, motions, meId, view }: { room: RoomConfig; motions: React.R
     const m = motions.current?.get(meId);
     const v = view.current;
     if (!m || !v) return;
+    const near = v.first ? 0.08 : 0.3; // close walls stay drawn from the eyes
+    if ((camera as THREE.PerspectiveCamera).near !== near) {
+      (camera as THREE.PerspectiveCamera).near = near;
+      (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
+    }
+    if (v.first) {
+      // Through the traveler's eyes. A walk started by tapping turns the gaze along the way,
+      // unless the person has just looked around themselves.
+      if (m.path && performance.now() - v.touchedAt > 1500) {
+        const want = m.heading + Math.PI;
+        v.yaw += Math.atan2(Math.sin(want - v.yaw), Math.cos(want - v.yaw)) * (1 - Math.exp(-dt * 4));
+      }
+      const eye = ground(m.x, m.z) + (m.sitting ? 0.95 : 1.3);
+      const kf = 1 - Math.exp(-dt * 16);
+      look.current.x += (m.x - look.current.x) * kf;
+      look.current.y += (eye - look.current.y) * kf;
+      look.current.z += (m.z - look.current.z) * kf;
+      camera.position.copy(look.current);
+      const c = Math.cos(v.tilt);
+      aim.current.set(look.current.x - Math.sin(v.yaw) * c, look.current.y + Math.sin(v.tilt), look.current.z - Math.cos(v.yaw) * c);
+      camera.lookAt(aim.current);
+      fit.current = v.dist; // back to the full distance when leaving first person
+      return;
+    }
     const k = 1 - Math.exp(-dt * 6);
     const ty = ground(m.x, m.z) + 1.25; // pivot at head height
     look.current.x += (m.x - look.current.x) * k;

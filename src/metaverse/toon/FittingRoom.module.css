@@ -72,6 +72,50 @@
   text-decoration: none;
 }
 
+/* The name others see. 16px so phones do not zoom in on focus. */
+.name {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid rgb(30 33 38 / 0.16);
+  border-radius: 14px;
+  background: #fff;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+
+.name::placeholder {
+  color: rgb(30 33 38 / 0.4);
+}
+
+.name:focus-visible {
+  outline: none;
+  border-color: var(--cobalt);
+  box-shadow: 0 0 0 3px rgb(31 64 140 / 0.16);
+}
+
+.name[aria-invalid="true"] {
+  border-color: #b4412f;
+}
+
+.nameHint,
+.nameBad {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.nameHint {
+  color: var(--ink-soft);
+}
+
+.nameBad {
+  color: #b4412f;
+}
+
 .footRow {
   display: flex;
   flex-wrap: wrap;
